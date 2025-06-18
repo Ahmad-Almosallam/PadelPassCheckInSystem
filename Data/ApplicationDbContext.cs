@@ -19,6 +19,15 @@ namespace PadelPassCheckInSystem.Data
         {
             base.OnModelCreating(builder);
 
+            // Set schema for all Identity tables
+            builder.HasDefaultSchema("access");
+
+            // Set schema for Identity tables
+            foreach (var entityType in builder.Model.GetEntityTypes())
+            {
+                builder.Entity(entityType.ClrType).ToTable(entityType.GetTableName(), "access");
+            }
+
             // Unique constraint on EndUser phone number
             builder.Entity<EndUser>()
                 .HasIndex(e => e.PhoneNumber)

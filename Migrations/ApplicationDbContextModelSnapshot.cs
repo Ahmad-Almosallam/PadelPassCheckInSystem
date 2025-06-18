@@ -17,6 +17,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("access")
                 .HasAnnotation("ProductVersion", "8.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
@@ -46,7 +47,7 @@ namespace PadelPassCheckInSystem.Migrations
                         .HasDatabaseName("RoleNameIndex")
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
-                    b.ToTable("AspNetRoles", (string)null);
+                    b.ToTable("AspNetRoles", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -71,7 +72,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims", (string)null);
+                    b.ToTable("AspNetRoleClaims", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -96,7 +97,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims", (string)null);
+                    b.ToTable("AspNetUserClaims", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
@@ -118,7 +119,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins", (string)null);
+                    b.ToTable("AspNetUserLogins", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
@@ -133,7 +134,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetUserRoles", (string)null);
+                    b.ToTable("AspNetUserRoles", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -152,7 +153,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens", (string)null);
+                    b.ToTable("AspNetUserTokens", "access");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.ApplicationUser", b =>
@@ -225,7 +226,7 @@ namespace PadelPassCheckInSystem.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("AspNetUsers", "access");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.Branch", b =>
@@ -253,7 +254,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Branches");
+                    b.ToTable("Branches", "access");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.CheckIn", b =>
@@ -280,7 +281,7 @@ namespace PadelPassCheckInSystem.Migrations
                     b.HasIndex("EndUserId", "CheckInDateTime")
                         .HasDatabaseName("IX_CheckIn_EndUser_Date");
 
-                    b.ToTable("CheckIns");
+                    b.ToTable("CheckIns", "access");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.EndUser", b =>
@@ -333,7 +334,7 @@ namespace PadelPassCheckInSystem.Migrations
                         .IsUnique()
                         .HasFilter("[UniqueIdentifier] IS NOT NULL");
 
-                    b.ToTable("EndUsers");
+                    b.ToTable("EndUsers", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

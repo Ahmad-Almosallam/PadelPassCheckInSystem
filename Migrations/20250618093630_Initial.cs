@@ -11,8 +11,12 @@ namespace PadelPassCheckInSystem.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.EnsureSchema(
+                name: "access");
+
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
+                schema: "access",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -27,6 +31,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Branches",
+                schema: "access",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -43,6 +48,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateTable(
                 name: "EndUsers",
+                schema: "access",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -54,6 +60,8 @@ namespace PadelPassCheckInSystem.Migrations
                     SubscriptionStartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     SubscriptionEndDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UniqueIdentifier = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    QRCodeDownloadToken = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    HasDownloadedQR = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
@@ -63,6 +71,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
+                schema: "access",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -77,6 +86,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
                         column: x => x.RoleId,
+                        principalSchema: "access",
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -84,6 +94,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AspNetUsers",
+                schema: "access",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -110,6 +121,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUsers_Branches_BranchId",
                         column: x => x.BranchId,
+                        principalSchema: "access",
                         principalTable: "Branches",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
@@ -117,6 +129,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateTable(
                 name: "CheckIns",
+                schema: "access",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -131,12 +144,14 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_CheckIns_Branches_BranchId",
                         column: x => x.BranchId,
+                        principalSchema: "access",
                         principalTable: "Branches",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_CheckIns_EndUsers_EndUserId",
                         column: x => x.EndUserId,
+                        principalSchema: "access",
                         principalTable: "EndUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -144,6 +159,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserClaims",
+                schema: "access",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -158,6 +174,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserClaims_AspNetUsers_UserId",
                         column: x => x.UserId,
+                        principalSchema: "access",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -165,6 +182,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserLogins",
+                schema: "access",
                 columns: table => new
                 {
                     LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -178,6 +196,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserLogins_AspNetUsers_UserId",
                         column: x => x.UserId,
+                        principalSchema: "access",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -185,6 +204,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserRoles",
+                schema: "access",
                 columns: table => new
                 {
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -196,12 +216,14 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserRoles_AspNetRoles_RoleId",
                         column: x => x.RoleId,
+                        principalSchema: "access",
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_AspNetUserRoles_AspNetUsers_UserId",
                         column: x => x.UserId,
+                        principalSchema: "access",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -209,6 +231,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AspNetUserTokens",
+                schema: "access",
                 columns: table => new
                 {
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -222,6 +245,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserTokens_AspNetUsers_UserId",
                         column: x => x.UserId,
+                        principalSchema: "access",
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -229,11 +253,13 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
+                schema: "access",
                 table: "AspNetRoleClaims",
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
                 name: "RoleNameIndex",
+                schema: "access",
                 table: "AspNetRoles",
                 column: "NormalizedName",
                 unique: true,
@@ -241,31 +267,37 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserClaims_UserId",
+                schema: "access",
                 table: "AspNetUserClaims",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserLogins_UserId",
+                schema: "access",
                 table: "AspNetUserLogins",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserRoles_RoleId",
+                schema: "access",
                 table: "AspNetUserRoles",
                 column: "RoleId");
 
             migrationBuilder.CreateIndex(
                 name: "EmailIndex",
+                schema: "access",
                 table: "AspNetUsers",
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUsers_BranchId",
+                schema: "access",
                 table: "AspNetUsers",
                 column: "BranchId");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
+                schema: "access",
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
                 unique: true,
@@ -273,22 +305,26 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_CheckIn_EndUser_Date",
+                schema: "access",
                 table: "CheckIns",
                 columns: new[] { "EndUserId", "CheckInDateTime" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_CheckIns_BranchId",
+                schema: "access",
                 table: "CheckIns",
                 column: "BranchId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_EndUsers_PhoneNumber",
+                schema: "access",
                 table: "EndUsers",
                 column: "PhoneNumber",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_EndUsers_UniqueIdentifier",
+                schema: "access",
                 table: "EndUsers",
                 column: "UniqueIdentifier",
                 unique: true,
@@ -299,34 +335,44 @@ namespace PadelPassCheckInSystem.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "AspNetRoleClaims");
+                name: "AspNetRoleClaims",
+                schema: "access");
 
             migrationBuilder.DropTable(
-                name: "AspNetUserClaims");
+                name: "AspNetUserClaims",
+                schema: "access");
 
             migrationBuilder.DropTable(
-                name: "AspNetUserLogins");
+                name: "AspNetUserLogins",
+                schema: "access");
 
             migrationBuilder.DropTable(
-                name: "AspNetUserRoles");
+                name: "AspNetUserRoles",
+                schema: "access");
 
             migrationBuilder.DropTable(
-                name: "AspNetUserTokens");
+                name: "AspNetUserTokens",
+                schema: "access");
 
             migrationBuilder.DropTable(
-                name: "CheckIns");
+                name: "CheckIns",
+                schema: "access");
 
             migrationBuilder.DropTable(
-                name: "AspNetRoles");
+                name: "AspNetRoles",
+                schema: "access");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
+                name: "AspNetUsers",
+                schema: "access");
 
             migrationBuilder.DropTable(
-                name: "EndUsers");
+                name: "EndUsers",
+                schema: "access");
 
             migrationBuilder.DropTable(
-                name: "Branches");
+                name: "Branches",
+                schema: "access");
         }
     }
 }
