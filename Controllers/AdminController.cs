@@ -173,11 +173,21 @@ namespace PadelPassCheckInSystem.Controllers
         {
             if (ModelState.IsValid)
             {
+                // Check if the end user already exists by phone number or email
+                var existingUser = await _context.EndUsers
+                    .FirstOrDefaultAsync(e => e.PhoneNumber == model.PhoneNumber || e.Email == model.Email.ToLower());
+
+                if (existingUser != null)
+                {
+                    TempData["Error"] = "An end user with the same phone number or email already exists.";
+                    return RedirectToAction(nameof(EndUsers));
+                }
+
                 var endUser = new EndUser
                 {
                     Name = model.Name,
                     PhoneNumber = model.PhoneNumber,
-                    Email = model.Email,
+                    Email = model.Email.ToLower(),
                     ImageUrl = model.ImageUrl,
                     SubscriptionStartDate = model.SubscriptionStartDate,
                     SubscriptionEndDate = model.SubscriptionEndDate,
@@ -203,18 +213,27 @@ namespace PadelPassCheckInSystem.Controllers
             EndUserViewModel model)
         {
             var endUser = await _context.EndUsers.FindAsync(id);
-            if (endUser != null)
+            
+            if (endUser == null || !ModelState.IsValid) return RedirectToAction(nameof(EndUsers));
+            
+            if ((endUser.PhoneNumber != model.PhoneNumber &&
+                 await _context.EndUsers.AnyAsync(e => e.PhoneNumber == model.PhoneNumber)) ||
+                (endUser.Email != model.Email.ToLower() &&
+                 await _context.EndUsers.AnyAsync(e => e.Email == model.Email.ToLower())))
             {
-                endUser.Name = model.Name;
-                endUser.PhoneNumber = model.PhoneNumber;
-                endUser.Email = model.Email;
-                endUser.ImageUrl = model.ImageUrl;
-                endUser.SubscriptionStartDate = model.SubscriptionStartDate;
-                endUser.SubscriptionEndDate = model.SubscriptionEndDate;
-
-                await _context.SaveChangesAsync();
-                TempData["Success"] = "End user updated successfully!";
+                TempData["Error"] = "An end user with the same phone number or email already exists.";
+                return RedirectToAction(nameof(EndUsers));
             }
+
+            endUser.Name = model.Name;
+            endUser.PhoneNumber = model.PhoneNumber;
+            endUser.Email = model.Email;
+            endUser.ImageUrl = model.ImageUrl;
+            endUser.SubscriptionStartDate = model.SubscriptionStartDate;
+            endUser.SubscriptionEndDate = model.SubscriptionEndDate;
+
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "End user updated successfully!";
 
             return RedirectToAction(nameof(EndUsers));
         }
@@ -224,12 +243,12 @@ namespace PadelPassCheckInSystem.Controllers
             int id)
         {
             var endUser = await _context.EndUsers.FindAsync(id);
-            if (endUser != null)
-            {
-                _context.EndUsers.Remove(endUser);
-                await _context.SaveChangesAsync();
-                TempData["Success"] = "End user deleted successfully!";
-            }
+            
+            if (endUser == null) return RedirectToAction(nameof(EndUsers));
+            
+            _context.EndUsers.Remove(endUser);
+            await _context.SaveChangesAsync();
+            TempData["Success"] = "End user deleted successfully!";
 
             return RedirectToAction(nameof(EndUsers));
         }
