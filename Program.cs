@@ -3,8 +3,21 @@ using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Services;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Error()
+    .WriteTo.Console()
+    .WriteTo.File("logs/padelpass_.log", 
+        rollingInterval: RollingInterval.Day,
+        fileSizeLimitBytes: 10 * 1024 * 1024,
+        retainedFileCountLimit: 30)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
