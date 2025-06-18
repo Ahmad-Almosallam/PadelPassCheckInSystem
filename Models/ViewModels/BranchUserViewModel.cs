@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace CheckInSystem.Web.Models.ViewModels
+namespace PadelPassCheckInSystem.Models.ViewModels
 {
     public class BranchUserViewModel
     {
@@ -10,6 +10,7 @@ namespace CheckInSystem.Web.Models.ViewModels
         public string Email { get; set; }
         public int? BranchId { get; set; }
         public string BranchName { get; set; }
+        public bool IsActive { get; set; }
     }
 
     public class CreateBranchUserViewModel
@@ -32,3 +33,4 @@ namespace CheckInSystem.Web.Models.ViewModels
         public int BranchId { get; set; }
     }
 }
+

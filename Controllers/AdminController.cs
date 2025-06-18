@@ -1,4 +1,3 @@
-using CheckInSystem.Web.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -118,7 +117,8 @@ namespace PadelPassCheckInSystem.Controllers
                         FullName = user.FullName,
                         Email = user.Email,
                         BranchId = user.BranchId,
-                        BranchName = user.Branch?.Name
+                        BranchName = user.Branch?.Name,
+                        IsActive = user.LockoutEnd == null
                     });
                 }
             }
@@ -153,6 +153,85 @@ namespace PadelPassCheckInSystem.Controllers
                 {
                     TempData["Error"] = string.Join(", ", result.Errors.Select(e => e.Description));
                 }
+            }
+
+            return RedirectToAction(nameof(BranchUsers));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateBranchUser(string id, string fullName, string email, int? branchId)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                TempData["Error"] = "User not found.";
+                return RedirectToAction(nameof(BranchUsers));
+            }
+
+            user.FullName = fullName;
+            user.Email = email;
+            user.UserName = email;
+            user.BranchId = branchId;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (result.Succeeded)
+            {
+                TempData["Success"] = "Branch user updated successfully!";
+            }
+            else
+            {
+                TempData["Error"] = string.Join(", ", result.Errors.Select(e => e.Description));
+            }
+
+            return RedirectToAction(nameof(BranchUsers));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteBranchUser(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                TempData["Error"] = "User not found.";
+                return RedirectToAction(nameof(BranchUsers));
+            }
+
+            var result = await _userManager.DeleteAsync(user);
+            if (result.Succeeded)
+            {
+                TempData["Success"] = "Branch user deleted successfully!";
+            }
+            else
+            {
+                TempData["Error"] = string.Join(", ", result.Errors.Select(e => e.Description));
+            }
+
+            return RedirectToAction(nameof(BranchUsers));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ToggleUserStatus(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+            {
+                TempData["Error"] = "User not found.";
+                return RedirectToAction(nameof(BranchUsers));
+            }
+
+            user.LockoutEnabled = true;
+            user.LockoutEnd = user.LockoutEnd == null ? 
+                DateTimeOffset.MaxValue : // Deactivate
+                null; // Activate
+
+            var result = await _userManager.UpdateAsync(user);
+            if (result.Succeeded)
+            {
+                TempData["Success"] = $"User has been {(user.LockoutEnd == null ? "activated" : "deactivated")} successfully!";
+            }
+            else
+            {
+                TempData["Error"] = string.Join(", ", result.Errors.Select(e => e.Description));
             }
 
             return RedirectToAction(nameof(BranchUsers));
