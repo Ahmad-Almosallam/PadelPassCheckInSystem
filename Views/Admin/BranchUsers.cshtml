@@ -1,0 +1,98 @@
+@model List<CheckInSystem.Web.Models.ViewModels.BranchUserViewModel>
+@{
+    ViewData["Title"] = "Branch Users Management";
+    var branches = ViewBag.Branches as List<Branch>;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Branch Users Management</h1>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+        <i class="bi bi-plus-circle"></i> Add New Branch User
+    </button>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Full Name</th>
+                        <th>Email</th>
+                        <th>Branch</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model)
+                    {
+                        <tr>
+                            <td>@user.FullName</td>
+                            <td>@user.Email</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(user.BranchName))
+                                {
+                                    <span class="badge bg-primary">@user.BranchName</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning">Not Assigned</span>
+                                }
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="CreateBranchUser" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Branch User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" name="FullName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="Email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="Password" class="form-control" required minlength="6">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Branch</label>
+                        <select name="BranchId" class="form-select" required>
+                            <option value="">Select Branch</option>
+                            @if (branches != null)
+                            {
+                                foreach (var branch in branches)
+                                {
+                                    <option value="@branch.Id">@branch.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

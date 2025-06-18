@@ -1,0 +1,115 @@
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<h1 class="mb-4">Admin Dashboard</h1>
+
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1">Total Branches</h6>
+                        <h2 class="mb-0">@Model.TotalBranches</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-building fs-1"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="@Url.Action("Branches")" class="text-white text-decoration-none">
+                    View Details <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1">End Users</h6>
+                        <h2 class="mb-0">@Model.TotalEndUsers</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-people fs-1"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="@Url.Action("EndUsers")" class="text-white text-decoration-none">
+                    View Details <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1">Today's Check-Ins</h6>
+                        <h2 class="mb-0">@Model.TotalCheckInsToday</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-check-circle fs-1"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="@Url.Action("CheckIns")" class="text-white text-decoration-none">
+                    View Details <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 mb-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-uppercase mb-1">Active Subscriptions</h6>
+                        <h2 class="mb-0">@Model.ActiveSubscriptions</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-calendar-check fs-1"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="@Url.Action("EndUsers")" class="text-white text-decoration-none">
+                    View Details <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="@Url.Action("EndUsers")" class="btn btn-outline-primary">
+                        <i class="bi bi-person-plus"></i> Add New End User
+                    </a>
+                    <a href="@Url.Action("BranchUsers")" class="btn btn-outline-success">
+                        <i class="bi bi-person-badge"></i> Add Branch User
+                    </a>
+                    <a href="@Url.Action("CheckIns")" class="btn btn-outline-info">
+                        <i class="bi bi-file-earmark-excel"></i> Export Check-Ins
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

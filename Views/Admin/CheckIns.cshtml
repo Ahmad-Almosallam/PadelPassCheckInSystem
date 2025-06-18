@@ -1,0 +1,78 @@
+@model List<CheckIn>
+@{
+    ViewData["Title"] = "Check-Ins Report";
+    var branches = ViewBag.Branches as List<Branch>;
+}
+
+<h1 class="mb-4">Check-Ins Report</h1>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="CheckIns" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">From Date</label>
+                <input type="date" name="fromDate" class="form-control" value="@ViewBag.FromDate?.ToString("yyyy-MM-dd")">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">To Date</label>
+                <input type="date" name="toDate" class="form-control" value="@ViewBag.ToDate?.ToString("yyyy-MM-dd")">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Branch</label>
+                <select name="branchId" class="form-select">
+                    <option value="">All Branches</option>
+                    @foreach (var branch in branches)
+                    {
+                        <option value="@branch.Id" selected="@(ViewBag.BranchId == branch.Id ? "selected" : null)">@branch.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Filter
+                    </button>
+                    <button type="submit" formaction="@Url.Action("ExportCheckIns")" class="btn btn-success">
+                        <i class="bi bi-file-earmark-excel"></i> Export
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>End User</th>
+                        <th>Phone</th>
+                        <th>Branch</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var checkIn in Model)
+                    {
+                        <tr>
+                            <td>@checkIn.EndUser.Name</td>
+                            <td>@checkIn.EndUser.PhoneNumber</td>
+                            <td>@checkIn.Branch.Name</td>
+                            <td>@checkIn.CheckInDateTime.ToLocalTime().ToString("yyyy-MM-dd")</td>
+                            <td>@checkIn.CheckInDateTime.ToLocalTime().ToString("HH:mm:ss")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        
+        @if (!Model.Any())
+        {
+            <p class="text-center text-muted">No check-ins found for the selected criteria.</p>
+        }
+    </div>
+</div>
