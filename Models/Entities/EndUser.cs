@@ -27,6 +27,9 @@ namespace PadelPassCheckInSystem.Models.Entities
         
         public string UniqueIdentifier { get; set; } // For QR code
         
+        public string QRCodeDownloadToken { get; set; }
+        public bool HasDownloadedQR { get; set; }
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
         public virtual ICollection<CheckIn> CheckIns { get; set; }

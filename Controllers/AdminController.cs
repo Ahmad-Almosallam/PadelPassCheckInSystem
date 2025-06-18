@@ -334,8 +334,7 @@ namespace PadelPassCheckInSystem.Controllers
 
         // Generate QR Code
         [HttpGet]
-        public async Task<IActionResult> GenerateQRCode(
-            int endUserId)
+        public async Task<IActionResult> GenerateQRCode(int endUserId, bool forceRegenerate = false)
         {
             var endUser = await _context.EndUsers.FindAsync(endUserId);
             if (endUser == null)
@@ -343,13 +342,25 @@ namespace PadelPassCheckInSystem.Controllers
                 return NotFound();
             }
 
-            var qrCodeBase64 = _qrCodeService.GenerateQRCodeBase64(endUser.UniqueIdentifier);
+            // Check if QR has already been downloaded and not forcing regeneration
+            if (endUser.HasDownloadedQR && !forceRegenerate)
+            {
+                return Json(new { success = false, message = "QR code has already been downloaded." });
+            }
+
+            // Generate a new token and reset the download status
+            endUser.QRCodeDownloadToken = Guid.NewGuid().ToString("N");
+            endUser.HasDownloadedQR = false;
+            await _context.SaveChangesAsync();
+
+            // Generate the download URL
+            var downloadUrl = Url.Action("Download", "QRCode", new { token = endUser.QRCodeDownloadToken }, Request.Scheme);
 
             return Json(new
             {
                 success = true,
-                qrCode = qrCodeBase64,
-                identifier = endUser.UniqueIdentifier
+                downloadUrl = downloadUrl,
+                message = forceRegenerate ? "New QR code generated successfully." : "QR code download link generated successfully."
             });
         }
 

@@ -222,16 +222,75 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        document.getElementById('qrCodeImage').src = 'data:image/png;base64,' + data.qrCode;
-                        document.getElementById('uniqueId').textContent = data.identifier;
-                        new bootstrap.Modal(document.getElementById('qrModal')).show();
+                        // Create temporary input to copy link
+                        const input = document.createElement('input');
+                        input.value = data.downloadUrl;
+                        document.body.appendChild(input);
+                        input.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(input);
+
+                        // Show success message with Bootstrap alert
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                        alertDiv.innerHTML = `
+                            <strong>Success!</strong> QR code download link has been copied to clipboard.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        document.body.appendChild(alertDiv);
+
+                        // Remove alert after 5 seconds
+                        setTimeout(() => {
+                            alertDiv.remove();
+                        }, 5000);
+                    } else if (data.message === "QR code has already been downloaded.") {
+                        if (confirm("This QR code has already been downloaded. Would you like to generate a new one?")) {
+                            regenerateQRCode(userId);
+                        }
                     } else {
-                        alert('Failed to generate QR code');
+                        // Show error message
+                        alert(data.message || 'Failed to generate QR code');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     alert('Error generating QR code');
+                });
+        }
+
+        function regenerateQRCode(userId) {
+            fetch(`/Admin/GenerateQRCode?endUserId=${userId}&forceRegenerate=true`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Create temporary input to copy link
+                        const input = document.createElement('input');
+                        input.value = data.downloadUrl;
+                        document.body.appendChild(input);
+                        input.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(input);
+
+                        // Show success message with Bootstrap alert
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                        alertDiv.innerHTML = `
+                            <strong>Success!</strong> New QR code download link has been copied to clipboard.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+                        document.body.appendChild(alertDiv);
+
+                        // Remove alert after 5 seconds
+                        setTimeout(() => {
+                            alertDiv.remove();
+                        }, 5000);
+                    } else {
+                        alert(data.message || 'Failed to regenerate QR code');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error regenerating QR code');
                 });
         }
 
