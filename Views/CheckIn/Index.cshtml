@@ -1,6 +1,6 @@
 @model List<PadelPassCheckInSystem.Models.Entities.CheckIn>
 @{
-    ViewData["Title"] = "Check-In";
+ViewData["Title"] = "Check-In";
 }
 
 <div class="row">
@@ -16,15 +16,16 @@
                     <h5>Today's Check-Ins: <span class="badge bg-success">@ViewBag.TodayCount</span></h5>
                 </div>
 
-                <div class="check-in-form">
-                    <div class="input-group input-group-lg mb-3">
-                        <span class="input-group-text">
-                            <i class="bi bi-qr-code-scan"></i>
-                        </span>
-                        <input type="text" id="identifierInput" class="form-control" 
-                               placeholder="Scan QR Code or Enter Phone Number" autofocus>
-                        <button class="btn btn-primary" type="button" onclick="processCheckIn()">
-                            <i class="bi bi-check-circle"></i> Check In
+                <!-- QR Code Scanner Section -->
+                <div class="scanner-container mb-4">
+                    <div id="qr-reader" class="mx-auto" style="width: 100%; max-width: 600px;"></div>
+
+                    <div class="text-center mt-3">
+                        <button id="startScanBtn" class="btn btn-primary btn-lg" onclick="startScanner()">
+                            <i class="bi bi-qr-code-scan"></i> Start QR Scanner
+                        </button>
+                        <button id="stopScanBtn" class="btn btn-danger btn-lg d-none" onclick="stopScanner()">
+                            <i class="bi bi-stop-circle"></i> Stop Scanner
                         </button>
                     </div>
                 </div>
@@ -51,35 +52,35 @@
                 <div id="recentCheckInsList">
                     @if (Model.Any())
                     {
-                        <div class="list-group">
-                            @foreach (var checkIn in Model.Take(5))
-                            {
-                                <div class="list-group-item">
-                                    <div class="d-flex align-items-center">
-                                        @if (!string.IsNullOrEmpty(checkIn.EndUser.ImageUrl))
-                                        {
-                                            <img src="@checkIn.EndUser.ImageUrl" alt="@checkIn.EndUser.Name" 
-                                                 class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
-                                        }
-                                        else
-                                        {
-                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" 
-                                                 style="width: 50px; height: 50px;">
-                                                <i class="bi bi-person text-white"></i>
-                                            </div>
-                                        }
-                                        <div>
-                                            <h6 class="mb-0">@checkIn.EndUser.Name</h6>
-                                            <small class="text-muted">@checkIn.CheckInDateTime.ToLocalTime().ToString("HH:mm:ss")</small>
-                                        </div>
-                                    </div>
+                    <div class="list-group">
+                        @foreach (var checkIn in Model.Take(5))
+                        {
+                        <div class="list-group-item">
+                            <div class="d-flex align-items-center">
+                                @if (!string.IsNullOrEmpty(checkIn.EndUser.ImageUrl))
+                                {
+                                <img src="@checkIn.EndUser.ImageUrl" alt="@checkIn.EndUser.Name"
+                                     class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                }
+                                else
+                                {
+                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3"
+                                     style="width: 50px; height: 50px;">
+                                    <i class="bi bi-person text-white"></i>
                                 </div>
-                            }
+                                }
+                                <div>
+                                    <h6 class="mb-0">@checkIn.EndUser.Name</h6>
+                                    <small class="text-muted">@checkIn.CheckInDateTime.ToLocalTime().ToString("HH:mm:ss")</small>
+                                </div>
+                            </div>
                         </div>
+                        }
+                    </div>
                     }
                     else
                     {
-                        <p class="text-muted text-center">No check-ins today</p>
+                    <p class="text-muted text-center">No check-ins today</p>
                     }
                 </div>
             </div>
@@ -93,164 +94,258 @@
             </div>
             <div class="card-body">
                 <ol>
-                    <li class="mb-2">Ask the customer for their QR code or phone number</li>
-                    <li class="mb-2">Scan the QR code using the phone camera or enter the phone number</li>
-                    <li class="mb-2">Press Enter or click "Check In"</li>
+                    <li class="mb-2">Click "Start QR Scanner" to activate the camera</li>
+                    <li class="mb-2">Ask the customer to show their QR code</li>
+                    <li class="mb-2">Position the QR code within the camera view</li>
+                    <li class="mb-2">The system will automatically scan and check-in</li>
                     <li class="mb-2">Verify the customer's name and photo</li>
                 </ol>
-                
-                <hr>
-                
-                <h6>Keyboard Shortcuts:</h6>
-                <ul class="list-unstyled">
-                    <li><kbd>Enter</kbd> - Process check-in</li>
-                    <li><kbd>Esc</kbd> - Clear input</li>
-                </ul>
+
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle"></i> The scanner will automatically detect and process QR codes
+                </div>
+
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-camera"></i> Camera permission is required for scanning
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 @section Styles {
-    <style>
-        #identifierInput {
-            font-size: 1.2rem;
-            text-align: center;
-        }
-        
-        .success-checkmark {
-            animation: scale-in 0.5s ease-in-out;
-        }
-        
-        @@keyframes scale-in {
-            0% { transform: scale(0); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-        
-        .list-group-item {
-            transition: background-color 0.3s;
-        }
-        
-        .list-group-item:hover {
-            background-color: #f8f9fa;
-        }
-    </style>
+<style>
+    #qr-reader {
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    #qr-reader__dashboard_section_swaplink {
+        display: none !important;
+    }
+
+    #qr-reader__scan_region {
+        background: transparent !important;
+    }
+
+    .success-checkmark {
+        animation: scale-in 0.5s ease-in-out;
+    }
+
+    @@keyframes scale-in {
+        0% { transform: scale(0); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
+
+    .list-group-item {
+        transition: background-color 0.3s;
+    }
+
+    .list-group-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .qr-shaded-region {
+        border: 2px solid #28a745 !important;
+    }
+</style>
 }
 
 @section Scripts {
-    <script>
-        let isProcessing = false;
+<!-- Include Html5-QRCode library for better QR code scanning -->
+<script src="https://unpkg.com/html5-qrcode"></script>
 
-        document.getElementById('identifierInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                processCheckIn();
+<script>
+    let html5QrCode = null;
+    let isProcessing = false;
+    let lastScannedCode = '';
+    let scanTimeout;
+
+    function startScanner() {
+        const startBtn = document.getElementById('startScanBtn');
+        const stopBtn = document.getElementById('stopScanBtn');
+
+        // Toggle buttons
+        startBtn.classList.add('d-none');
+        stopBtn.classList.remove('d-none');
+
+        // Initialize Html5Qrcode scanner
+        html5QrCode = new Html5Qrcode("qr-reader");
+
+        const config = {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0
+        };
+
+        html5QrCode.start(
+            { facingMode: "environment" }, // Use back camera
+            config,
+            (decodedText, decodedResult) => {
+                // Handle successful scan
+                if (decodedText && decodedText !== lastScannedCode && !isProcessing) {
+                    lastScannedCode = decodedText;
+
+                    // Clear any existing timeout
+                    clearTimeout(scanTimeout);
+
+                    // Process the QR code
+                    processCheckIn(decodedText);
+
+                    // Reset last scanned code after 3 seconds
+                    scanTimeout = setTimeout(() => {
+                        lastScannedCode = '';
+                    }, 3000);
+                }
+            },
+            (errorMessage) => {
+                // Handle scan error (ignore - continuous scanning)
             }
+        ).catch((err) => {
+            console.error(`Unable to start scanning: ${err}`);
+            showMessage('Failed to start camera. Please check camera permissions.', 'danger');
+
+            // Reset buttons
+            stopBtn.classList.add('d-none');
+            startBtn.classList.remove('d-none');
         });
+    }
 
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                clearInput();
-            }
-        });
+    function stopScanner() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => {
+                const startBtn = document.getElementById('startScanBtn');
+                const stopBtn = document.getElementById('stopScanBtn');
 
-        function processCheckIn() {
-            if (isProcessing) return;
-            
-            const identifier = document.getElementById('identifierInput').value.trim();
-            if (!identifier) {
-                showMessage('Please enter a phone number or scan a QR code.', 'warning');
-                return;
-            }
+                // Toggle buttons
+                stopBtn.classList.add('d-none');
+                startBtn.classList.remove('d-none');
 
-            isProcessing = true;
-            const button = document.querySelector('.btn-primary');
-            button.disabled = true;
-            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+                // Clear the QR reader div to remove camera view
+                document.getElementById('qr-reader').innerHTML = '';
+            }).catch((err) => {
+                console.error(`Failed to stop scanning: ${err}`);
+            });
+        }
+    }
 
-            fetch('/CheckIn/ProcessCheckIn', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                },
-                body: JSON.stringify({ identifier: identifier })
-            })
+    function processCheckIn(qrCode) {
+        if (isProcessing) return;
+
+        isProcessing = true;
+
+        // Visual/audio feedback
+        playBeep();
+
+        // Stop the scanner immediately after detecting a QR code
+        stopScanner();
+
+        fetch('/CheckIn/ProcessCheckIn', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify({ identifier: qrCode })
+        })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     showSuccessAnimation(data);
-                    clearInput();
                     updateRecentCheckIns();
+                    updateTodayCount();
+
+                    // Reset processing flag after animation
+                    setTimeout(() => {
+                        isProcessing = false;
+                    }, 3000);
                 } else {
                     showMessage(data.message, 'danger');
+                    playErrorSound();
+                    isProcessing = false;
                 }
             })
-            .finally(() => {
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('An error occurred while processing check-in.', 'danger');
                 isProcessing = false;
-                button.disabled = false;
-                button.innerHTML = '<i class="bi bi-check-circle"></i> Check In';
             });
-        }
+    }
 
-        function showMessage(message, type) {
-            const resultDiv = document.getElementById('resultMessage');
-            resultDiv.className = `alert alert-${type} alert-dismissible fade show`;
-            resultDiv.innerHTML = `
+    function showMessage(message, type) {
+        const resultDiv = document.getElementById('resultMessage');
+        resultDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        resultDiv.innerHTML = `
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-            resultDiv.classList.remove('d-none');
-            
-            setTimeout(() => {
-                resultDiv.classList.add('d-none');
-            }, 5000);
+        resultDiv.classList.remove('d-none');
+
+        // Add a button to restart scanner if it's an error
+        if (type === 'danger') {
+            resultDiv.innerHTML += `
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-primary" onclick="startScanner()">
+                            <i class="bi bi-arrow-clockwise"></i> Try Again
+                        </button>
+                    </div>
+                `;
         }
 
-        function showSuccessAnimation(data) {
-            const successDiv = document.getElementById('successAnimation');
-            const userInfoDiv = document.getElementById('userInfo');
-            
-            let userHtml = `<h4>${data.userName}</h4>`;
-            if (data.userImage) {
-                userHtml = `
+        setTimeout(() => {
+            resultDiv.classList.add('d-none');
+        }, 7000);
+    }
+
+    function showSuccessAnimation(data) {
+        const successDiv = document.getElementById('successAnimation');
+        const userInfoDiv = document.getElementById('userInfo');
+
+        let userHtml = `<h4>${data.userName}</h4>`;
+        if (data.userImage) {
+            userHtml = `
                     <img src="${data.userImage}" alt="${data.userName}" 
                          class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
                     <h4>${data.userName}</h4>
                 `;
-            }
-            
-            userInfoDiv.innerHTML = userHtml;
-            successDiv.classList.remove('d-none');
-            
-            // Play success sound if available
-            const audio = new Audio('/sounds/success.mp3');
-            audio.play().catch(() => {});
-            
-            setTimeout(() => {
-                successDiv.classList.add('d-none');
-            }, 3000);
         }
 
-        function clearInput() {
-            document.getElementById('identifierInput').value = '';
-            document.getElementById('identifierInput').focus();
-        }
+        // Add a button to scan next customer
+        userHtml += `
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="startScanner()">
+                        <i class="bi bi-qr-code-scan"></i> Scan Next Customer
+                    </button>
+                </div>
+            `;
 
-        function updateRecentCheckIns() {
-            fetch('/CheckIn/GetRecentCheckIns')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const listDiv = document.getElementById('recentCheckInsList');
-                        if (data.checkIns.length > 0) {
-                            let html = '<div class="list-group">';
-                            data.checkIns.forEach(checkIn => {
-                                const imageHtml = checkIn.image 
-                                    ? `<img src="${checkIn.image}" alt="${checkIn.name}" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">`
-                                    : `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;"><i class="bi bi-person text-white"></i></div>`;
-                                
-                                html += `
+        userInfoDiv.innerHTML = userHtml;
+        successDiv.classList.remove('d-none');
+
+        // Play success sound
+        playSuccessSound();
+
+        setTimeout(() => {
+            successDiv.classList.add('d-none');
+        }, 5000);
+    }
+
+    function updateRecentCheckIns() {
+        fetch('/CheckIn/GetRecentCheckIns')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const listDiv = document.getElementById('recentCheckInsList');
+                    if (data.checkIns.length > 0) {
+                        let html = '<div class="list-group">';
+                        data.checkIns.forEach(checkIn => {
+                            const imageHtml = checkIn.image
+                                ? `<img src="${checkIn.image}" alt="${checkIn.name}" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">`
+                                : `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;"><i class="bi bi-person text-white"></i></div>`;
+
+                            html += `
                                     <div class="list-group-item">
                                         <div class="d-flex align-items-center">
                                             ${imageHtml}
@@ -261,15 +356,94 @@
                                         </div>
                                     </div>
                                 `;
-                            });
-                            html += '</div>';
-                            listDiv.innerHTML = html;
-                        }
+                        });
+                        html += '</div>';
+                        listDiv.innerHTML = html;
                     }
-                });
-        }
+                }
+            });
+    }
 
-        // Auto-refresh recent check-ins every 30 seconds
-        setInterval(updateRecentCheckIns, 30000);
-    </script>
+    function updateTodayCount() {
+        const countBadge = document.querySelector('.badge.bg-success');
+        if (countBadge) {
+            const currentCount = parseInt(countBadge.textContent) || 0;
+            countBadge.textContent = currentCount + 1;
+        }
+    }
+
+    // Sound effects
+    function playBeep() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 1000;
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.3;
+
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (e) {
+            console.log('Could not play beep sound');
+        }
+    }
+
+    function playSuccessSound() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+            oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+            oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.3;
+
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.3);
+        } catch (e) {
+            console.log('Could not play success sound');
+        }
+    }
+
+    function playErrorSound() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 300;
+            oscillator.type = 'sine';
+            gainNode.gain.value = 0.3;
+
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.5);
+        } catch (e) {
+            console.log('Could not play error sound');
+        }
+    }
+
+    // Auto-refresh recent check-ins every 30 seconds
+    setInterval(updateRecentCheckIns, 30000);
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop();
+        }
+    });
+</script>
 }

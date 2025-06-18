@@ -51,7 +51,7 @@ namespace PadelPassCheckInSystem.Controllers
         {
             if (string.IsNullOrWhiteSpace(request?.Identifier))
             {
-                return Json(new { success = false, message = "Please enter a phone number or scan a QR code." });
+                return Json(new { success = false, message = "Invalid barcode data." });
             }
 
             var user = await _userManager.GetUserAsync(User);
@@ -66,7 +66,7 @@ namespace PadelPassCheckInSystem.Controllers
             {
                 // Get the end user details for the success message
                 var endUser = await _context.EndUsers
-                    .FirstOrDefaultAsync(u => u.PhoneNumber == request.Identifier || u.UniqueIdentifier == request.Identifier);
+                    .FirstOrDefaultAsync(u => u.UniqueIdentifier == request.Identifier);
                 
                 return Json(new { 
                     success = true, 
