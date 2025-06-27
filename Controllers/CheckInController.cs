@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Models.Entities;
+using PadelPassCheckInSystem.Models.ViewModels;
+using PadelPassCheckInSystem.Models.ViewModels.PadelPassCheckInSystem.Models.ViewModels;
 using PadelPassCheckInSystem.Services;
 
 namespace PadelPassCheckInSystem.Controllers
@@ -34,20 +36,19 @@ namespace PadelPassCheckInSystem.Controllers
                 return RedirectToAction("AccessDenied", "Account");
             }
 
-            var todayCheckIns = await _context.CheckIns
-                .Include(c => c.EndUser)
-                .Where(c => c.BranchId == user.BranchId && c.CheckInDateTime.Date == DateTime.UtcNow.Date)
-                .OrderByDescending(c => c.CheckInDateTime)
-                .ToListAsync();
+            var todayCheckIns = await _checkInService.GetTodayCheckInsWithCourtInfoAsync(user.BranchId.Value);
+            var pendingCourtAssignments = await _checkInService.GetPendingCourtAssignmentsAsync(user.BranchId.Value);
 
             ViewBag.BranchName = (await _context.Branches.FindAsync(user.BranchId))?.Name;
             ViewBag.TodayCount = todayCheckIns.Count;
+            ViewBag.PendingAssignments = pendingCourtAssignments.Count;
 
             return View(todayCheckIns);
         }
 
         [HttpPost]
-        public async Task<IActionResult> ProcessCheckIn([FromBody] ProcessCheckInRequest request)
+        public async Task<IActionResult> ProcessCheckIn(
+            [FromBody] ProcessCheckInRequest request)
         {
             if (string.IsNullOrWhiteSpace(request?.Identifier))
             {
@@ -61,22 +62,46 @@ namespace PadelPassCheckInSystem.Controllers
             }
 
             var result = await _checkInService.CheckInAsync(request.Identifier.Trim(), user.BranchId.Value);
-            
+
             if (result.Success)
             {
                 // Get the end user details for the success message
                 var endUser = await _context.EndUsers
-                    .FirstOrDefaultAsync(u => u.UniqueIdentifier == request.Identifier);
-                
-                return Json(new { 
-                    success = true, 
+                    .FirstOrDefaultAsync(u =>
+                        u.UniqueIdentifier == request.Identifier || u.PhoneNumber == request.Identifier);
+
+                return Json(new
+                {
+                    success = true,
                     message = result.Message,
                     userName = endUser?.Name,
-                    userImage = endUser?.ImageUrl
+                    userImage = endUser?.ImageUrl,
+                    checkInId = result.CheckInId,
+                    needsCourtAssignment = true
                 });
             }
 
             return Json(new { success = false, message = result.Message });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AssignCourt(
+            [FromBody] AssignCourtRequest request)
+        {
+            if (request == null || request.CheckInId <= 0 || string.IsNullOrWhiteSpace(request.CourtName))
+            {
+                return Json(new { success = false, message = "Invalid court assignment data." });
+            }
+
+            var result = await _checkInService.AssignCourtAsync(
+                request.CheckInId,
+                request.CourtName,
+                request.PlayDurationMinutes,
+                request.PlayStartTime,
+                request.Notes
+            );
+
+            return Json(new { success = result.Success, message = result.Message });
         }
 
         [HttpGet]
@@ -92,21 +117,119 @@ namespace PadelPassCheckInSystem.Controllers
                 .Include(c => c.EndUser)
                 .Where(c => c.BranchId == user.BranchId && c.CheckInDateTime.Date == DateTime.UtcNow.Date)
                 .OrderByDescending(c => c.CheckInDateTime)
-                .Take(5)
+                .Take(10)
                 .Select(c => new
                 {
+                    id = c.Id,
                     name = c.EndUser.Name,
-                    time = c.CheckInDateTime.ToLocalTime().ToString("HH:mm:ss"),
-                    image = c.EndUser.ImageUrl
+                    time = c.CheckInDateTime.ToLocalTime()
+                        .ToString("HH:mm:ss"),
+                    image = c.EndUser.ImageUrl,
+                    courtName = c.CourtName,
+                    playDuration = c.PlayDuration.HasValue
+                        ? c.PlayDuration.Value.TotalMinutes.ToString("F0") + " min"
+                        : "Not assigned",
+                    playStartTime = c.PlayStartTime.HasValue ? c.PlayStartTime.Value.ToString("HH:mm") : "Not assigned",
+                    hasCourtAssignment = !string.IsNullOrEmpty(c.CourtName)
                 })
                 .ToListAsync();
 
             return Json(new { success = true, checkIns = recentCheckIns });
         }
-    }
 
-    public class ProcessCheckInRequest
-    {
-        public string Identifier { get; set; }
+        [HttpGet]
+        public async Task<IActionResult> GetPendingCourtAssignments()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user?.BranchId == null)
+            {
+                return Json(new { success = false });
+            }
+
+            var pendingAssignments = await _checkInService.GetPendingCourtAssignmentsAsync(user.BranchId.Value);
+
+            var result = pendingAssignments.Select(c => new
+                {
+                    id = c.Id,
+                    name = c.EndUser.Name,
+                    checkInTime = c.CheckInDateTime.ToLocalTime()
+                        .ToString("HH:mm:ss"),
+                    image = c.EndUser.ImageUrl,
+                    phoneNumber = c.EndUser.PhoneNumber
+                })
+                .ToList();
+
+            return Json(new { success = true, pendingAssignments = result });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> CourtAssignment(
+            int checkInId)
+        {
+            var checkIn = await _context.CheckIns
+                .Include(c => c.EndUser)
+                .Include(c => c.Branch)
+                .FirstOrDefaultAsync(c => c.Id == checkInId);
+
+            if (checkIn == null)
+            {
+                TempData["Error"] = "Check-in record not found.";
+                return RedirectToAction("Index");
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user?.BranchId != checkIn.BranchId)
+            {
+                TempData["Error"] = "You can only assign courts for your branch.";
+                return RedirectToAction("Index");
+            }
+
+            if (!string.IsNullOrEmpty(checkIn.CourtName))
+            {
+                TempData["Error"] = "Court has already been assigned to this check-in.";
+                return RedirectToAction("Index");
+            }
+
+            var viewModel = new CourtAssignmentViewModel
+            {
+                CheckInId = checkIn.Id,
+                EndUserName = checkIn.EndUser.Name,
+                CheckInDateTime = checkIn.CheckInDateTime,
+                BranchName = checkIn.Branch.Name,
+                PlayDurationMinutes = 90, // Default 90 minutes
+                PlayStartTime = DateTime.Now.AddMinutes(5) // Default to 5 minutes from now
+            };
+
+            return View(viewModel);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CourtAssignment(
+            CourtAssignmentViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var result = await _checkInService.AssignCourtAsync(
+                model.CheckInId,
+                model.CourtName,
+                model.PlayDurationMinutes,
+                model.PlayStartTime,
+                model.Notes
+            );
+
+            if (result.Success)
+            {
+                TempData["Success"] = result.Message;
+                return RedirectToAction("Index");
+            }
+            else
+            {
+                TempData["Error"] = result.Message;
+                return View(model);
+            }
+        }
     }
 }

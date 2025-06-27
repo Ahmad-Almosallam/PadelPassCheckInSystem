@@ -30,9 +30,14 @@ namespace PadelPassCheckInSystem.Models.Entities
         public string QRCodeDownloadToken { get; set; }
         public bool HasDownloadedQR { get; set; }
         
+        public bool IsPaused { get; set; } = false;
+        public DateTime? CurrentPauseStartDate { get; set; }
+        public DateTime? CurrentPauseEndDate { get; set; }
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
         public virtual ICollection<CheckIn> CheckIns { get; set; }
+        public virtual ICollection<SubscriptionPause> SubscriptionPauses { get; set; }
     }
 }
 

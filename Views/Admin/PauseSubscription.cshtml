@@ -1,0 +1,107 @@
+﻿@model PadelPassCheckInSystem.Models.ViewModels.PadelPassCheckInSystem.Models.ViewModels.PauseSubscriptionViewModel
+@{
+    ViewData["Title"] = "Pause Subscription";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-pause-circle"></i> Pause Subscription - @Model.EndUserName
+                </h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="PauseSubscription" method="post">
+                    <input type="hidden" asp-for="EndUserId"/>
+
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle"></i> Current Subscription Details</h6>
+                        <p class="mb-1"><strong>End User:</strong> @Model.EndUserName</p>
+                        <p class="mb-0"><strong>Current End
+                                Date:</strong> @Model.CurrentSubscriptionEndDate.ToString("MMM dd, yyyy")</p>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="PauseStartDate" class="form-label"></label>
+                                <input asp-for="PauseStartDate" type="date" class="form-control"
+                                       min="@DateTime.UtcNow.ToString("yyyy-MM-dd")"
+                                       max="@Model.CurrentSubscriptionEndDate.ToString("yyyy-MM-dd")"/>
+                                <span asp-validation-for="PauseStartDate" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="PauseDays" class="form-label"></label>
+                                <input asp-for="PauseDays" type="number" class="form-control" 
+                                       min="1" max="90" value="7" 
+                                       onchange="updateNewEndDate()"
+                                       required />
+                                <div class="form-text">Enter number of days (1-90)</div>
+                                <span asp-validation-for="PauseDays" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Reason" class="form-label"></label>
+                        <textarea asp-for="Reason" class="form-control" rows="3"
+                                  placeholder="Enter reason for pausing subscription (optional)"></textarea>
+                        <span asp-validation-for="Reason" class="text-danger"></span>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Impact of Pause</h6>
+                        <p class="mb-1"><strong>Pause Period:</strong> <span id="pausePeriod">7 days</span></p>
+                        <p class="mb-1"><strong>New Subscription End Date:</strong> <span
+                                id="newEndDate">@Model.CurrentSubscriptionEndDate.AddDays(7).ToString("MMM dd, yyyy")</span>
+                        </p>
+                        <p class="mb-0"><small class="text-muted">The subscription end date will be extended by the
+                                pause duration.</small></p>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="@Url.Action("EndUsers")" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to End Users
+                        </a>
+                        <button type="submit" class="btn btn-warning"
+                                onclick="return confirm('Are you sure you want to pause this subscription?')">
+                            <i class="bi bi-pause-circle"></i> Pause Subscription
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function updateNewEndDate() {
+            const pauseStartDate = new Date(document.querySelector('[name="PauseStartDate"]').value);
+            const pauseDays = parseInt(document.querySelector('[name="PauseDays"]').value);
+            const currentEndDate = new Date('@Model.CurrentSubscriptionEndDate.ToString("yyyy-MM-dd")');
+
+            if (!isNaN(pauseStartDate.getTime()) && !isNaN(pauseDays)) {
+                const pauseEndDate = new Date(pauseStartDate);
+                pauseEndDate.setDate(pauseEndDate.getDate() + pauseDays - 1);
+
+                const newEndDate = new Date(currentEndDate);
+                newEndDate.setDate(newEndDate.getDate() + pauseDays);
+
+                document.getElementById('pausePeriod').textContent =
+                    pauseStartDate.toLocaleDateString() + ' to ' + pauseEndDate.toLocaleDateString();
+                document.getElementById('newEndDate').textContent = newEndDate.toLocaleDateString();
+            }
+        }
+
+        // Update on page load
+        document.addEventListener('DOMContentLoaded', updateNewEndDate);
+
+        // Update when pause start date changes
+        document.querySelector('[name="PauseStartDate"]').addEventListener('change', updateNewEndDate);
+    </script>
+}
+

@@ -6,7 +6,8 @@ namespace PadelPassCheckInSystem.Data
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        public ApplicationDbContext(
+            DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {
         }
@@ -14,8 +15,11 @@ namespace PadelPassCheckInSystem.Data
         public DbSet<Branch> Branches { get; set; }
         public DbSet<EndUser> EndUsers { get; set; }
         public DbSet<CheckIn> CheckIns { get; set; }
+        public DbSet<SubscriptionPause> SubscriptionPauses { get; set; }
+        public DbSet<BranchTimeSlot> BranchTimeSlots { get; set; }
 
-        protected override void OnModelCreating(ModelBuilder builder)
+        protected override void OnModelCreating(
+            ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
@@ -25,7 +29,8 @@ namespace PadelPassCheckInSystem.Data
             // Set schema for Identity tables
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
-                builder.Entity(entityType.ClrType).ToTable(entityType.GetTableName(), "access");
+                builder.Entity(entityType.ClrType)
+                    .ToTable(entityType.GetTableName(), "access");
             }
 
             // Unique constraint on EndUser phone number
@@ -49,6 +54,47 @@ namespace PadelPassCheckInSystem.Data
                 .WithMany(b => b.BranchUsers)
                 .HasForeignKey(u => u.BranchId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // SubscriptionPause relationships
+            builder.Entity<SubscriptionPause>()
+                .HasOne(sp => sp.EndUser)
+                .WithMany(eu => eu.SubscriptionPauses)
+                .HasForeignKey(sp => sp.EndUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<SubscriptionPause>()
+                .HasOne(sp => sp.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(sp => sp.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // BranchTimeSlot relationships
+            builder.Entity<BranchTimeSlot>()
+                .HasOne(bts => bts.Branch)
+                .WithMany(b => b.TimeSlots)
+                .HasForeignKey(bts => bts.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Index for time slot queries
+            builder.Entity<BranchTimeSlot>()
+                .HasIndex(bts => new { bts.BranchId, bts.DayOfWeek, bts.IsActive })
+                .HasDatabaseName("IX_BranchTimeSlot_Branch_Day_Active");
+
+            // Index for subscription pause queries
+            builder.Entity<SubscriptionPause>()
+                .HasIndex(sp => new { sp.EndUserId, sp.IsActive })
+                .HasDatabaseName("IX_SubscriptionPause_EndUser_Active");
+
+            // Index for check-in court assignment
+            builder.Entity<CheckIn>()
+                .HasIndex(c => new { c.BranchId, c.CheckInDateTime })
+                .HasDatabaseName("IX_CheckIn_Branch_DateTime");
+
+            // Configure decimal precision for time-related calculations
+            
+            builder.Entity<CheckIn>()
+                .Property(c => c.PlayDuration)
+                .HasColumnType("time");
         }
     }
 }

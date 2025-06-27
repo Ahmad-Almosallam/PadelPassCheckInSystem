@@ -1,6 +1,6 @@
 @model List<PadelPassCheckInSystem.Models.Entities.CheckIn>
 @{
-ViewData["Title"] = "Check-In";
+    ViewData["Title"] = "Check-In";
 }
 
 <div class="row">
@@ -13,7 +13,16 @@ ViewData["Title"] = "Check-In";
             </div>
             <div class="card-body">
                 <div class="text-center mb-4">
-                    <h5>Today's Check-Ins: <span class="badge bg-success">@ViewBag.TodayCount</span></h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Today's Check-Ins: <span class="badge bg-success">@ViewBag.TodayCount</span></h5>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Pending Court Assignments: <span class="badge bg-warning"
+                                                                 id="pendingCount">@ViewBag.PendingAssignments</span>
+                            </h5>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- QR Code Scanner Section -->
@@ -45,42 +54,70 @@ ViewData["Title"] = "Check-In";
 
         <!-- Recent Check-Ins -->
         <div class="card mt-4">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Recent Check-Ins</h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="updateRecentCheckIns()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
             </div>
             <div class="card-body">
                 <div id="recentCheckInsList">
                     @if (Model.Any())
                     {
-                    <div class="list-group">
-                        @foreach (var checkIn in Model.Take(5))
-                        {
-                        <div class="list-group-item">
-                            <div class="d-flex align-items-center">
-                                @if (!string.IsNullOrEmpty(checkIn.EndUser.ImageUrl))
-                                {
-                                <img src="@checkIn.EndUser.ImageUrl" alt="@checkIn.EndUser.Name"
-                                     class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
-                                }
-                                else
-                                {
-                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3"
-                                     style="width: 50px; height: 50px;">
-                                    <i class="bi bi-person text-white"></i>
+                        <div class="list-group">
+                            @foreach (var checkIn in Model.Take(10))
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        @if (!string.IsNullOrEmpty(checkIn.EndUser.ImageUrl))
+                                        {
+                                            <img src="@checkIn.EndUser.ImageUrl" alt="@checkIn.EndUser.Name"
+                                                 class="rounded-circle me-3"
+                                                 style="width: 50px; height: 50px; object-fit: cover;">
+                                        }
+                                        else
+                                        {
+                                            <div
+                                                class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3"
+                                                style="width: 50px; height: 50px;">
+                                                <i class="bi bi-person text-white"></i>
+                                            </div>
+                                        }
+                                        <div>
+                                            <h6 class="mb-0">@checkIn.EndUser.Name</h6>
+                                            <small
+                                                class="text-muted">@checkIn.CheckInDateTime.ToLocalTime().ToString("HH:mm:ss")</small>
+                                            @if (!string.IsNullOrEmpty(checkIn.CourtName))
+                                            {
+                                                <br>
+                                                <small class="text-success"><i class="bi bi-geo-alt"></i>
+                                                    Court: @checkIn.CourtName</small>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        @if (string.IsNullOrEmpty(checkIn.CourtName))
+                                        {
+                                            <span class="badge bg-warning">Pending Assignment</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Court Assigned</span>
+                                            @if (checkIn.PlayDuration.HasValue)
+                                            {
+                                                <br>
+                                                <small
+                                                    class="text-muted">@((int)checkIn.PlayDuration.Value.TotalMinutes) min</small>
+                                            }
+                                        }
+                                    </div>
                                 </div>
-                                }
-                                <div>
-                                    <h6 class="mb-0">@checkIn.EndUser.Name</h6>
-                                    <small class="text-muted">@checkIn.CheckInDateTime.ToLocalTime().ToString("HH:mm:ss")</small>
-                                </div>
-                            </div>
+                            }
                         </div>
-                        }
-                    </div>
                     }
                     else
                     {
-                    <p class="text-muted text-center">No check-ins today</p>
+                        <p class="text-muted text-center">No check-ins today</p>
                     }
                 </div>
             </div>
@@ -88,7 +125,8 @@ ViewData["Title"] = "Check-In";
     </div>
 
     <div class="col-md-4">
-        <div class="card">
+        <!-- Instructions Card -->
+        <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">Instructions</h5>
             </div>
@@ -97,12 +135,12 @@ ViewData["Title"] = "Check-In";
                     <li class="mb-2">Click "Start QR Scanner" to activate the camera</li>
                     <li class="mb-2">Ask the customer to show their QR code</li>
                     <li class="mb-2">Position the QR code within the camera view</li>
-                    <li class="mb-2">The system will automatically scan and check-in</li>
+                    <li class="mb-2">After successful scan, assign court and play time</li>
                     <li class="mb-2">Verify the customer's name and photo</li>
                 </ol>
 
                 <div class="alert alert-info mt-3">
-                    <i class="bi bi-info-circle"></i> The scanner will automatically detect and process QR codes
+                    <i class="bi bi-info-circle"></i> Two-step process: Scan → Assign Court
                 </div>
 
                 <div class="alert alert-warning mt-3">
@@ -110,340 +148,563 @@ ViewData["Title"] = "Check-In";
                 </div>
             </div>
         </div>
+
+        <!-- Pending Court Assignments -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Pending Assignments</h5>
+                <button class="btn btn-sm btn-outline-warning" onclick="updatePendingAssignments()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="pendingAssignmentsList">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Court Assignment Modal -->
+<div class="modal fade" id="courtAssignmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Court</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="courtAssignmentForm">
+                    <input type="hidden" id="assignCheckInId">
+                    <div class="mb-3">
+                        <label class="form-label">Customer Name</label>
+                        <input type="text" id="assignCustomerName" class="form-control" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Court Name/Number *</label>
+                        <input type="text" id="assignCourtName" class="form-control"
+                               placeholder="e.g., Court 1, Court A" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Play Duration (minutes) *</label>
+                        <select id="assignPlayDuration" class="form-select" required>
+                            <option value="60">60 minutes</option>
+                            <option value="90" selected>90 minutes</option>
+                            <option value="120">120 minutes</option>
+                            <option value="150">150 minutes</option>
+                            <option value="180">180 minutes</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Play Start Time</label>
+                        <input type="time" id="assignPlayStartTime" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea id="assignNotes" class="form-control" rows="2"
+                                  placeholder="Additional notes (optional)"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitCourtAssignment()">Assign Court</button>
+            </div>
+        </div>
     </div>
 </div>
 
 @section Styles {
-<style>
-    #qr-reader {
-        border: 2px solid #dee2e6;
-        border-radius: 8px;
-        overflow: hidden;
-    }
+    <style>
+        #qr-reader {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            overflow: hidden;
+        }
 
-    #qr-reader__dashboard_section_swaplink {
-        display: none !important;
-    }
+        #qr-reader__dashboard_section_swaplink {
+            display: none !important;
+        }
 
-    #qr-reader__scan_region {
-        background: transparent !important;
-    }
+        #qr-reader__scan_region {
+            background: transparent !important;
+        }
 
-    .success-checkmark {
-        animation: scale-in 0.5s ease-in-out;
-    }
+        .success-checkmark {
+            animation: scale-in 0.5s ease-in-out;
+        }
 
-    @@keyframes scale-in {
-        0% { transform: scale(0); }
-        50% { transform: scale(1.2); }
-        100% { transform: scale(1); }
-    }
+        @@keyframes scale-in {
+            0% {
+                transform: scale(0);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
 
-    .list-group-item {
-        transition: background-color 0.3s;
-    }
+        .list-group-item {
+            transition: background-color 0.3s;
+        }
 
-    .list-group-item:hover {
-        background-color: #f8f9fa;
-    }
+        .list-group-item:hover {
+            background-color: #f8f9fa;
+        }
 
-    .qr-shaded-region {
-        border: 2px solid #28a745 !important;
-    }
-</style>
+        .qr-shaded-region {
+            border: 2px solid #28a745 !important;
+        }
+
+        .pending-assignment-item {
+            border-left: 4px solid #ffc107;
+        }
+    </style>
 }
 
 @section Scripts {
-<!-- Include Html5-QRCode library for better QR code scanning -->
-<script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- Include Html5-QRCode library for better QR code scanning -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
 
-<script>
-    let html5QrCode = null;
-    let isProcessing = false;
-    let lastScannedCode = '';
-    let scanTimeout;
+    <script>
+        let html5QrCode = null;
+        let isProcessing = false;
+        let lastScannedCode = '';
+        let scanTimeout;
+        let currentCheckInId = null;
 
-    function startScanner() {
-        const startBtn = document.getElementById('startScanBtn');
-        const stopBtn = document.getElementById('stopScanBtn');
+        function startScanner() {
+            const startBtn = document.getElementById('startScanBtn');
+            const stopBtn = document.getElementById('stopScanBtn');
 
-        // Toggle buttons
-        startBtn.classList.add('d-none');
-        stopBtn.classList.remove('d-none');
+            // Toggle buttons
+            startBtn.classList.add('d-none');
+            stopBtn.classList.remove('d-none');
 
-        // Initialize Html5Qrcode scanner
-        html5QrCode = new Html5Qrcode("qr-reader");
+            // Initialize Html5Qrcode scanner
+            html5QrCode = new Html5Qrcode("qr-reader");
 
-        const config = {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0
-        };
+            const config = {
+                fps: 10,
+                qrbox: {width: 250, height: 250},
+                aspectRatio: 1.0
+            };
 
-        html5QrCode.start(
-            { facingMode: "environment" }, // Use back camera
-            config,
-            (decodedText, decodedResult) => {
-                // Handle successful scan
-                if (decodedText && decodedText !== lastScannedCode && !isProcessing) {
-                    lastScannedCode = decodedText;
+            html5QrCode.start(
+                {facingMode: "environment"}, // Use back camera
+                config,
+                (decodedText, decodedResult) => {
+                    // Handle successful scan
+                    if (decodedText && decodedText !== lastScannedCode && !isProcessing) {
+                        lastScannedCode = decodedText;
 
-                    // Clear any existing timeout
-                    clearTimeout(scanTimeout);
+                        // Clear any existing timeout
+                        clearTimeout(scanTimeout);
 
-                    // Process the QR code
-                    processCheckIn(decodedText);
+                        // Process the QR code
+                        processCheckIn(decodedText);
 
-                    // Reset last scanned code after 3 seconds
-                    scanTimeout = setTimeout(() => {
-                        lastScannedCode = '';
-                    }, 3000);
+                        // Reset last scanned code after 3 seconds
+                        scanTimeout = setTimeout(() => {
+                            lastScannedCode = '';
+                        }, 3000);
+                    }
+                },
+                (errorMessage) => {
+                    // Handle scan error (ignore - continuous scanning)
                 }
-            },
-            (errorMessage) => {
-                // Handle scan error (ignore - continuous scanning)
-            }
-        ).catch((err) => {
-            console.error(`Unable to start scanning: ${err}`);
-            showMessage('Failed to start camera. Please check camera permissions.', 'danger');
+            ).catch((err) => {
+                console.error(`Unable to start scanning: ${err}`);
+                showMessage('Failed to start camera. Please check camera permissions.', 'danger');
 
-            // Reset buttons
-            stopBtn.classList.add('d-none');
-            startBtn.classList.remove('d-none');
-        });
-    }
-
-    function stopScanner() {
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => {
-                const startBtn = document.getElementById('startScanBtn');
-                const stopBtn = document.getElementById('stopScanBtn');
-
-                // Toggle buttons
+                // Reset buttons
                 stopBtn.classList.add('d-none');
                 startBtn.classList.remove('d-none');
-
-                // Clear the QR reader div to remove camera view
-                document.getElementById('qr-reader').innerHTML = '';
-            }).catch((err) => {
-                console.error(`Failed to stop scanning: ${err}`);
             });
         }
-    }
 
-    function processCheckIn(qrCode) {
-        if (isProcessing) return;
+        function stopScanner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => {
+                    const startBtn = document.getElementById('startScanBtn');
+                    const stopBtn = document.getElementById('stopScanBtn');
 
-        isProcessing = true;
+                    // Toggle buttons
+                    stopBtn.classList.add('d-none');
+                    startBtn.classList.remove('d-none');
 
-        // Visual/audio feedback
-        playBeep();
+                    // Clear the QR reader div to remove camera view
+                    document.getElementById('qr-reader').innerHTML = '';
+                }).catch((err) => {
+                    console.error(`Failed to stop scanning: ${err}`);
+                });
+            }
+        }
 
-        // Stop the scanner immediately after detecting a QR code
-        stopScanner();
+        function processCheckIn(qrCode) {
+            if (isProcessing) return;
 
-        fetch('/CheckIn/ProcessCheckIn', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-            },
-            body: JSON.stringify({ identifier: qrCode })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showSuccessAnimation(data);
-                    updateRecentCheckIns();
-                    updateTodayCount();
+            isProcessing = true;
 
-                    // Reset processing flag after animation
-                    setTimeout(() => {
-                        isProcessing = false;
-                    }, 3000);
-                } else {
-                    showMessage(data.message, 'danger');
-                    playErrorSound();
-                    isProcessing = false;
-                }
+            // Visual/audio feedback
+            playBeep();
+
+            // Stop the scanner immediately after detecting a QR code
+            stopScanner();
+
+            fetch('/CheckIn/ProcessCheckIn', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({identifier: qrCode})
             })
-            .catch(error => {
-                console.error('Error:', error);
-                showMessage('An error occurred while processing check-in.', 'danger');
-                isProcessing = false;
-            });
-    }
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentCheckInId = data.checkInId;
+                        showSuccessAnimation(data);
 
-    function showMessage(message, type) {
-        const resultDiv = document.getElementById('resultMessage');
-        resultDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        resultDiv.innerHTML = `
+                        // Show court assignment modal after a short delay
+                        setTimeout(() => {
+                            showCourtAssignmentModal(data.checkInId, data.userName);
+                        }, 2000);
+
+                        updateRecentCheckIns();
+                        updateTodayCount();
+                        updatePendingAssignments();
+
+                        // Reset processing flag after animation
+                        setTimeout(() => {
+                            isProcessing = false;
+                        }, 3000);
+                    } else {
+                        showMessage(data.message, 'danger');
+                        playErrorSound();
+                        isProcessing = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('An error occurred while processing check-in.', 'danger');
+                    isProcessing = false;
+                });
+        }
+
+        function showCourtAssignmentModal(checkInId, customerName) {
+            document.getElementById('assignCheckInId').value = checkInId;
+            document.getElementById('assignCustomerName').value = customerName;
+            document.getElementById('assignCourtName').value = '';
+            document.getElementById('assignNotes').value = '';
+
+            // Set default play start time to now + 5 minutes
+            const now = new Date();
+            now.setMinutes(now.getMinutes() + 5);
+            document.getElementById('assignPlayStartTime').value = now.toTimeString().slice(0, 5);
+
+            new bootstrap.Modal(document.getElementById('courtAssignmentModal')).show();
+        }
+
+        function submitCourtAssignment() {
+            const checkInId = document.getElementById('assignCheckInId').value;
+            const courtName = document.getElementById('assignCourtName').value.trim();
+            const playDuration = parseInt(document.getElementById('assignPlayDuration').value);
+            const playStartTime = document.getElementById('assignPlayStartTime').value;
+            const notes = document.getElementById('assignNotes').value.trim();
+
+            if (!courtName) {
+                alert('Please enter a court name/number.');
+                return;
+            }
+
+            let playStartDateTime = null;
+            if (playStartTime) {
+                const today = new Date();
+                const [hours, minutes] = playStartTime.split(':');
+                playStartDateTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hours), parseInt(minutes));
+            }
+
+            fetch('/CheckIn/AssignCourt', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    checkInId: parseInt(checkInId),
+                    courtName: courtName,
+                    playDurationMinutes: playDuration,
+                    playStartTime: playStartDateTime,
+                    notes: notes
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Close modal
+                        bootstrap.Modal.getInstance(document.getElementById('courtAssignmentModal')).hide();
+
+                        // Show success message
+                        showMessage(data.message, 'success');
+
+                        // Update displays
+                        updateRecentCheckIns();
+                        updatePendingAssignments();
+
+                        // Play success sound
+                        playSuccessSound();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while assigning court.');
+                });
+        }
+
+        function showMessage(message, type) {
+            const resultDiv = document.getElementById('resultMessage');
+            resultDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            resultDiv.innerHTML = `
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-        resultDiv.classList.remove('d-none');
+            resultDiv.classList.remove('d-none');
 
-        // Add a button to restart scanner if it's an error
-        if (type === 'danger') {
-            resultDiv.innerHTML += `
+            // Add a button to restart scanner if it's an error
+            if (type === 'danger') {
+                resultDiv.innerHTML += `
                     <div class="mt-2">
                         <button class="btn btn-sm btn-outline-primary" onclick="startScanner()">
                             <i class="bi bi-arrow-clockwise"></i> Try Again
                         </button>
                     </div>
                 `;
+            }
+
+            setTimeout(() => {
+                resultDiv.classList.add('d-none');
+            }, 7000);
         }
 
-        setTimeout(() => {
-            resultDiv.classList.add('d-none');
-        }, 7000);
-    }
+        function showSuccessAnimation(data) {
+            const successDiv = document.getElementById('successAnimation');
+            const userInfoDiv = document.getElementById('userInfo');
 
-    function showSuccessAnimation(data) {
-        const successDiv = document.getElementById('successAnimation');
-        const userInfoDiv = document.getElementById('userInfo');
-
-        let userHtml = `<h4>${data.userName}</h4>`;
-        if (data.userImage) {
-            userHtml = `
+            let userHtml = `<h4>${data.userName}</h4>`;
+            if (data.userImage) {
+                userHtml = `
                     <img src="${data.userImage}" alt="${data.userName}" 
                          class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
                     <h4>${data.userName}</h4>
                 `;
-        }
+            }
 
-        // Add a button to scan next customer
-        userHtml += `
+            userHtml += `
                 <div class="mt-3">
-                    <button class="btn btn-primary" onclick="startScanner()">
-                        <i class="bi bi-qr-code-scan"></i> Scan Next Customer
-                    </button>
+                    <p class="text-info"><i class="bi bi-info-circle"></i> Court assignment required</p>
                 </div>
             `;
 
-        userInfoDiv.innerHTML = userHtml;
-        successDiv.classList.remove('d-none');
+            userInfoDiv.innerHTML = userHtml;
+            successDiv.classList.remove('d-none');
 
-        // Play success sound
-        playSuccessSound();
+            // Play success sound
+            playSuccessSound();
 
-        setTimeout(() => {
-            successDiv.classList.add('d-none');
-        }, 5000);
-    }
+            setTimeout(() => {
+                successDiv.classList.add('d-none');
+            }, 5000);
+        }
 
-    function updateRecentCheckIns() {
-        fetch('/CheckIn/GetRecentCheckIns')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const listDiv = document.getElementById('recentCheckInsList');
-                    if (data.checkIns.length > 0) {
-                        let html = '<div class="list-group">';
-                        data.checkIns.forEach(checkIn => {
-                            const imageHtml = checkIn.image
-                                ? `<img src="${checkIn.image}" alt="${checkIn.name}" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">`
-                                : `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;"><i class="bi bi-person text-white"></i></div>`;
+        function updateRecentCheckIns() {
+            fetch('/CheckIn/GetRecentCheckIns')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const listDiv = document.getElementById('recentCheckInsList');
+                        if (data.checkIns.length > 0) {
+                            let html = '<div class="list-group">';
+                            data.checkIns.forEach(checkIn => {
+                                const imageHtml = checkIn.image
+                                    ? `<img src="${checkIn.image}" alt="${checkIn.name}" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">`
+                                    : `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;"><i class="bi bi-person text-white"></i></div>`;
 
-                            html += `
-                                    <div class="list-group-item">
+                                const courtInfo = checkIn.hasCourtAssignment
+                                    ? `<br><small class="text-success"><i class="bi bi-geo-alt"></i> Court: ${checkIn.courtName}</small>`
+                                    : '';
+
+                                const statusBadge = checkIn.hasCourtAssignment
+                                    ? '<span class="badge bg-success">Court Assigned</span>'
+                                    : '<span class="badge bg-warning">Pending Assignment</span>';
+
+                                const durationInfo = checkIn.playDuration
+                                    ? `<br><small class="text-muted">${checkIn.playDuration} min</small>`
+                                    : '';
+
+                                html += `
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center">
                                             ${imageHtml}
                                             <div>
                                                 <h6 class="mb-0">${checkIn.name}</h6>
                                                 <small class="text-muted">${checkIn.time}</small>
+                                                ${courtInfo}
                                             </div>
+                                        </div>
+                                        <div class="text-end">
+                                            ${statusBadge}
+                                            ${durationInfo}
                                         </div>
                                     </div>
                                 `;
-                        });
-                        html += '</div>';
-                        listDiv.innerHTML = html;
+                            });
+                            html += '</div>';
+                            listDiv.innerHTML = html;
+                        } else {
+                            listDiv.innerHTML = '<p class="text-muted text-center">No check-ins today</p>';
+                        }
                     }
-                }
-            });
-    }
-
-    function updateTodayCount() {
-        const countBadge = document.querySelector('.badge.bg-success');
-        if (countBadge) {
-            const currentCount = parseInt(countBadge.textContent) || 0;
-            countBadge.textContent = currentCount + 1;
+                });
         }
-    }
 
-    // Sound effects
-    function playBeep() {
-        try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
+        function updatePendingAssignments() {
+            fetch('/CheckIn/GetPendingCourtAssignments')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const listDiv = document.getElementById('pendingAssignmentsList');
+                        const countBadge = document.getElementById('pendingCount');
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+                        countBadge.textContent = data.pendingAssignments.length;
 
-            oscillator.frequency.value = 1000;
-            oscillator.type = 'sine';
-            gainNode.gain.value = 0.3;
+                        if (data.pendingAssignments.length > 0) {
+                            let html = '<div class="list-group">';
+                            data.pendingAssignments.forEach(assignment => {
+                                const imageHtml = assignment.image
+                                    ? `<img src="${assignment.image}" alt="${assignment.name}" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">`
+                                    : `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;"><i class="bi bi-person text-white"></i></div>`;
 
-            oscillator.start();
-            oscillator.stop(audioContext.currentTime + 0.1);
-        } catch (e) {
-            console.log('Could not play beep sound');
+                                html += `
+                                    <div class="list-group-item pending-assignment-item">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <div class="d-flex align-items-center">
+                                                ${imageHtml}
+                                                <div>
+                                                    <h6 class="mb-0">${assignment.name}</h6>
+                                                    <small class="text-muted">${assignment.checkInTime}</small>
+                                                </div>
+                                            </div>
+                                            <button class="btn btn-sm btn-warning" onclick="showCourtAssignmentModal(${assignment.id}, '${assignment.name}')">
+                                                <i class="bi bi-geo-alt"></i> Assign
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                            html += '</div>';
+                            listDiv.innerHTML = html;
+                        } else {
+                            listDiv.innerHTML = '<p class="text-muted text-center">No pending assignments</p>';
+                        }
+                    }
+                });
         }
-    }
 
-    function playSuccessSound() {
-        try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-            oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
-            oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
-
-            oscillator.type = 'sine';
-            gainNode.gain.value = 0.3;
-
-            oscillator.start();
-            oscillator.stop(audioContext.currentTime + 0.3);
-        } catch (e) {
-            console.log('Could not play success sound');
+        function updateTodayCount() {
+            const countBadge = document.querySelector('.badge.bg-success');
+            if (countBadge) {
+                const currentCount = parseInt(countBadge.textContent) || 0;
+                countBadge.textContent = currentCount + 1;
+            }
         }
-    }
 
-    function playErrorSound() {
-        try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
+        // Sound effects
+        function playBeep() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
 
-            oscillator.frequency.value = 300;
-            oscillator.type = 'sine';
-            gainNode.gain.value = 0.3;
+                oscillator.frequency.value = 1000;
+                oscillator.type = 'sine';
+                gainNode.gain.value = 0.3;
 
-            oscillator.start();
-            oscillator.stop(audioContext.currentTime + 0.5);
-        } catch (e) {
-            console.log('Could not play error sound');
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.1);
+            } catch (e) {
+                console.log('Could not play beep sound');
+            }
         }
-    }
 
-    // Auto-refresh recent check-ins every 30 seconds
-    setInterval(updateRecentCheckIns, 30000);
+        function playSuccessSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
 
-    // Cleanup on page unload
-    window.addEventListener('beforeunload', function() {
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+                oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+                oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+
+                oscillator.type = 'sine';
+                gainNode.gain.value = 0.3;
+
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch (e) {
+                console.log('Could not play success sound');
+            }
         }
-    });
-</script>
+
+        function playErrorSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                oscillator.frequency.value = 300;
+                oscillator.type = 'sine';
+                gainNode.gain.value = 0.3;
+
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                console.log('Could not play error sound');
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function () {
+            // Load pending assignments on page load
+            updatePendingAssignments();
+
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                updateRecentCheckIns();
+                updatePendingAssignments();
+            }, 30000);
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function () {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop();
+            }
+        });
+    </script>
 }

@@ -17,8 +17,10 @@ namespace PadelPassCheckInSystem.Models.Entities
         
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
+        // Navigation properties
         public virtual ICollection<ApplicationUser> BranchUsers { get; set; }
         public virtual ICollection<CheckIn> CheckIns { get; set; }
+        public virtual ICollection<BranchTimeSlot> TimeSlots { get; set; }
     }
 }
 

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
+using PadelPassCheckInSystem.Models.ViewModels.PadelPassCheckInSystem.Models.ViewModels;
 using PadelPassCheckInSystem.Services;
 
 namespace PadelPassCheckInSystem.Controllers
@@ -159,7 +160,11 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> UpdateBranchUser(string id, string fullName, string email, int? branchId)
+        public async Task<IActionResult> UpdateBranchUser(
+            string id,
+            string fullName,
+            string email,
+            int? branchId)
         {
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
@@ -187,7 +192,8 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeleteBranchUser(string id)
+        public async Task<IActionResult> DeleteBranchUser(
+            string id)
         {
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
@@ -210,7 +216,8 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> ToggleUserStatus(string id)
+        public async Task<IActionResult> ToggleUserStatus(
+            string id)
         {
             var user = await _userManager.FindByIdAsync(id);
             if (user == null)
@@ -220,14 +227,16 @@ namespace PadelPassCheckInSystem.Controllers
             }
 
             user.LockoutEnabled = true;
-            user.LockoutEnd = user.LockoutEnd == null ? 
-                DateTimeOffset.MaxValue : // Deactivate
+            user.LockoutEnd = user.LockoutEnd == null
+                ? DateTimeOffset.MaxValue
+                : // Deactivate
                 null; // Activate
 
             var result = await _userManager.UpdateAsync(user);
             if (result.Succeeded)
             {
-                TempData["Success"] = $"User has been {(user.LockoutEnd == null ? "activated" : "deactivated")} successfully!";
+                TempData["Success"] =
+                    $"User has been {(user.LockoutEnd == null ? "activated" : "deactivated")} successfully!";
             }
             else
             {
@@ -292,9 +301,9 @@ namespace PadelPassCheckInSystem.Controllers
             EndUserViewModel model)
         {
             var endUser = await _context.EndUsers.FindAsync(id);
-            
+
             if (endUser == null || !ModelState.IsValid) return RedirectToAction(nameof(EndUsers));
-            
+
             if ((endUser.PhoneNumber != model.PhoneNumber &&
                  await _context.EndUsers.AnyAsync(e => e.PhoneNumber == model.PhoneNumber)) ||
                 (endUser.Email != model.Email.ToLower() &&
@@ -322,9 +331,9 @@ namespace PadelPassCheckInSystem.Controllers
             int id)
         {
             var endUser = await _context.EndUsers.FindAsync(id);
-            
+
             if (endUser == null) return RedirectToAction(nameof(EndUsers));
-            
+
             _context.EndUsers.Remove(endUser);
             await _context.SaveChangesAsync();
             TempData["Success"] = "End user deleted successfully!";
@@ -334,7 +343,9 @@ namespace PadelPassCheckInSystem.Controllers
 
         // Generate QR Code
         [HttpGet]
-        public async Task<IActionResult> GenerateQRCode(int endUserId, bool forceRegenerate = false)
+        public async Task<IActionResult> GenerateQRCode(
+            int endUserId,
+            bool forceRegenerate = false)
         {
             var endUser = await _context.EndUsers.FindAsync(endUserId);
             if (endUser == null)
@@ -349,18 +360,22 @@ namespace PadelPassCheckInSystem.Controllers
             }
 
             // Generate a new token and reset the download status
-            endUser.QRCodeDownloadToken = Guid.NewGuid().ToString("N");
+            endUser.QRCodeDownloadToken = Guid.NewGuid()
+                .ToString("N");
             endUser.HasDownloadedQR = false;
             await _context.SaveChangesAsync();
 
             // Generate the download URL
-            var downloadUrl = Url.Action("Download", "QRCode", new { token = endUser.QRCodeDownloadToken }, Request.Scheme);
+            var downloadUrl = Url.Action("Download", "QRCode", new { token = endUser.QRCodeDownloadToken },
+                Request.Scheme);
 
             return Json(new
             {
                 success = true,
                 downloadUrl = downloadUrl,
-                message = forceRegenerate ? "New QR code generated successfully." : "QR code download link generated successfully."
+                message = forceRegenerate
+                    ? "New QR code generated successfully."
+                    : "QR code download link generated successfully."
             });
         }
 
@@ -438,6 +453,221 @@ namespace PadelPassCheckInSystem.Controllers
             return File(excelData,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"CheckIns_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+        }
+
+        // Add these new action methods to the existing AdminController class
+
+// Subscription Pause Management
+        [HttpGet]
+        public async Task<IActionResult> PauseSubscription(
+            int endUserId)
+        {
+            var endUser = await _context.EndUsers.FindAsync(endUserId);
+            if (endUser == null)
+            {
+                TempData["Error"] = "End user not found.";
+                return RedirectToAction("EndUsers");
+            }
+
+            if (endUser.IsPaused)
+            {
+                TempData["Error"] = "Subscription is already paused.";
+                return RedirectToAction("EndUsers");
+            }
+
+            var viewModel = new PauseSubscriptionViewModel
+            {
+                EndUserId = endUserId,
+                EndUserName = endUser.Name,
+                CurrentSubscriptionEndDate = endUser.SubscriptionEndDate,
+                PauseStartDate = DateTime.UtcNow.Date,
+                PauseDays = 7 // Default 7 days
+            };
+
+            return View(viewModel);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> PauseSubscription(
+            PauseSubscriptionViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var pauseService = HttpContext.RequestServices.GetRequiredService<ISubscriptionPauseService>();
+            var currentUserId = _userManager.GetUserId(User);
+
+            var result = await pauseService.PauseSubscriptionAsync(
+                model.EndUserId,
+                model.PauseStartDate,
+                model.PauseDays,
+                model.Reason,
+                currentUserId
+            );
+
+            if (result.Success)
+            {
+                TempData["Success"] = result.Message;
+            }
+            else
+            {
+                TempData["Error"] = result.Message;
+            }
+
+            return RedirectToAction("EndUsers");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UnpauseSubscription(
+            int endUserId)
+        {
+            var pauseService = HttpContext.RequestServices.GetRequiredService<ISubscriptionPauseService>();
+            var currentUserId = _userManager.GetUserId(User);
+
+            var result = await pauseService.UnpauseSubscriptionAsync(endUserId, currentUserId);
+
+            if (result.Success)
+            {
+                TempData["Success"] = result.Message;
+            }
+            else
+            {
+                TempData["Error"] = result.Message;
+            }
+
+            return RedirectToAction("EndUsers");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> PauseHistory(
+            int? endUserId)
+        {
+            var pauseService = HttpContext.RequestServices.GetRequiredService<ISubscriptionPauseService>();
+            List<SubscriptionPauseHistoryViewModel> pauseHistory;
+
+            if (endUserId.HasValue)
+            {
+                pauseHistory = await pauseService.GetPauseHistoryAsync(endUserId.Value);
+                var endUser = await _context.EndUsers.FindAsync(endUserId.Value);
+                ViewBag.EndUserName = endUser?.Name;
+            }
+            else
+            {
+                pauseHistory = await pauseService.GetAllPauseHistoryAsync();
+            }
+
+            ViewBag.EndUserId = endUserId;
+            return View(pauseHistory);
+        }
+
+// Branch Time Slots Management
+        public async Task<IActionResult> BranchTimeSlots(
+            int? branchId)
+        {
+            var timeSlotService = HttpContext.RequestServices.GetRequiredService<IBranchTimeSlotService>();
+            List<BranchTimeSlotViewModel> timeSlots;
+
+            if (branchId.HasValue)
+            {
+                timeSlots = await timeSlotService.GetBranchTimeSlotsAsync(branchId.Value);
+                var branch = await _context.Branches.FindAsync(branchId.Value);
+                ViewBag.BranchName = branch?.Name;
+            }
+            else
+            {
+                timeSlots = await timeSlotService.GetAllTimeSlotsAsync();
+            }
+
+            ViewBag.BranchId = branchId;
+            ViewBag.Branches = await _context.Branches.Where(b => b.IsActive)
+                .ToListAsync();
+            ViewBag.DaysOfWeek = Enum.GetValues(typeof(DayOfWeek))
+                .Cast<DayOfWeek>()
+                .ToList();
+
+            return View(timeSlots);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateTimeSlot(
+            BranchTimeSlotViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["Error"] = "Invalid time slot data.";
+                return RedirectToAction("BranchTimeSlots", new { branchId = model.BranchId });
+            }
+
+            if (!TimeSpan.TryParse(model.StartTime, out var startTime) ||
+                !TimeSpan.TryParse(model.EndTime, out var endTime))
+            {
+                TempData["Error"] = "Invalid time format. Please use HH:mm format.";
+                return RedirectToAction("BranchTimeSlots", new { branchId = model.BranchId });
+            }
+
+            var timeSlotService = HttpContext.RequestServices.GetRequiredService<IBranchTimeSlotService>();
+            var result = await timeSlotService.AddTimeSlotAsync(model.BranchId, model.DayOfWeek, startTime, endTime);
+
+            if (result.Success)
+            {
+                TempData["Success"] = result.Message;
+            }
+            else
+            {
+                TempData["Error"] = result.Message;
+            }
+
+            return RedirectToAction("BranchTimeSlots", new { branchId = model.BranchId });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateTimeSlot(
+            int id,
+            string startTime,
+            string endTime,
+            bool isActive)
+        {
+            if (!TimeSpan.TryParse(startTime, out var parsedStartTime) ||
+                !TimeSpan.TryParse(endTime, out var parsedEndTime))
+            {
+                TempData["Error"] = "Invalid time format. Please use HH:mm format.";
+                return RedirectToAction("BranchTimeSlots");
+            }
+
+            var timeSlotService = HttpContext.RequestServices.GetRequiredService<IBranchTimeSlotService>();
+            var result = await timeSlotService.UpdateTimeSlotAsync(id, parsedStartTime, parsedEndTime, isActive);
+
+            if (result.Success)
+            {
+                TempData["Success"] = result.Message;
+            }
+            else
+            {
+                TempData["Error"] = result.Message;
+            }
+
+            return RedirectToAction("BranchTimeSlots");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteTimeSlot(
+            int id)
+        {
+            var timeSlotService = HttpContext.RequestServices.GetRequiredService<IBranchTimeSlotService>();
+            var result = await timeSlotService.DeleteTimeSlotAsync(id);
+
+            if (result.Success)
+            {
+                TempData["Success"] = result.Message;
+            }
+            else
+            {
+                TempData["Error"] = result.Message;
+            }
+
+            return RedirectToAction("BranchTimeSlots");
         }
     }
 }

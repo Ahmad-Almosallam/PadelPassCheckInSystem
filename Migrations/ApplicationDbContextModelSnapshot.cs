@@ -23,6 +23,40 @@ namespace PadelPassCheckInSystem.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("BranchTimeSlot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("EndTime")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<TimeSpan>("StartTime")
+                        .HasColumnType("time");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId", "DayOfWeek", "IsActive")
+                        .HasDatabaseName("IX_BranchTimeSlot_Branch_Day_Active");
+
+                    b.ToTable("BranchTimeSlots", "access");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -271,12 +305,27 @@ namespace PadelPassCheckInSystem.Migrations
                     b.Property<DateTime>("CheckInDateTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CourtName")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<int>("EndUserId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<TimeSpan?>("PlayDuration")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime?>("PlayStartTime")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("BranchId");
+                    b.HasIndex("BranchId", "CheckInDateTime")
+                        .HasDatabaseName("IX_CheckIn_Branch_DateTime");
 
                     b.HasIndex("EndUserId", "CheckInDateTime")
                         .HasDatabaseName("IX_CheckIn_EndUser_Date");
@@ -295,6 +344,12 @@ namespace PadelPassCheckInSystem.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("CurrentPauseEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CurrentPauseStartDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
 
@@ -303,6 +358,9 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsPaused")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -335,6 +393,61 @@ namespace PadelPassCheckInSystem.Migrations
                         .HasFilter("[UniqueIdentifier] IS NOT NULL");
 
                     b.ToTable("EndUsers", "access");
+                });
+
+            modelBuilder.Entity("SubscriptionPause", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("EndUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("PauseDays")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PauseEndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("PauseStartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("EndUserId", "IsActive")
+                        .HasDatabaseName("IX_SubscriptionPause_EndUser_Active");
+
+                    b.ToTable("SubscriptionPauses", "access");
+                });
+
+            modelBuilder.Entity("BranchTimeSlot", b =>
+                {
+                    b.HasOne("PadelPassCheckInSystem.Models.Entities.Branch", "Branch")
+                        .WithMany("TimeSlots")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -417,16 +530,39 @@ namespace PadelPassCheckInSystem.Migrations
                     b.Navigation("EndUser");
                 });
 
+            modelBuilder.Entity("SubscriptionPause", b =>
+                {
+                    b.HasOne("PadelPassCheckInSystem.Models.Entities.ApplicationUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PadelPassCheckInSystem.Models.Entities.EndUser", "EndUser")
+                        .WithMany("SubscriptionPauses")
+                        .HasForeignKey("EndUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("EndUser");
+                });
+
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.Branch", b =>
                 {
                     b.Navigation("BranchUsers");
 
                     b.Navigation("CheckIns");
+
+                    b.Navigation("TimeSlots");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.EndUser", b =>
                 {
                     b.Navigation("CheckIns");
+
+                    b.Navigation("SubscriptionPauses");
                 });
 #pragma warning restore 612, 618
         }

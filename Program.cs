@@ -49,6 +49,8 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddScoped<ICheckInService, CheckInService>();
 builder.Services.AddScoped<IQRCodeService, QRCodeService>();
 builder.Services.AddScoped<IExcelService, ExcelService>();
+builder.Services.AddScoped<ISubscriptionPauseService, SubscriptionPauseService>();
+builder.Services.AddScoped<IBranchTimeSlotService, BranchTimeSlotService>();
 
 builder.Services.AddControllersWithViews();
 
