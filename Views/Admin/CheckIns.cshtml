@@ -4,17 +4,23 @@
     var branches = ViewBag.Branches as List<Branch>;
 }
 
-<h1 class="mb-4">Check-Ins Report</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Check-Ins Report</h1>
+    <div class="text-muted">
+        <i class="bi bi-info-circle"></i> All times shown in KSA Time (UTC+3)
+        <br><small>Current Time: @KSADateTimeExtensions.GetKSANow().ToString("yyyy-MM-dd HH:mm:ss") KSA</small>
+    </div>
+</div>
 
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" asp-action="CheckIns" class="row g-3">
             <div class="col-md-3">
-                <label class="form-label">From Date</label>
+                <label class="form-label">From Date <small class="text-muted">(KSA)</small></label>
                 <input type="date" name="fromDate" class="form-control" value="@ViewBag.FromDate?.ToString("yyyy-MM-dd")">
             </div>
             <div class="col-md-3">
-                <label class="form-label">To Date</label>
+                <label class="form-label">To Date <small class="text-muted">(KSA)</small></label>
                 <input type="date" name="toDate" class="form-control" value="@ViewBag.ToDate?.ToString("yyyy-MM-dd")">
             </div>
             <div class="col-md-3">
@@ -51,19 +57,61 @@
                         <th>End User</th>
                         <th>Phone</th>
                         <th>Branch</th>
-                        <th>Date</th>
-                        <th>Time</th>
+                        <th>Date <small class="text-muted">(KSA)</small></th>
+                        <th>Time <small class="text-muted">(KSA)</small></th>
+                        <th>Court</th>
+                        <th>Play Duration</th>
+                        <th>Play Start Time <small class="text-muted">(KSA)</small></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var checkIn in Model)
                     {
                         <tr>
-                            <td>@checkIn.EndUser.Name</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    @if (!string.IsNullOrEmpty(checkIn.EndUser.ImageUrl))
+                                    {
+                                        <img src="@checkIn.EndUser.ImageUrl" alt="@checkIn.EndUser.Name" 
+                                             class="rounded-circle me-2" style="width: 30px; height: 30px; object-fit: cover;">
+                                    }
+                                    <span>@checkIn.EndUser.Name</span>
+                                </div>
+                            </td>
                             <td>@checkIn.EndUser.PhoneNumber</td>
                             <td>@checkIn.Branch.Name</td>
-                            <td>@checkIn.CheckInDateTime.ToLocalTime().ToString("yyyy-MM-dd")</td>
-                            <td>@checkIn.CheckInDateTime.ToLocalTime().ToString("HH:mm:ss")</td>
+                            <td>@checkIn.CheckInDateTime.ToKSATime().ToString("yyyy-MM-dd")</td>
+                            <td>@checkIn.CheckInDateTime.ToKSATime().ToString("HH:mm:ss")</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(checkIn.CourtName))
+                                {
+                                    <span class="badge bg-success">@checkIn.CourtName</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning">Not Assigned</span>
+                                }
+                            </td>
+                            <td>
+                                @if (checkIn.PlayDuration.HasValue)
+                                {
+                                    <span>@((int)checkIn.PlayDuration.Value.TotalMinutes) min</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Not Set</span>
+                                }
+                            </td>
+                            <td>
+                                @if (checkIn.PlayStartTime.HasValue)
+                                {
+                                    <span>@checkIn.PlayStartTime.Value.ToKSATime().ToString("HH:mm:ss")</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Not Set</span>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -72,7 +120,20 @@
         
         @if (!Model.Any())
         {
-            <p class="text-center text-muted">No check-ins found for the selected criteria.</p>
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-list-check fs-1 mb-3"></i>
+                <h5>No Check-Ins Found</h5>
+                <p>No check-ins found for the selected criteria.</p>
+            </div>
+        }
+        else
+        {
+            <div class="mt-3 text-muted">
+                <small>
+                    <i class="bi bi-info-circle"></i> 
+                    Showing @Model.Count check-in(s). All times displayed in KSA Time (UTC+3).
+                </small>
+            </div>
         }
     </div>
 </div>
