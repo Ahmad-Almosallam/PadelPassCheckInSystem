@@ -100,24 +100,37 @@ ViewData["Title"] = "Check-In";
                                 </div>
                             </div>
                             <div class="text-end">
-                                @if (string.IsNullOrEmpty(checkIn.CourtName))
-                                {
-                                <span class="badge bg-warning">Pending Assignment</span>
-                                }
-                                else
-                                {
-                                <span class="badge bg-success">Court Assigned</span>
-                                @if (checkIn.PlayDuration.HasValue)
-                                {
-                                <br>
-                                <small class="text-muted">@((int)checkIn.PlayDuration.Value.TotalMinutes) min</small>
-                                }
-                                @if (checkIn.PlayStartTime.HasValue)
-                                {
-                                <br>
-                                <small class="text-muted">Start: @checkIn.PlayStartTime.Value.ToKSATime().ToString("HH:mm")</small>
-                                }
-                                }
+                                <div class="mb-1">
+                                    @if (string.IsNullOrEmpty(checkIn.CourtName))
+                                    {
+                                    <span class="badge bg-warning">Pending Assignment</span>
+                                    }
+                                    else
+                                    {
+                                    <span class="badge bg-success">Court Assigned</span>
+                                    @if (checkIn.PlayDuration.HasValue)
+                                    {
+                                    <br>
+                                    <small class="text-muted">@((int)checkIn.PlayDuration.Value.TotalMinutes) min</small>
+                                    }
+                                    @if (checkIn.PlayStartTime.HasValue)
+                                    {
+                                    <br>
+                                    <small class="text-muted">Start: @checkIn.PlayStartTime.Value.ToKSATime().ToString("HH:mm")</small>
+                                    }
+                                    }
+                                </div>
+                                <div class="btn-group" role="group">
+                                    @if (string.IsNullOrEmpty(checkIn.CourtName))
+                                    {
+                                    <button class="btn btn-sm btn-warning" onclick="showCourtAssignmentModal(@checkIn.Id, '@checkIn.EndUser.Name')">
+                                        <i class="bi bi-geo-alt"></i> Assign
+                                    </button>
+                                    }
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCheckIn(@checkIn.Id, '@checkIn.EndUser.Name')" title="Delete Check-In">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         }
@@ -145,6 +158,7 @@ ViewData["Title"] = "Check-In";
                     <li class="mb-2">Position the QR code within the camera view</li>
                     <li class="mb-2">After successful scan, assign court and play time</li>
                     <li class="mb-2">Verify the customer's name and photo</li>
+                    <li class="mb-2">Use delete button to remove incorrect check-ins</li>
                 </ol>
 
                 <div class="alert alert-info mt-3">
@@ -157,6 +171,10 @@ ViewData["Title"] = "Check-In";
 
                 <div class="alert alert-light mt-3">
                     <i class="bi bi-clock"></i> All times shown in KSA Time (UTC+3)
+                </div>
+
+                <div class="alert alert-danger mt-3">
+                    <i class="bi bi-exclamation-triangle"></i> You can only delete today's check-ins
                 </div>
             </div>
         </div>
@@ -227,6 +245,32 @@ ViewData["Title"] = "Check-In";
     </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Warning:</strong> This action cannot be undone.
+                </div>
+                <p>Are you sure you want to delete the check-in for <strong id="deleteUserName"></strong>?</p>
+                <input type="hidden" id="deleteCheckInId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteCheckIn()">
+                    <i class="bi bi-trash"></i> Delete Check-In
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Styles {
 <style>
     #qr-reader {
@@ -267,6 +311,14 @@ ViewData["Title"] = "Check-In";
 
     .pending-assignment-item {
         border-left: 4px solid #ffc107;
+    }
+
+    .btn-group .btn {
+        margin-left: 2px;
+    }
+
+    .btn-group .btn:first-child {
+        margin-left: 0;
     }
 </style>
 }
@@ -441,6 +493,51 @@ ViewData["Title"] = "Check-In";
             });
     }
 
+    function deleteCheckIn(checkInId, userName) {
+        document.getElementById('deleteCheckInId').value = checkInId;
+        document.getElementById('deleteUserName').textContent = userName;
+        new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
+    }
+
+    function confirmDeleteCheckIn() {
+        const checkInId = parseInt(document.getElementById('deleteCheckInId').value);
+
+        if (!checkInId) {
+            alert('Invalid check-in ID.');
+            return;
+        }
+
+        fetch('/CheckIn/DeleteCheckIn', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify({ checkInId: checkInId })
+        })
+            .then(response => response.json())
+            .then(data => {
+                bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
+
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                    updateRecentCheckIns();
+                    updatePendingAssignments();
+                    updateTodayCount(-1); // Decrease count by 1
+                    playSuccessSound();
+                } else {
+                    showMessage(data.message, 'danger');
+                    playErrorSound();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
+                showMessage('An error occurred while deleting check-in.', 'danger');
+                playErrorSound();
+            });
+    }
+
     function updateRecentCheckIns() {
         fetch('/CheckIn/GetRecentCheckIns')
             .then(response => response.json())
@@ -470,6 +567,12 @@ ViewData["Title"] = "Check-In";
                                 ? `<br><small class="text-muted">Start: ${checkIn.playStartTime}</small>`
                                 : '';
 
+                            const assignButton = !checkIn.hasCourtAssignment
+                                ? `<button class="btn btn-sm btn-warning" onclick="showCourtAssignmentModal(${checkIn.id}, '${checkIn.name}')">
+                                     <i class="bi bi-geo-alt"></i> Assign
+                                   </button>`
+                                : '';
+
                             html += `
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center">
@@ -481,9 +584,17 @@ ViewData["Title"] = "Check-In";
                                             </div>
                                         </div>
                                         <div class="text-end">
-                                            ${statusBadge}
-                                            ${durationInfo}
-                                            ${startTimeInfo}
+                                            <div class="mb-1">
+                                                ${statusBadge}
+                                                ${durationInfo}
+                                                ${startTimeInfo}
+                                            </div>
+                                            <div class="btn-group" role="group">
+                                                ${assignButton}
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCheckIn(${checkIn.id}, '${checkIn.name}')" title="Delete Check-In">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 `;
@@ -524,9 +635,14 @@ ViewData["Title"] = "Check-In";
                                                     <small class="text-muted">${assignment.checkInTime} <span class="badge badge-sm bg-info">KSA</span></small>
                                                 </div>
                                             </div>
-                                            <button class="btn btn-sm btn-warning" onclick="showCourtAssignmentModal(${assignment.id}, '${assignment.name}')">
-                                                <i class="bi bi-geo-alt"></i> Assign
-                                            </button>
+                                            <div class="btn-group" role="group">
+                                                <button class="btn btn-sm btn-warning" onclick="showCourtAssignmentModal(${assignment.id}, '${assignment.name}')">
+                                                    <i class="bi bi-geo-alt"></i> Assign
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCheckIn(${assignment.id}, '${assignment.name}')" title="Delete Check-In">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 `;
@@ -540,11 +656,11 @@ ViewData["Title"] = "Check-In";
             });
     }
 
-    function updateTodayCount() {
+    function updateTodayCount(change = 1) {
         const countBadge = document.querySelector('.badge.bg-success');
         if (countBadge) {
             const currentCount = parseInt(countBadge.textContent) || 0;
-            countBadge.textContent = currentCount + 1;
+            countBadge.textContent = Math.max(0, currentCount + change);
         }
     }
 

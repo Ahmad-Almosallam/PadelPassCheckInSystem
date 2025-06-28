@@ -106,6 +106,39 @@ namespace PadelPassCheckInSystem.Services
             return (true, $"Court '{courtName}' assigned successfully to {checkIn.EndUser.Name}");
         }
 
+        public async Task<(bool Success, string Message)> DeleteCheckInAsync(int checkInId, int branchId)
+        {
+            var checkIn = await _context.CheckIns
+                .Include(c => c.EndUser)
+                .Include(c => c.Branch)
+                .FirstOrDefaultAsync(c => c.Id == checkInId);
+
+            if (checkIn == null)
+            {
+                return (false, "Check-in record not found");
+            }
+
+            // Verify that the check-in belongs to the specified branch
+            if (checkIn.BranchId != branchId)
+            {
+                return (false, "You can only delete check-ins from your branch");
+            }
+
+            // Only allow deletion of today's check-ins
+            var today = DateTime.UtcNow.Date;
+            if (checkIn.CheckInDateTime.Date != today)
+            {
+                return (false, "You can only delete today's check-ins");
+            }
+
+            var userName = checkIn.EndUser.Name;
+            
+            _context.CheckIns.Remove(checkIn);
+            await _context.SaveChangesAsync();
+
+            return (true, $"Check-in for {userName} has been deleted successfully");
+        }
+
         public async Task<bool> HasCheckedInTodayAsync(int endUserId)
         {
             var today = DateTime.UtcNow.Date;

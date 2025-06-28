@@ -231,5 +231,24 @@ namespace PadelPassCheckInSystem.Controllers
                 return View(model);
             }
         }
+        
+        [HttpPost]
+        public async Task<IActionResult> DeleteCheckIn([FromBody] DeleteCheckInRequest request)
+        {
+            if (request == null || request.CheckInId <= 0)
+            {
+                return Json(new { success = false, message = "Invalid check-in ID." });
+            }
+        
+            var user = await _userManager.GetUserAsync(User);
+            if (user?.BranchId == null)
+            {
+                return Json(new { success = false, message = "You are not assigned to any branch." });
+            }
+        
+            var result = await _checkInService.DeleteCheckInAsync(request.CheckInId, user.BranchId.Value);
+        
+            return Json(new { success = result.Success, message = result.Message });
+        }
     }
 }
