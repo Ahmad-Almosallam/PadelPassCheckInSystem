@@ -406,9 +406,9 @@ ViewData["Title"] = "Check-In";
                 if (data.success) {
                     currentCheckInId = data.checkInId;
                     showSuccessAnimation(data);
-                    setTimeout(() => {
-                        showCourtAssignmentModal(data.checkInId, data.userName);
-                    }, 2000);
+                    // setTimeout(() => {
+                    //     showCourtAssignmentModal(data.checkInId, data.userName);
+                    // }, 2000);
                     updateRecentCheckIns();
                     updateTodayCount();
                     updatePendingAssignments();
@@ -746,21 +746,20 @@ ViewData["Title"] = "Check-In";
         const successDiv = document.getElementById('successAnimation');
         const userInfoDiv = document.getElementById('userInfo');
 
-        let userHtml = `<h4>${data.userName}</h4>`;
+        let userHtml = '';
         if (data.userImage) {
             userHtml = `
                     <img src="${data.userImage}" alt="${data.userName}" 
-                         class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
-                    <h4>${data.userName}</h4>
-                `;
+                         class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">`;
         }
-
+        
         userHtml += `
-                <div class="mt-3">
-                    <p class="text-info"><i class="bi bi-info-circle"></i> Court assignment required</p>
-                    ${data.checkInTimeKSA ? `<small class="text-muted">Check-in time: ${data.checkInTimeKSA} KSA</small>` : ''}
-                </div>
-            `;
+                    <h4>${data.userName}</h4>
+                    <h5 class="text-info">Subscription End Date: ${data.subEndDate}</h5>
+                    <div class="mt-3">
+                        <p class="text-info"><i class="bi bi-info-circle"></i> Court assignment required</p>
+                        ${data.checkInTimeKSA ? `<small class="text-muted">Check-in time: ${data.checkInTimeKSA} KSA</small>` : ''}
+                    </div>`;
 
         userInfoDiv.innerHTML = userHtml;
         successDiv.classList.remove('d-none');

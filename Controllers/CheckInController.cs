@@ -77,6 +77,7 @@ namespace PadelPassCheckInSystem.Controllers
                     userName = endUser?.Name,
                     userImage = endUser?.ImageUrl,
                     checkInId = result.CheckInId,
+                    subEndDate = endUser?.SubscriptionEndDate.ToString("d"),
                     needsCourtAssignment = true
                 });
             }
