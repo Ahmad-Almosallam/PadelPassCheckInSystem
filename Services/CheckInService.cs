@@ -44,8 +44,8 @@ namespace PadelPassCheckInSystem.Services
             }
 
             // Check subscription validity (considering pauses)
-            var effectiveEndDate = await GetEffectiveSubscriptionEndDateAsync(endUser.Id);
-            if (today < endUser.SubscriptionStartDate.Date || today > effectiveEndDate.Date)
+            // var effectiveEndDate = await GetEffectiveSubscriptionEndDateAsync(endUser.Id);
+            if (today < endUser.SubscriptionStartDate.Date || today > endUser.SubscriptionEndDate.Date)
             {
                 return (false, "Subscription is not active", null);
             }

@@ -45,8 +45,7 @@ namespace PadelPassCheckInSystem.Services
             }
 
             // Check if pause start date is within subscription period
-            var effectiveEndDate = await GetEffectiveSubscriptionEndDateAsync(endUserId);
-            if (pauseStartDate.Date > effectiveEndDate.Date)
+            if (pauseStartDate.Date > endUser.SubscriptionEndDate.Date)
             {
                 return (false, "Pause start date is after subscription end date");
             }
