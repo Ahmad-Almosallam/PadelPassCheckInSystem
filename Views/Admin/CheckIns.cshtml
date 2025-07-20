@@ -23,16 +23,19 @@
                 <label class="form-label">To Date <small class="text-muted">(KSA)</small></label>
                 <input type="date" name="toDate" class="form-control" value="@ViewBag.ToDate?.ToString("yyyy-MM-dd")">
             </div>
-            <div class="col-md-3">
-                <label class="form-label">Branch</label>
-                <select name="branchId" class="form-select">
-                    <option value="">All Branches</option>
-                    @foreach (var branch in branches)
-                    {
-                        <option value="@branch.Id" selected="@(ViewBag.BranchId == branch.Id ? "selected" : null)">@branch.Name</option>
-                    }
-                </select>
-            </div>
+            @if (User.IsInRole("Admin"))
+            {
+                <div class="col-md-3">
+                    <label class="form-label">Branch</label>
+                    <select name="branchId" class="form-select">
+                        <option value="">All Branches</option>
+                        @foreach (var branch in branches)
+                        {
+                            <option value="@branch.Id" selected="@(ViewBag.BranchId == branch.Id ? "selected" : null)">@branch.Name</option>
+                        }
+                    </select>
+                </div>
+            }
             <div class="col-md-3">
                 <label class="form-label">&nbsp;</label>
                 <div>
@@ -41,6 +44,9 @@
                     </button>
                     <button type="submit" formaction="@Url.Action("ExportCheckIns")" class="btn btn-success">
                         <i class="bi bi-file-earmark-excel"></i> Export
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                        <i class="bi bi-x-circle"></i> Reset
                     </button>
                 </div>
             </div>
@@ -137,3 +143,11 @@
         }
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function resetForm() {
+            window.location.href = '@Url.Action("CheckIns", "Admin")';
+        }
+    </script>
+}

@@ -10,7 +10,7 @@ using PadelPassCheckInSystem.Services;
 
 namespace PadelPassCheckInSystem.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "BranchUser,Admin")]
     public class AdminController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -30,6 +30,7 @@ namespace PadelPassCheckInSystem.Controllers
             _excelService = excelService;
         }
 
+        [Authorize(Roles = "Admin")]
         public IActionResult Index()
         {
             var viewModel = new AdminDashboardViewModel
@@ -46,6 +47,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         // Branches Management
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Branches()
         {
             var branches = await _context.Branches
@@ -56,6 +58,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateBranch(
             BranchViewModel model)
         {
@@ -79,6 +82,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateBranch(
             int id,
             BranchViewModel model)
@@ -98,6 +102,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         // Branch Users Management
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> BranchUsers()
         {
             var users = await _userManager.Users
@@ -130,6 +135,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateBranchUser(
             CreateBranchUserViewModel model)
         {
@@ -160,6 +166,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateBranchUser(
             string id,
             string fullName,
@@ -192,6 +199,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteBranchUser(
             string id)
         {
@@ -216,6 +224,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ToggleUserStatus(
             string id)
         {
@@ -247,6 +256,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         // End Users Management
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> EndUsers()
         {
             var endUsers = await _context.EndUsers
@@ -256,6 +266,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateEndUser(
             EndUserViewModel model)
         {
@@ -296,6 +307,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateEndUser(
             int id,
             EndUserViewModel model)
@@ -327,6 +339,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteEndUser(
             int id)
         {
@@ -343,6 +356,7 @@ namespace PadelPassCheckInSystem.Controllers
 
         // Generate QR Code
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GenerateQRCode(
             int endUserId,
             bool forceRegenerate = false)
@@ -380,11 +394,19 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         // Check-ins Management
+
         public async Task<IActionResult> CheckIns(
             DateTime? fromDate,
             DateTime? toDate,
             int? branchId)
         {
+            // check if user is BranchUser and filter by branch
+            if (User.IsInRole("BranchUser"))
+            {
+                var user = await _userManager.GetUserAsync(User);
+                branchId ??= user.BranchId;
+            }
+
             var query = _context.CheckIns
                 .Include(c => c.EndUser)
                 .Include(c => c.Branch)
@@ -418,12 +440,19 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         // Export to Excel
-        [HttpPost]
+        [HttpGet]
         public async Task<IActionResult> ExportCheckIns(
             DateTime? fromDate,
             DateTime? toDate,
             int? branchId)
         {
+            // check if user is BranchUser and filter by branch
+            if (User.IsInRole("BranchUser"))
+            {
+                var user = await _userManager.GetUserAsync(User);
+                branchId ??= user.BranchId;
+            }
+            
             var query = _context.CheckIns
                 .Include(c => c.EndUser)
                 .Include(c => c.Branch)
@@ -459,6 +488,7 @@ namespace PadelPassCheckInSystem.Controllers
 
 // Subscription Pause Management
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PauseSubscription(
             int endUserId)
         {
@@ -488,6 +518,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PauseSubscription(
             PauseSubscriptionViewModel model)
         {
@@ -520,6 +551,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UnpauseSubscription(
             int endUserId)
         {
@@ -541,6 +573,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PauseHistory(
             int? endUserId)
         {
@@ -563,6 +596,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
 // Branch Time Slots Management
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> BranchTimeSlots(
             int? branchId)
         {
@@ -591,6 +625,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateTimeSlot(
             BranchTimeSlotViewModel model)
         {
@@ -623,6 +658,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateTimeSlot(
             int id,
             string startTime,
@@ -652,6 +688,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteTimeSlot(
             int id)
         {
