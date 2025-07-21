@@ -706,5 +706,35 @@ namespace PadelPassCheckInSystem.Controllers
 
             return RedirectToAction("BranchTimeSlots");
         }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return RedirectToAction("BranchUsers");
+
+            var user = await _userManager.FindByIdAsync(model.UserId);
+            if (user == null)
+            {
+                TempData["Error"] = "User not found.";
+                return RedirectToAction("BranchUsers");
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+            if (result.Succeeded)
+            {
+                TempData["Success"] = "Password has been reset successfully.";
+            }
+            else
+            {
+                TempData["Error"] = "Failed to reset password. " + string.Join(" ", result.Errors.Select(e => e.Description));
+            }
+
+            return RedirectToAction("BranchUsers");
+        }
     }
 }
+
