@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
+using PadelPassCheckInSystem.Extensions;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
 using PadelPassCheckInSystem.Models.ViewModels.PadelPassCheckInSystem.Models.ViewModels;
@@ -61,6 +62,40 @@ namespace PadelPassCheckInSystem.Controllers
                 return Json(new { success = false, message = "You are not assigned to any branch." });
             }
 
+            // Get the end user details for the confirmation message
+            var endUser = await _context.EndUsers
+                .FirstOrDefaultAsync(u => u.UniqueIdentifier == request.Identifier || u.PhoneNumber == request.Identifier);
+
+            if (endUser == null)
+            {
+                return Json(new { success = false, message = "User not found." });
+            }
+
+            // Return user details for confirmation without creating check-in yet
+            return Json(new
+            {
+                success = true,
+                userName = endUser.Name,
+                userImage = endUser.ImageUrl,
+                subEndDate = endUser.SubscriptionEndDate.ToString("d")
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ConfirmCheckIn(
+            [FromBody] ProcessCheckInRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Identifier))
+            {
+                return Json(new { success = false, message = "Invalid barcode data." });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user?.BranchId == null)
+            {
+                return Json(new { success = false, message = "You are not assigned to any branch." });
+            }
+
             var result = await _checkInService.CheckInAsync(request.Identifier.Trim(), user.BranchId.Value);
 
             if (result.Success)
@@ -78,7 +113,8 @@ namespace PadelPassCheckInSystem.Controllers
                     userImage = endUser?.ImageUrl,
                     checkInId = result.CheckInId,
                     subEndDate = endUser?.SubscriptionEndDate.ToString("d"),
-                    needsCourtAssignment = true
+                    needsCourtAssignment = true,
+                    checkInTimeKSA = DateTime.UtcNow.ToKSATime().ToString("HH:mm:ss")
                 });
             }
 
@@ -250,6 +286,38 @@ namespace PadelPassCheckInSystem.Controllers
             var result = await _checkInService.DeleteCheckInAsync(request.CheckInId, user.BranchId.Value);
         
             return Json(new { success = result.Success, message = result.Message });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ProcessPhoneCheckIn([FromBody] ProcessPhoneCheckInRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.PhoneNumber))
+            {
+                return Json(new { success = false, message = "Invalid phone number." });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user?.BranchId == null)
+            {
+                return Json(new { success = false, message = "You are not assigned to any branch." });
+            }
+
+            // Get the end user details for the confirmation message
+            var endUser = await _context.EndUsers
+                .FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
+
+            if (endUser == null)
+            {
+                return Json(new { success = false, message = "User not found with this phone number." });
+            }
+
+            return Json(new
+            {
+                success = true,
+                userName = endUser.Name,
+                userImage = endUser.ImageUrl,
+                subEndDate = endUser.SubscriptionEndDate.ToString("d")
+            });
         }
     }
 }
