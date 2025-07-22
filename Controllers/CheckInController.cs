@@ -71,13 +71,18 @@ namespace PadelPassCheckInSystem.Controllers
                 return Json(new { success = false, message = "User not found." });
             }
 
-            // Return user details for confirmation without creating check-in yet
+            // Return user details with default court assignment values
             return Json(new
             {
                 success = true,
                 userName = endUser.Name,
                 userImage = endUser.ImageUrl,
-                subEndDate = endUser.SubscriptionEndDate.ToString("d")
+                subEndDate = endUser.SubscriptionEndDate.ToString("d"),
+                identifier = request.Identifier,
+                requiresCourtAssignment = true,
+                defaultPlayDurationMinutes = 90,
+                defaultPlayStartTime = DateTime.Now.AddMinutes(5).ToString("HH:mm"),
+                checkInTimeKSA = DateTime.UtcNow.ToKSATime().ToString("HH:mm:ss")
             });
         }
 
@@ -311,12 +316,80 @@ namespace PadelPassCheckInSystem.Controllers
                 return Json(new { success = false, message = "User not found with this phone number." });
             }
 
+            // Return user details with default court assignment values
             return Json(new
             {
                 success = true,
                 userName = endUser.Name,
                 userImage = endUser.ImageUrl,
-                subEndDate = endUser.SubscriptionEndDate.ToString("d")
+                subEndDate = endUser.SubscriptionEndDate.ToString("d"),
+                identifier = request.PhoneNumber,
+                requiresCourtAssignment = true,
+                defaultPlayDurationMinutes = 90,
+                defaultPlayStartTime = DateTime.Now.AddMinutes(5).ToString("HH:mm"),
+                checkInTimeKSA = DateTime.UtcNow.ToKSATime().ToString("HH:mm:ss")
+            });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CheckInWithCourtAssignment([FromBody] CheckInWithCourtAssignmentRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Identifier))
+            {
+                return Json(new { success = false, message = "Invalid identifier." });
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user?.BranchId == null)
+            {
+                return Json(new { success = false, message = "You are not assigned to any branch." });
+            }
+
+            // First, perform the check-in
+            var checkInResult = await _checkInService.CheckInAsync(request.Identifier.Trim(), user.BranchId.Value);
+            if (!checkInResult.Success)
+            {
+                return Json(new { success = false, message = checkInResult.Message });
+            }
+
+            // Then, assign the court
+            var courtResult = await _checkInService.AssignCourtAsync(
+                checkInResult.CheckInId.GetValueOrDefault(),
+                request.CourtName,
+                request.PlayDurationMinutes,
+                request.PlayStartTime,
+                request.Notes
+            );
+
+            if (!courtResult.Success)
+            {
+                // If court assignment fails, we should still return the check-in info
+                return Json(new { 
+                    success = true,
+                    checkInSuccess = true,
+                    courtAssignmentSuccess = false,
+                    message = courtResult.Message,
+                    checkInId = checkInResult.CheckInId
+                });
+            }
+
+            var endUser = await _context.EndUsers
+                .FirstOrDefaultAsync(u => u.UniqueIdentifier == request.Identifier || u.PhoneNumber == request.Identifier);
+
+            return Json(new
+            {
+                success = true,
+                checkInSuccess = true,
+                courtAssignmentSuccess = true,
+                message = "Check-in completed and court assigned successfully",
+                userName = endUser?.Name,
+                userImage = endUser?.ImageUrl,
+                checkInId = checkInResult.CheckInId,
+                subEndDate = endUser?.SubscriptionEndDate.ToString("d"),
+                checkInTimeKSA = DateTime.UtcNow.ToKSATime().ToString("HH:mm:ss"),
+                courtName = request.CourtName,
+                playDurationMinutes = request.PlayDurationMinutes,
+                playStartTime = request.PlayStartTime.ToString("HH:mm")
             });
         }
     }

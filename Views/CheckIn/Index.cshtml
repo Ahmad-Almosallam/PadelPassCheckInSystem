@@ -307,7 +307,7 @@
     </div>
 </div>
 
-<!-- Check-In Confirmation Modal -->
+<!-- Check-in Confirmation Modal with Court Assignment -->
 <div class="modal fade" id="checkInConfirmModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -315,15 +315,49 @@
                 <h5 class="modal-title">Confirm Check-In</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center">
-                <div id="confirmUserInfo">
-                    <!-- Will be populated dynamically -->
+            <div class="modal-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div id="confirmUserImage" class="me-3">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    <div>
+                        <h5 id="confirmUserName" class="mb-1"><!-- Will be populated by JavaScript --></h5>
+                        <small class="text-muted">Subscription End Date: <span id="confirmSubEndDate"></span></small>
+                    </div>
                 </div>
+
+                <hr>
+
+                <form id="checkInConfirmForm">
+                    <input type="hidden" id="confirmIdentifier">
+                    <div class="mb-3">
+                        <label class="form-label">Court Name/Number *</label>
+                        <input type="text" id="confirmCourtName" class="form-control"
+                               placeholder="e.g., Court 1, Court A" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Play Duration (minutes) *</label>
+                        <select id="confirmPlayDuration" class="form-select" required>
+                            <option value="60">60 minutes</option>
+                            <option value="90" selected>90 minutes</option>
+                            <option value="120">120 minutes</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Play Start Time <small class="text-muted">(KSA)</small></label>
+                        <input type="time" id="confirmPlayStartTime" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea id="confirmNotes" class="form-control" rows="2"
+                                  placeholder="Additional notes (optional)"></textarea>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="confirmCheckIn()">
-                    <i class="bi bi-check-circle"></i> Confirm Check-In
+                <button type="button" class="btn btn-primary" onclick="confirmCheckInWithCourt()">
+                    Confirm Check-In & Assign Court
                 </button>
             </div>
         </div>
@@ -391,7 +425,7 @@
 @section Scripts {
     <!-- Include Html5-QRCode library -->
     <script src="https://unpkg.com/html5-qrcode"></script>
-
+    <script src="js/checkIn.js"></script>
     <script>
         let html5QrCode = null;
         let isProcessing = false;
@@ -471,7 +505,7 @@
                 .then(data => {
                     if (data.success) {
                         // Show confirmation modal instead of immediate check-in
-                        showCheckInConfirmation(data, qrCode);
+                        showCheckInConfirmation(data);
                     } else {
                         showMessage(data.message, 'danger');
                         playErrorSound();
@@ -485,30 +519,30 @@
                 });
         }
 
-        function showCheckInConfirmation(data, qrCode) {
-            const userInfoDiv = document.getElementById('confirmUserInfo');
-            pendingQrCode = qrCode;
-
-            let userHtml = '';
-            if (data.userImage) {
-                userHtml = `
-                <img src="${data.userImage}" alt="${data.userName}" 
-                     class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">`;
-            } else {
-                userHtml = `
-                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
-                     style="width: 150px; height: 150px;">
-                    <i class="bi bi-person-fill text-white" style="font-size: 4rem;"></i>
-                </div>`;
-            }
-
-            userHtml += `
-            <h4>${data.userName}</h4>
-            <h5 class="text-info">Subscription End Date: ${data.subEndDate}</h5>`;
-
-            userInfoDiv.innerHTML = userHtml;
-            new bootstrap.Modal(document.getElementById('checkInConfirmModal')).show();
-        }
+        // function showCheckInConfirmation(data, qrCode) {
+        //     const userInfoDiv = document.getElementById('confirmUserImage');
+        //     pendingQrCode = qrCode;
+        //
+        //     let userHtml = '';
+        //     if (data.userImage) {
+        //         userHtml = `
+        //         <img src="${data.userImage}" alt="${data.userName}" 
+        //              class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">`;
+        //     } else {
+        //         userHtml = `
+        //         <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+        //              style="width: 150px; height: 150px;">
+        //             <i class="bi bi-person-fill text-white" style="font-size: 4rem;"></i>
+        //         </div>`;
+        //     }
+        //
+        //     userHtml += `
+        //     <h4>${data.userName}</h4>
+        //     <h5 class="text-info">Subscription End Date: ${data.subEndDate}</h5>`;
+        //
+        //     userInfoDiv.innerHTML = userHtml;
+        //     new bootstrap.Modal(document.getElementById('checkInConfirmModal')).show();
+        // }
 
         function confirmCheckIn() {
             if (!pendingQrCode) return;
@@ -606,7 +640,9 @@
                     console.error('Error:', error);
                     alert('An error occurred while assigning court.');
                 });
+
         }
+
 
         function deleteCheckIn(checkInId, userName) {
             document.getElementById('deleteCheckInId').value = checkInId;
@@ -920,7 +956,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        showCheckInConfirmation(data, phoneNumber);
+                        showCheckInConfirmation(data);
                     } else {
                         showMessage(data.message, 'danger');
                         playErrorSound();
