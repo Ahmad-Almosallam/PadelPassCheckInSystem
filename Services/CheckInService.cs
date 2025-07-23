@@ -15,57 +15,14 @@ namespace PadelPassCheckInSystem.Services
 
         public async Task<(bool Success, string Message, int? CheckInId)> CheckInAsync(string identifier, int branchId)
         {
-            // Find user by phone or unique identifier
-            var endUser = await _context.EndUsers
-                .FirstOrDefaultAsync(u => u.PhoneNumber == identifier || u.UniqueIdentifier == identifier);
-
-            if (endUser == null)
+            var (isValid, message, endUser) = await ValidateCheckInAsync(identifier, branchId);
+            
+            if (!isValid)
             {
-                return (false, "User not found", null);
+                return (false, message, null);
             }
 
-            var today = DateTime.UtcNow.Date;
-            var currentTime = DateTime.UtcNow.TimeOfDay;
-            var currentDayOfWeek = DateTime.UtcNow.DayOfWeek;
-
-            // Check if subscription is paused
-            if (endUser.IsPaused)
-            {
-                var pauseEndDate = endUser.CurrentPauseEndDate?.Date;
-                if (pauseEndDate.HasValue && today <= pauseEndDate.Value)
-                {
-                    return (false, $"Subscription is currently paused until {pauseEndDate.Value:MMM dd, yyyy}", null);
-                }
-                else
-                {
-                    // Auto-unpause if pause period has ended
-                    await UnpauseSubscriptionAsync(endUser.Id);
-                }
-            }
-
-            // Check subscription validity (considering pauses)
-            // var effectiveEndDate = await GetEffectiveSubscriptionEndDateAsync(endUser.Id);
-            if (today < endUser.SubscriptionStartDate.Date || today > endUser.SubscriptionEndDate.Date)
-            {
-                return (false, "Subscription is not active", null);
-            }
-
-            // Check if user has already checked in today
-            var hasCheckedInToday = await HasCheckedInTodayAsync(endUser.Id);
-            if (hasCheckedInToday)
-            {
-                return (false, "User has already checked in today", null);
-            }
-
-            // Check if current time is within allowed branch time slots
-            var isWithinAllowedTime = await IsWithinAllowedTimeSlotAsync(branchId, currentDayOfWeek, currentTime);
-            if (!isWithinAllowedTime)
-            {
-                var allowedTimes = await GetBranchTimeSlotDisplayAsync(branchId, currentDayOfWeek);
-                return (false, $"Check-in is only allowed during: {allowedTimes}", null);
-            }
-
-            // Create check-in record (without court assignment initially)
+            // Create check-in record
             var checkIn = new CheckIn
             {
                 EndUserId = endUser.Id,
@@ -263,6 +220,60 @@ namespace PadelPassCheckInSystem.Services
                 .Where(c => c.BranchId == branchId && c.CheckInDateTime.Date == today)
                 .OrderByDescending(c => c.CheckInDateTime)
                 .ToListAsync();
+        }
+
+        public async Task<(bool IsValid, string Message, EndUser User)> ValidateCheckInAsync(string identifier, int branchId)
+        {
+            // Find user by phone or unique identifier
+            var endUser = await _context.EndUsers
+                .FirstOrDefaultAsync(u => u.PhoneNumber == identifier || u.UniqueIdentifier == identifier);
+
+            if (endUser == null)
+            {
+                return (false, "User not found", null);
+            }
+
+            var today = DateTime.UtcNow.Date;
+            var currentTime = DateTime.UtcNow.TimeOfDay;
+            var currentDayOfWeek = DateTime.UtcNow.DayOfWeek;
+
+            // Check if subscription is paused
+            if (endUser.IsPaused)
+            {
+                var pauseEndDate = endUser.CurrentPauseEndDate?.Date;
+                if (pauseEndDate.HasValue && today <= pauseEndDate.Value)
+                {
+                    return (false, $"Subscription is currently paused until {pauseEndDate.Value:MMM dd, yyyy}", null);
+                }
+                else
+                {
+                    // Auto-unpause if pause period has ended
+                    await UnpauseSubscriptionAsync(endUser.Id);
+                }
+            }
+
+            // Check subscription validity
+            if (today < endUser.SubscriptionStartDate.Date || today > endUser.SubscriptionEndDate.Date)
+            {
+                return (false, "Subscription is not active", null);
+            }
+
+            // Check if user has already checked in today
+            var hasCheckedInToday = await HasCheckedInTodayAsync(endUser.Id);
+            if (hasCheckedInToday)
+            {
+                return (false, "User has already checked in today", null);
+            }
+
+            // Check if current time is within allowed branch time slots
+            var isWithinAllowedTime = await IsWithinAllowedTimeSlotAsync(branchId, currentDayOfWeek, currentTime);
+            if (!isWithinAllowedTime)
+            {
+                var allowedTimes = await GetBranchTimeSlotDisplayAsync(branchId, currentDayOfWeek);
+                return (false, $"Check-in is only allowed during: {allowedTimes}", null);
+            }
+
+            return (true, "Validation successful", endUser);
         }
     }
 }

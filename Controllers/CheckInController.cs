@@ -63,18 +63,18 @@ namespace PadelPassCheckInSystem.Controllers
             }
 
             // Get the end user details for the confirmation message
-            var endUser = await _context.EndUsers
-                .FirstOrDefaultAsync(u => u.UniqueIdentifier == request.Identifier || u.PhoneNumber == request.Identifier);
+            var (isValid, message, endUser) = await _checkInService.ValidateCheckInAsync(request.Identifier, user.BranchId.Value);
 
-            if (endUser == null)
+            if (!isValid)
             {
-                return Json(new { success = false, message = "User not found." });
+                return Json(new { success = false, message = message });
             }
 
             // Return user details with default court assignment values
             return Json(new
             {
-                success = true,
+                success = isValid,
+                message = message,
                 userName = endUser.Name,
                 userImage = endUser.ImageUrl,
                 subEndDate = endUser.SubscriptionEndDate.ToString("d"),
@@ -308,18 +308,18 @@ namespace PadelPassCheckInSystem.Controllers
             }
 
             // Get the end user details for the confirmation message
-            var endUser = await _context.EndUsers
-                .FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
+            var (isValid, message, endUser) = await _checkInService.ValidateCheckInAsync(request.PhoneNumber, user.BranchId.Value);
 
-            if (endUser == null)
+            if (!isValid)
             {
-                return Json(new { success = false, message = "User not found with this phone number." });
+                return Json(new { success = false, message = message });
             }
 
             // Return user details with default court assignment values
             return Json(new
             {
-                success = true,
+                success = isValid,
+                message = message,
                 userName = endUser.Name,
                 userImage = endUser.ImageUrl,
                 subEndDate = endUser.SubscriptionEndDate.ToString("d"),
