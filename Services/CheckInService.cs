@@ -63,7 +63,7 @@ namespace PadelPassCheckInSystem.Services
             return (true, $"Court '{courtName}' assigned successfully to {checkIn.EndUser.Name}");
         }
 
-        public async Task<(bool Success, string Message)> DeleteCheckInAsync(int checkInId, int branchId)
+        public async Task<(bool Success, string Message)> DeleteCheckInAsync(int checkInId, int? branchId = null)
         {
             var checkIn = await _context.CheckIns
                 .Include(c => c.EndUser)
@@ -75,17 +75,20 @@ namespace PadelPassCheckInSystem.Services
                 return (false, "Check-in record not found");
             }
 
-            // Verify that the check-in belongs to the specified branch
-            if (checkIn.BranchId != branchId)
+            // If branchId is provided (non-admin user), verify branch access and date
+            if (branchId.HasValue)
             {
-                return (false, "You can only delete check-ins from your branch");
-            }
+                if (checkIn.BranchId != branchId.Value)
+                {
+                    return (false, "You can only delete check-ins from your branch");
+                }
 
-            // Only allow deletion of today's check-ins
-            var today = DateTime.UtcNow.Date;
-            if (checkIn.CheckInDateTime.Date != today)
-            {
-                return (false, "You can only delete today's check-ins");
+                // Only non-admin users are restricted to deleting today's check-ins
+                var today = DateTime.UtcNow.Date;
+                if (checkIn.CheckInDateTime.Date != today)
+                {
+                    return (false, "You can only delete today's check-ins");
+                }
             }
 
             var userName = checkIn.EndUser.Name;

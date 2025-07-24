@@ -161,11 +161,6 @@
                                                     <i class="bi bi-geo-alt"></i> Assign
                                                 </button>
                                             }
-                                            <button class="btn btn-sm btn-outline-danger"
-                                                    onclick="deleteCheckIn(@checkIn.Id, '@checkIn.EndUser.Name')"
-                                                    title="Delete Check-In">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -209,9 +204,7 @@
                     <i class="bi bi-clock"></i> All times shown in KSA Time (UTC+3)
                 </div>
 
-                <div class="alert alert-danger mt-3">
-                    <i class="bi bi-exclamation-triangle"></i> You can only delete today's check-ins
-                </div>
+              
             </div>
         </div>
 
@@ -742,9 +735,6 @@
                                             </div>
                                             <div class="btn-group" role="group">
                                                 ${assignButton}
-                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCheckIn(${checkIn.id}, '${checkIn.name}')" title="Delete Check-In">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -789,9 +779,6 @@
                                             <div class="btn-group" role="group">
                                                 <button class="btn btn-sm btn-warning" onclick="showCourtAssignmentModal(${assignment.id}, '${assignment.name}')">
                                                     <i class="bi bi-geo-alt"></i> Assign
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCheckIn(${assignment.id}, '${assignment.name}')" title="Delete Check-In">
-                                                    <i class="bi bi-trash"></i>
                                                 </button>
                                             </div>
                                         </div>

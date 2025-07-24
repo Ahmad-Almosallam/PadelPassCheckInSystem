@@ -11,7 +11,7 @@ using PadelPassCheckInSystem.Services;
 
 namespace PadelPassCheckInSystem.Controllers
 {
-    [Authorize(Roles = "BranchUser")]
+    [Authorize(Roles = "BranchUser,Admin")]
     public class CheckInController : Controller
     {
         private readonly ICheckInService _checkInService;
@@ -283,13 +283,19 @@ namespace PadelPassCheckInSystem.Controllers
             }
         
             var user = await _userManager.GetUserAsync(User);
-            if (user?.BranchId == null)
+            
+            // For non-admin users, verify branch access
+            int? branchId = null;
+            if (!User.IsInRole("Admin"))
             {
-                return Json(new { success = false, message = "You are not assigned to any branch." });
+                if (user?.BranchId == null)
+                {
+                    return Json(new { success = false, message = "You are not assigned to any branch." });
+                }
+                branchId = user.BranchId;
             }
         
-            var result = await _checkInService.DeleteCheckInAsync(request.CheckInId, user.BranchId.Value);
-        
+            var result = await _checkInService.DeleteCheckInAsync(request.CheckInId, branchId);
             return Json(new { success = result.Success, message = result.Message });
         }
 
