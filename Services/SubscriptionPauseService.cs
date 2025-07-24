@@ -117,11 +117,7 @@ namespace PadelPassCheckInSystem.Services
                     var today = DateTime.UtcNow.Date;
                     var actualPauseDays = 0;
                     
-                    if (today >= activePause.PauseStartDate.Date && today <= activePause.PauseEndDate.Date)
-                    {
-                        actualPauseDays = (today - activePause.PauseStartDate.Date).Days + 1;
-                    }
-                    else if (today > activePause.PauseEndDate.Date)
+                    if (today >= activePause.PauseStartDate.Date && today <= activePause.PauseEndDate.Date || today > activePause.PauseEndDate.Date)
                     {
                         actualPauseDays = activePause.PauseDays;
                     }
