@@ -29,6 +29,10 @@ namespace PadelPassCheckInSystem.Models.ViewModels
         [Display(Name = "Subscription End Date")]
         public DateTime SubscriptionEndDate { get; set; }
         
+        [Display(Name = "Subscription Duration (Months)")]
+        [Range(1, 60, ErrorMessage = "Duration must be between 1 and 60 months")]
+        public int? SubscriptionDurationMonths { get; set; }
+        
         public string UniqueIdentifier { get; set; }
     }
 }

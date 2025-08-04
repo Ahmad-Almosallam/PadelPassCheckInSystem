@@ -200,7 +200,7 @@ ViewData["Title"] = "End Users Management";
 
 <!-- Create Modal -->
 <div class="modal fade" id="createModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form asp-action="CreateEndUser" method="post">
                 <div class="modal-header">
@@ -208,34 +208,74 @@ ViewData["Title"] = "End Users Management";
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Name</label>
-                        <input type="text" name="Name" class="form-control" required>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Name *</label>
+                                <input type="text" name="Name" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Phone Number *</label>
+                                <input type="tel" name="PhoneNumber" class="form-control" required>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Phone Number</label>
-                        <input type="tel" name="PhoneNumber" class="form-control" required>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" name="Email" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Image URL</label>
+                                <input type="url" name="ImageUrl" class="form-control">
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <input type="email" name="Email" class="form-control">
+
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle"></i> Subscription Period</h6>
+                        <p class="mb-0">You can either set the duration in months (auto-calculated) or manually set the end date.</p>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Image URL</label>
-                        <input type="url" name="ImageUrl" class="form-control">
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Subscription Start Date *</label>
+                                <input type="date" id="createStartDate" name="SubscriptionStartDate" class="form-control" required onchange="calculateEndDate()">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Duration (Months)</label>
+                                <input type="number" id="createDurationMonths" name="SubscriptionDurationMonths" 
+                                       class="form-control" min="1" max="60" placeholder="e.g., 12" value="0"
+                                       onchange="calculateEndDate()">
+                                <small class="text-muted">Auto-calculates end date</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Subscription End Date *</label>
+                                <input type="date" id="createEndDate" name="SubscriptionEndDate" class="form-control" required onchange="clearDuration()">
+                                <small class="text-muted">Or set manually</small>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Subscription Start Date</label>
-                        <input type="date" name="SubscriptionStartDate" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Subscription End Date</label>
-                        <input type="date" name="SubscriptionEndDate" class="form-control" required>
+
+                    <div class="alert alert-warning d-none" id="dateCalculationAlert">
+                        <i class="bi bi-calculator"></i> <strong>Auto-calculated:</strong> 
+                        <span id="calculationDetails"></span>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create</button>
+                    <button type="submit" class="btn btn-primary">Create End User</button>
                 </div>
             </form>
         </div>
@@ -244,7 +284,7 @@ ViewData["Title"] = "End Users Management";
 
 <!-- Edit Modal -->
 <div class="modal fade" id="editModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form asp-action="UpdateEndUser" method="post">
                 <input type="hidden" id="editId" name="id">
@@ -253,34 +293,74 @@ ViewData["Title"] = "End Users Management";
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Name</label>
-                        <input type="text" id="editName" name="Name" class="form-control" required>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Name *</label>
+                                <input type="text" id="editName" name="Name" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Phone Number *</label>
+                                <input type="tel" id="editPhone" name="PhoneNumber" class="form-control" required>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Phone Number</label>
-                        <input type="tel" id="editPhone" name="PhoneNumber" class="form-control" required>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" id="editEmail" name="Email" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Image URL</label>
+                                <input type="url" id="editImageUrl" name="ImageUrl" class="form-control">
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Email</label>
-                        <input type="email" id="editEmail" name="Email" class="form-control">
+
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle"></i> Subscription Period</h6>
+                        <p class="mb-0">You can either set the duration in months (auto-calculated) or manually set the end date.</p>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Image URL</label>
-                        <input type="url" id="editImageUrl" name="ImageUrl" class="form-control">
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Subscription Start Date *</label>
+                                <input type="date" id="editStartDate" name="SubscriptionStartDate" class="form-control" required onchange="calculateEditEndDate()">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Duration (Months)</label>
+                                <input type="number" id="editDurationMonths" name="SubscriptionDurationMonths" 
+                                       class="form-control" min="1" max="60" placeholder="e.g., 12"
+                                       onchange="calculateEditEndDate()">
+                                <small class="text-muted">Auto-calculates end date</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Subscription End Date *</label>
+                                <input type="date" id="editEndDate" name="SubscriptionEndDate" class="form-control" required onchange="clearEditDuration()">
+                                <small class="text-muted">Or set manually</small>
+                            </div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Subscription Start Date</label>
-                        <input type="date" id="editStartDate" name="SubscriptionStartDate" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Subscription End Date</label>
-                        <input type="date" id="editEndDate" name="SubscriptionEndDate" class="form-control" required>
+
+                    <div class="alert alert-warning d-none" id="editDateCalculationAlert">
+                        <i class="bi bi-calculator"></i> <strong>Auto-calculated:</strong> 
+                        <span id="editCalculationDetails"></span>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update</button>
+                    <button type="submit" class="btn btn-primary">Update End User</button>
                 </div>
             </form>
         </div>
@@ -374,8 +454,111 @@ ViewData["Title"] = "End Users Management";
         document.getElementById('editStartDate').value = startDate;
         document.getElementById('editEndDate').value = endDate;
 
+        // Clear duration field and calculation alert when editing existing user
+        document.getElementById('editDurationMonths').value = '';
+        document.getElementById('editDateCalculationAlert').classList.add('d-none');
+
         new bootstrap.Modal(document.getElementById('editModal')).show();
     }
+
+    // Calculate end date based on start date and duration (Create Modal)
+    function calculateEndDate() {
+        const startDateInput = document.getElementById('createStartDate');
+        const durationInput = document.getElementById('createDurationMonths');
+        const endDateInput = document.getElementById('createEndDate');
+        const alert = document.getElementById('dateCalculationAlert');
+        const details = document.getElementById('calculationDetails');
+
+        if (startDateInput.value && durationInput.value) {
+            const startDate = new Date(startDateInput.value);
+            const months = parseInt(durationInput.value);
+            
+            // Calculate end date by adding months
+            const endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + months);
+            
+            // Format date for input (YYYY-MM-DD)
+            const formattedEndDate = endDate.toISOString().split('T')[0];
+            endDateInput.value = formattedEndDate;
+            
+            // Show calculation details
+            details.textContent = `${months} month${months > 1 ? 's' : ''} from ${startDate.toLocaleDateString()} = ${endDate.toLocaleDateString()}`;
+            alert.classList.remove('d-none');
+        } else {
+            alert.classList.add('d-none');
+        }
+    }
+
+    // Calculate end date based on start date and duration (Edit Modal)
+    function calculateEditEndDate() {
+        const startDateInput = document.getElementById('editStartDate');
+        const durationInput = document.getElementById('editDurationMonths');
+        const endDateInput = document.getElementById('editEndDate');
+        const alert = document.getElementById('editDateCalculationAlert');
+        const details = document.getElementById('editCalculationDetails');
+
+        if (startDateInput.value && durationInput.value) {
+            const startDate = new Date(startDateInput.value);
+            const months = parseInt(durationInput.value);
+            
+            // Calculate end date by adding months
+            const endDate = new Date(startDate);
+            endDate.setMonth(endDate.getMonth() + months);
+            
+            // Format date for input (YYYY-MM-DD)
+            const formattedEndDate = endDate.toISOString().split('T')[0];
+            endDateInput.value = formattedEndDate;
+            
+            // Show calculation details
+            details.textContent = `${months} month${months > 1 ? 's' : ''} from ${startDate.toLocaleDateString()} = ${endDate.toLocaleDateString()}`;
+            alert.classList.remove('d-none');
+        } else {
+            alert.classList.add('d-none');
+        }
+    }
+
+    // Clear duration when end date is manually changed (Create Modal)
+    function clearDuration() {
+        const durationInput = document.getElementById('createDurationMonths');
+        const alert = document.getElementById('dateCalculationAlert');
+        
+        // Clear the duration field to indicate manual override
+        durationInput.value = '';
+        alert.classList.add('d-none');
+    }
+
+    // Clear duration when end date is manually changed (Edit Modal)
+    function clearEditDuration() {
+        const durationInput = document.getElementById('editDurationMonths');
+        const alert = document.getElementById('editDateCalculationAlert');
+        
+        // Clear the duration field to indicate manual override
+        durationInput.value = '';
+        alert.classList.add('d-none');
+    }
+
+    // Set default start date to today when modal opens
+    document.getElementById('createModal').addEventListener('show.bs.modal', function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('createStartDate').value = today;
+        
+        // Set default duration to 12 months
+        document.getElementById('createDurationMonths').value = '';
+        
+        // Calculate initial end date
+        calculateEndDate();
+    });
+
+    // Reset form when modal closes
+    document.getElementById('createModal').addEventListener('hidden.bs.modal', function() {
+        document.querySelector('#createModal form').reset();
+        document.getElementById('dateCalculationAlert').classList.add('d-none');
+    });
+
+    // Reset edit form when modal closes
+    document.getElementById('editModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('editDateCalculationAlert').classList.add('d-none');
+    });
 
     function generateQRCode(userId) {
         fetch(`/Admin/GenerateQRCode?endUserId=${userId}`)
@@ -579,8 +762,22 @@ ViewData["Title"] = "End Users Management";
                 `;
             document.head.appendChild(style);
         }
+
+        // Add input event listeners for real-time calculation
+        const startDateInput = document.getElementById('createStartDate');
+        const durationInput = document.getElementById('createDurationMonths');
+        const editStartDateInput = document.getElementById('editStartDate');
+        const editDurationInput = document.getElementById('editDurationMonths');
+        
+        if (startDateInput && durationInput) {
+            startDateInput.addEventListener('input', calculateEndDate);
+            durationInput.addEventListener('input', calculateEndDate);
+        }
+
+        if (editStartDateInput && editDurationInput) {
+            editStartDateInput.addEventListener('input', calculateEditEndDate);
+            editDurationInput.addEventListener('input', calculateEditEndDate);
+        }
     });
 </script>
 }
-
-<!-- Keep existing Create and Edit modals unchanged -->
