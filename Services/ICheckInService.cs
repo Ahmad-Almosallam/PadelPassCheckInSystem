@@ -14,5 +14,6 @@ namespace PadelPassCheckInSystem.Services
         Task<(bool IsValid, string Message, EndUser User)> ValidateCheckInAsync(
             string identifier,
             int branchId);
+        Task<(bool Success, string Message)> EditCheckInAsync(int checkInId, string courtName, int playDurationMinutes, DateTime? playStartTime, string notes);
     }
 }

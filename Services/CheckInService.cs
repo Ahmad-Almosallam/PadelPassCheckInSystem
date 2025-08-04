@@ -278,5 +278,27 @@ namespace PadelPassCheckInSystem.Services
 
             return (true, "Validation successful", endUser);
         }
+        
+        public async Task<(bool Success, string Message)> EditCheckInAsync(int checkInId, string courtName, int playDurationMinutes, DateTime? playStartTime, string notes)
+        {
+            var checkIn = await _context.CheckIns
+                .Include(c => c.EndUser)
+                .FirstOrDefaultAsync(c => c.Id == checkInId);
+
+            if (checkIn == null)
+            {
+                return (false, "Check-in record not found");
+            }
+
+            // Update check-in details
+            checkIn.CourtName = !string.IsNullOrWhiteSpace(courtName) ? courtName.Trim() : null;
+            checkIn.PlayDuration = playDurationMinutes > 0 ? TimeSpan.FromMinutes(playDurationMinutes) : null;
+            checkIn.PlayStartTime = playStartTime;
+            checkIn.Notes = !string.IsNullOrWhiteSpace(notes) ? notes.Trim() : null;
+
+            await _context.SaveChangesAsync();
+
+            return (true, $"Check-in details updated successfully for {checkIn.EndUser.Name}");
+        }
     }
 }

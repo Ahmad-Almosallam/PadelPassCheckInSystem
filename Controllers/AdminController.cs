@@ -737,6 +737,41 @@ namespace PadelPassCheckInSystem.Controllers
 
             return RedirectToAction("BranchUsers");
         }
+        
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> EditCheckIn([FromBody] EditCheckInRequest request)
+        {
+            if (request == null || request.CheckInId <= 0)
+            {
+                return Json(new { success = false, message = "Invalid check-in data." });
+            }
+
+            var checkIn = await _context.CheckIns
+                .Include(c => c.EndUser)
+                .FirstOrDefaultAsync(c => c.Id == request.CheckInId);
+
+            if (checkIn == null)
+            {
+                return Json(new { success = false, message = "Check-in record not found." });
+            }
+
+            // Update check-in details
+            checkIn.CourtName = !string.IsNullOrWhiteSpace(request.CourtName) ? request.CourtName.Trim() : null;
+            checkIn.PlayDuration = request.PlayDurationMinutes > 0 ? TimeSpan.FromMinutes(request.PlayDurationMinutes) : null;
+            checkIn.PlayStartTime = request.PlayStartTime;
+            checkIn.Notes = !string.IsNullOrWhiteSpace(request.Notes) ? request.Notes.Trim() : null;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = $"Check-in details updated successfully for {checkIn.EndUser.Name}" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "An error occurred while updating check-in details." });
+            }
+        }
     }
 }
 
