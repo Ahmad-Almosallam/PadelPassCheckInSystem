@@ -1,0 +1,16 @@
+﻿/.idea/
+/obj/*
+obj/*
+obj/PadelPassCheckInSystem.csproj.nuget.dgspec.json
+/obj/project.assets.json
+/logs/
+/.vs/PadelPassCheckInSystem/DesignTimeBuild/.dtbcache.v2
+/.vs/PadelPassCheckInSystem/FileContentIndex/13710f3b-a4eb-4636-9477-dad636791d31.vsidx
+/.vs/PadelPassCheckInSystem/FileContentIndex/fe27ba86-8bbc-4405-b757-3d5dc8a3bf3b.vsidx
+/.vs/PadelPassCheckInSystem/v17/.futdcache.v2
+/.vs/PadelPassCheckInSystem/v17/.suo
+/.vs/PadelPassCheckInSystem/v17/DocumentLayout.json
+/.vs/ProjectEvaluation/padelpasscheckinsystem.metadata.v7.bin
+/.vs/ProjectEvaluation/padelpasscheckinsystem.projects.v7.bin
+/.vs/
+/.config/
