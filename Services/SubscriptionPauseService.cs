@@ -3,6 +3,7 @@ using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
 using PadelPassCheckInSystem.Models.ViewModels.PadelPassCheckInSystem.Models.ViewModels;
+using PadelPassCheckInSystem.Extensions;
 
 namespace PadelPassCheckInSystem.Services
 {
@@ -38,14 +39,19 @@ namespace PadelPassCheckInSystem.Services
                 return (false, "Subscription is already paused");
             }
 
-            // Validate pause start date
-            if (pauseStartDate.Date < DateTime.UtcNow.Date)
+            // Use KSA time for all date validations
+            var nowKSA = KSADateTimeExtensions.GetKSANow().Date;
+            var pauseStartKSA = pauseStartDate.Date;
+            var subscriptionEndKSA = endUser.SubscriptionEndDate.ToKSATime().Date;
+
+            // Validate pause start date using KSA time
+            if (pauseStartKSA < nowKSA)
             {
                 return (false, "Pause start date cannot be in the past");
             }
 
-            // Check if pause start date is within subscription period
-            if (pauseStartDate.Date > endUser.SubscriptionEndDate.Date)
+            // Check if pause start date is within subscription period using KSA time
+            if (pauseStartKSA > subscriptionEndKSA)
             {
                 return (false, "Pause start date is after subscription end date");
             }
@@ -55,13 +61,13 @@ namespace PadelPassCheckInSystem.Services
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Create pause record
+                // Create pause record (store in UTC)
                 var subscriptionPause = new SubscriptionPause
                 {
                     EndUserId = endUserId,
-                    PauseStartDate = pauseStartDate,
+                    PauseStartDate = pauseStartDate.ToUTCFromKSA(), // Convert KSA to UTC for storage
                     PauseDays = pauseDays,
-                    PauseEndDate = pauseEndDate,
+                    PauseEndDate = pauseEndDate.ToUTCFromKSA(), // Convert KSA to UTC for storage
                     Reason = reason,
                     CreatedByUserId = createdByUserId,
                     IsActive = true
@@ -69,10 +75,10 @@ namespace PadelPassCheckInSystem.Services
 
                 _context.SubscriptionPauses.Add(subscriptionPause);
 
-                // Update end user pause status
+                // Update end user pause status (store in UTC)
                 endUser.IsPaused = true;
-                endUser.CurrentPauseStartDate = pauseStartDate;
-                endUser.CurrentPauseEndDate = pauseEndDate;
+                endUser.CurrentPauseStartDate = pauseStartDate.ToUTCFromKSA();
+                endUser.CurrentPauseEndDate = pauseEndDate.ToUTCFromKSA();
 
                 // Extend subscription end date by pause days
                 endUser.SubscriptionEndDate = endUser.SubscriptionEndDate.AddDays(pauseDays);
@@ -80,7 +86,7 @@ namespace PadelPassCheckInSystem.Services
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return (true, $"Subscription paused for {pauseDays} days from {pauseStartDate:MMM dd, yyyy} to {pauseEndDate:MMM dd, yyyy}");
+                return (true, $"Subscription paused for {pauseDays} days from {pauseStartKSA:MMM dd, yyyy} to {pauseEndDate.Date:MMM dd, yyyy}");
             }
             catch (Exception ex)
             {
@@ -113,11 +119,14 @@ namespace PadelPassCheckInSystem.Services
                 {
                     activePause.IsActive = false;
                     
-                    // Calculate actual pause days used
-                    var today = DateTime.UtcNow.Date;
+                    // Calculate actual pause days used based on KSA time
+                    var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
+                    var pauseStartKSA = activePause.PauseStartDate.ToKSATime().Date;
+                    var pauseEndKSA = activePause.PauseEndDate.ToKSATime().Date;
+                    
                     var actualPauseDays = 0;
                     
-                    if (today >= activePause.PauseStartDate.Date && today <= activePause.PauseEndDate.Date || today > activePause.PauseEndDate.Date)
+                    if (todayKSA >= pauseStartKSA && todayKSA <= pauseEndKSA || todayKSA > pauseEndKSA)
                     {
                         actualPauseDays = activePause.PauseDays;
                     }
@@ -158,12 +167,12 @@ namespace PadelPassCheckInSystem.Services
                 {
                     Id = sp.Id,
                     EndUserName = sp.EndUser.Name,
-                    PauseStartDate = sp.PauseStartDate,
-                    PauseEndDate = sp.PauseEndDate,
+                    PauseStartDate = sp.PauseStartDate, // Will be converted to KSA in the view
+                    PauseEndDate = sp.PauseEndDate, // Will be converted to KSA in the view
                     PauseDays = sp.PauseDays,
                     Reason = sp.Reason,
                     CreatedByUserName = sp.CreatedByUser.FullName,
-                    CreatedAt = sp.CreatedAt,
+                    CreatedAt = sp.CreatedAt, // Will be converted to KSA in the view
                     IsActive = sp.IsActive
                 })
                 .ToListAsync();
@@ -179,12 +188,12 @@ namespace PadelPassCheckInSystem.Services
                 {
                     Id = sp.Id,
                     EndUserName = sp.EndUser.Name,
-                    PauseStartDate = sp.PauseStartDate,
-                    PauseEndDate = sp.PauseEndDate,
+                    PauseStartDate = sp.PauseStartDate, // Will be converted to KSA in the view
+                    PauseEndDate = sp.PauseEndDate, // Will be converted to KSA in the view
                     PauseDays = sp.PauseDays,
                     Reason = sp.Reason,
                     CreatedByUserName = sp.CreatedByUser.FullName,
-                    CreatedAt = sp.CreatedAt,
+                    CreatedAt = sp.CreatedAt, // Will be converted to KSA in the view
                     IsActive = sp.IsActive
                 })
                 .ToListAsync();
@@ -198,9 +207,12 @@ namespace PadelPassCheckInSystem.Services
                 return false;
             }
 
-            var today = DateTime.UtcNow.Date;
-            return endUser.CurrentPauseStartDate?.Date <= today && 
-                   endUser.CurrentPauseEndDate?.Date >= today;
+            // Use KSA time for comparison
+            var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
+            var pauseStartKSA = endUser.CurrentPauseStartDate?.ToKSATime().Date;
+            var pauseEndKSA = endUser.CurrentPauseEndDate?.ToKSATime().Date;
+            
+            return pauseStartKSA <= todayKSA && pauseEndKSA >= todayKSA;
         }
 
         public async Task<DateTime> GetEffectiveSubscriptionEndDateAsync(int endUserId)

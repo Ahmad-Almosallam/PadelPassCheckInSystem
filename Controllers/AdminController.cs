@@ -34,15 +34,28 @@ namespace PadelPassCheckInSystem.Controllers
         [Authorize(Roles = "Admin")]
         public IActionResult Index()
         {
-            var currentDate = DateTime.UtcNow.ToKSATime().Date;
+            // Use KSA time for dashboard statistics
+            var currentDateKSA = KSADateTimeExtensions.GetKSANow().Date;
+
+            // Get all check-ins and filter by KSA date
+            var allCheckIns = _context.CheckIns.ToList();
+            var todayCheckInsKSA = allCheckIns.Count(c => c.CheckInDateTime.ToKSATime().Date == currentDateKSA);
+
+            // Get active subscriptions using KSA date
+            var allEndUsers = _context.EndUsers.ToList();
+            var activeSubscriptions = allEndUsers.Count(e =>
+            {
+                var startKSA = e.SubscriptionStartDate.ToKSATime().Date;
+                var endKSA = e.SubscriptionEndDate.ToKSATime().Date;
+                return startKSA <= currentDateKSA && endKSA >= currentDateKSA && !e.IsPaused;
+            });
+
             var viewModel = new AdminDashboardViewModel
             {
                 TotalBranches = _context.Branches.Count(),
                 TotalEndUsers = _context.EndUsers.Count(),
-                TotalCheckInsToday = _context.CheckIns.Count(c => c.CheckInDateTime.AddHours(3).Date == currentDate),
-                ActiveSubscriptions = _context.EndUsers.Count(e =>
-                    e.SubscriptionStartDate <= DateTime.UtcNow &&
-                    e.SubscriptionEndDate >= DateTime.UtcNow)
+                TotalCheckInsToday = todayCheckInsKSA,
+                ActiveSubscriptions = activeSubscriptions
             };
 
             return View(viewModel);
@@ -269,8 +282,7 @@ namespace PadelPassCheckInSystem.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> CreateEndUser(
-            EndUserViewModel model)
+        public async Task<IActionResult> CreateEndUser(EndUserViewModel model)
         {
             if (ModelState.IsValid)
             {
@@ -284,14 +296,18 @@ namespace PadelPassCheckInSystem.Controllers
                     return RedirectToAction(nameof(EndUsers));
                 }
 
+                // Convert KSA dates to UTC for storage
+                var subscriptionStartUtc = model.SubscriptionStartDate.ToUTCFromKSA();
+                var subscriptionEndUtc = model.SubscriptionEndDate.ToUTCFromKSA();
+
                 var endUser = new EndUser
                 {
                     Name = model.Name,
                     PhoneNumber = model.PhoneNumber,
                     Email = model.Email.ToLower(),
                     ImageUrl = model.ImageUrl,
-                    SubscriptionStartDate = model.SubscriptionStartDate,
-                    SubscriptionEndDate = model.SubscriptionEndDate,
+                    SubscriptionStartDate = subscriptionStartUtc,
+                    SubscriptionEndDate = subscriptionEndUtc,
                     UniqueIdentifier = Guid.NewGuid()
                         .ToString("N")
                         .Substring(0, 8)
@@ -310,9 +326,7 @@ namespace PadelPassCheckInSystem.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateEndUser(
-            int id,
-            EndUserViewModel model)
+        public async Task<IActionResult> UpdateEndUser(int id, EndUserViewModel model)
         {
             var endUser = await _context.EndUsers.FindAsync(id);
 
@@ -327,12 +341,16 @@ namespace PadelPassCheckInSystem.Controllers
                 return RedirectToAction(nameof(EndUsers));
             }
 
+            // Convert KSA dates to UTC for storage
+            var subscriptionStartUtc = model.SubscriptionStartDate.ToUTCFromKSA();
+            var subscriptionEndUtc = model.SubscriptionEndDate.ToUTCFromKSA();
+
             endUser.Name = model.Name;
             endUser.PhoneNumber = model.PhoneNumber;
             endUser.Email = model.Email;
             endUser.ImageUrl = model.ImageUrl;
-            endUser.SubscriptionStartDate = model.SubscriptionStartDate;
-            endUser.SubscriptionEndDate = model.SubscriptionEndDate;
+            endUser.SubscriptionStartDate = subscriptionStartUtc;
+            endUser.SubscriptionEndDate = subscriptionEndUtc;
 
             await _context.SaveChangesAsync();
             TempData["Success"] = "End user updated successfully!";
@@ -397,10 +415,7 @@ namespace PadelPassCheckInSystem.Controllers
 
         // Check-ins Management
 
-        public async Task<IActionResult> CheckIns(
-            DateTime? fromDate,
-            DateTime? toDate,
-            int? branchId)
+        public async Task<IActionResult> CheckIns(DateTime? fromDate, DateTime? toDate, int? branchId)
         {
             // check if user is BranchUser and filter by branch
             if (User.IsInRole("BranchUser"))
@@ -414,14 +429,18 @@ namespace PadelPassCheckInSystem.Controllers
                 .Include(c => c.Branch)
                 .AsQueryable();
 
+            // Convert date filters to UTC for database query
             if (fromDate.HasValue)
             {
-                query = query.Where(c => c.CheckInDateTime.Date >= fromDate.Value.Date);
+                var fromDateUtc = fromDate.Value.ToUTCFromKSA();
+                query = query.Where(c => c.CheckInDateTime >= fromDateUtc);
             }
 
             if (toDate.HasValue)
             {
-                query = query.Where(c => c.CheckInDateTime.Date <= toDate.Value.Date);
+                // Add one day and convert to get the end of the day in KSA
+                var toDateUtc = toDate.Value.AddDays(1).ToUTCFromKSA();
+                query = query.Where(c => c.CheckInDateTime < toDateUtc);
             }
 
             if (branchId.HasValue)
@@ -441,12 +460,9 @@ namespace PadelPassCheckInSystem.Controllers
             return View(checkIns);
         }
 
-        // Export to Excel
+// Export to Excel with KSA time filtering
         [HttpGet]
-        public async Task<IActionResult> ExportCheckIns(
-            DateTime? fromDate,
-            DateTime? toDate,
-            int? branchId)
+        public async Task<IActionResult> ExportCheckIns(DateTime? fromDate, DateTime? toDate, int? branchId)
         {
             // check if user is BranchUser and filter by branch
             if (User.IsInRole("BranchUser"))
@@ -454,20 +470,24 @@ namespace PadelPassCheckInSystem.Controllers
                 var user = await _userManager.GetUserAsync(User);
                 branchId ??= user.BranchId;
             }
-            
+
             var query = _context.CheckIns
                 .Include(c => c.EndUser)
                 .Include(c => c.Branch)
                 .AsQueryable();
 
+            // Convert date filters to UTC for database query
             if (fromDate.HasValue)
             {
-                query = query.Where(c => c.CheckInDateTime.Date >= fromDate.Value.Date);
+                var fromDateUtc = fromDate.Value.ToUTCFromKSA();
+                query = query.Where(c => c.CheckInDateTime >= fromDateUtc);
             }
 
             if (toDate.HasValue)
             {
-                query = query.Where(c => c.CheckInDateTime.Date <= toDate.Value.Date);
+                // Add one day and convert to get the end of the day in KSA
+                var toDateUtc = toDate.Value.AddDays(1).ToUTCFromKSA();
+                query = query.Where(c => c.CheckInDateTime < toDateUtc);
             }
 
             if (branchId.HasValue)
@@ -483,16 +503,13 @@ namespace PadelPassCheckInSystem.Controllers
 
             return File(excelData,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"CheckIns_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+                $"CheckIns_{KSADateTimeExtensions.GetKSANow():yyyyMMdd_HHmmss}_KSA.xlsx");
         }
 
-        // Add these new action methods to the existing AdminController class
-
-// Subscription Pause Management
+// Subscription Pause Management with KSA time validation
         [HttpGet]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> PauseSubscription(
-            int endUserId)
+        public async Task<IActionResult> PauseSubscription(int endUserId)
         {
             var endUser = await _context.EndUsers.FindAsync(endUserId);
             if (endUser == null)
@@ -511,8 +528,8 @@ namespace PadelPassCheckInSystem.Controllers
             {
                 EndUserId = endUserId,
                 EndUserName = endUser.Name,
-                CurrentSubscriptionEndDate = endUser.SubscriptionEndDate,
-                PauseStartDate = DateTime.UtcNow.Date,
+                CurrentSubscriptionEndDate = endUser.SubscriptionEndDate.ToKSATime(), // Convert to KSA for display
+                PauseStartDate = KSADateTimeExtensions.GetKSANow().Date, // Use KSA date
                 PauseDays = 7 // Default 7 days
             };
 
@@ -521,8 +538,7 @@ namespace PadelPassCheckInSystem.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> PauseSubscription(
-            PauseSubscriptionViewModel model)
+        public async Task<IActionResult> PauseSubscription(PauseSubscriptionViewModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -532,9 +548,10 @@ namespace PadelPassCheckInSystem.Controllers
             var pauseService = HttpContext.RequestServices.GetRequiredService<ISubscriptionPauseService>();
             var currentUserId = _userManager.GetUserId(User);
 
+            // Note: PauseStartDate is already in KSA time from the form
             var result = await pauseService.PauseSubscriptionAsync(
                 model.EndUserId,
-                model.PauseStartDate,
+                model.PauseStartDate, // This is in KSA time
                 model.PauseDays,
                 model.Reason,
                 currentUserId
@@ -732,13 +749,13 @@ namespace PadelPassCheckInSystem.Controllers
             }
             else
             {
-                TempData["Error"] = "Failed to reset password. " + string.Join(" ", result.Errors.Select(e => e.Description));
+                TempData["Error"] = "Failed to reset password. " +
+                                    string.Join(" ", result.Errors.Select(e => e.Description));
             }
 
             return RedirectToAction("BranchUsers");
         }
-        
-        [HttpPost]
+
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> EditCheckIn([FromBody] EditCheckInRequest request)
         {
@@ -756,10 +773,17 @@ namespace PadelPassCheckInSystem.Controllers
                 return Json(new { success = false, message = "Check-in record not found." });
             }
 
+            // Convert play start time from KSA to UTC for storage
+            DateTime? playStartTimeUtc = null;
+            if (request.PlayStartTime.HasValue)
+            {
+                playStartTimeUtc = request.PlayStartTime.Value.ToUTCFromKSA();
+            }
+
             // Update check-in details
             checkIn.CourtName = !string.IsNullOrWhiteSpace(request.CourtName) ? request.CourtName.Trim() : null;
             checkIn.PlayDuration = request.PlayDurationMinutes > 0 ? TimeSpan.FromMinutes(request.PlayDurationMinutes) : null;
-            checkIn.PlayStartTime = request.PlayStartTime;
+            checkIn.PlayStartTime = playStartTimeUtc;
             checkIn.Notes = !string.IsNullOrWhiteSpace(request.Notes) ? request.Notes.Trim() : null;
 
             try
@@ -774,4 +798,3 @@ namespace PadelPassCheckInSystem.Controllers
         }
     }
 }
-

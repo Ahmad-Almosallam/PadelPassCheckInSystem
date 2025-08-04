@@ -63,7 +63,8 @@ namespace PadelPassCheckInSystem.Controllers
             }
 
             // Get the end user details for the confirmation message
-            var (isValid, message, endUser) = await _checkInService.ValidateCheckInAsync(request.Identifier, user.BranchId.Value);
+            var (isValid, message, endUser) =
+                await _checkInService.ValidateCheckInAsync(request.Identifier, user.BranchId.Value);
 
             if (!isValid)
             {
@@ -127,19 +128,25 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> AssignCourt(
-            [FromBody] AssignCourtRequest request)
+        public async Task<IActionResult> AssignCourt([FromBody] AssignCourtRequest request)
         {
             if (request == null || request.CheckInId <= 0 || string.IsNullOrWhiteSpace(request.CourtName))
             {
                 return Json(new { success = false, message = "Invalid court assignment data." });
             }
 
+            // Convert KSA play start time to UTC if provided
+            DateTime? playStartTimeUtc = null;
+            if (request.PlayStartTime.HasValue)
+            {
+                playStartTimeUtc = request.PlayStartTime.Value.ToUTCFromKSA();
+            }
+
             var result = await _checkInService.AssignCourtAsync(
                 request.CheckInId,
                 request.CourtName,
                 request.PlayDurationMinutes,
-                request.PlayStartTime,
+                playStartTimeUtc, // Pass UTC time to service
                 request.Notes
             );
 
@@ -155,26 +162,36 @@ namespace PadelPassCheckInSystem.Controllers
                 return Json(new { success = false });
             }
 
-            var recentCheckIns = await _context.CheckIns
+            // Use KSA date for filtering today's check-ins
+            var todayKSA = KSADateTimeExtensions.GetKSAToday();
+
+            var allCheckIns = await _context.CheckIns
                 .Include(c => c.EndUser)
-                .Where(c => c.BranchId == user.BranchId && c.CheckInDateTime.Date == DateTime.UtcNow.Date)
+                .Where(c => c.BranchId == user.BranchId)
                 .OrderByDescending(c => c.CheckInDateTime)
+                .Take(50) // Get more records to filter
+                .ToListAsync();
+
+            // Filter by KSA date and take top 10
+            var recentCheckIns = allCheckIns
+                .Where(c => c.CheckInDateTime.ToKSATime().Date == todayKSA)
                 .Take(10)
                 .Select(c => new
                 {
                     id = c.Id,
                     name = c.EndUser.Name,
-                    time = c.CheckInDateTime.ToLocalTime()
-                        .ToString("HH:mm:ss"),
+                    time = c.CheckInDateTime.ToKSATime().ToString("HH:mm:ss"), // Convert to KSA time
                     image = c.EndUser.ImageUrl,
                     courtName = c.CourtName,
                     playDuration = c.PlayDuration.HasValue
                         ? c.PlayDuration.Value.TotalMinutes.ToString("F0") + " min"
                         : "Not assigned",
-                    playStartTime = c.PlayStartTime.HasValue ? c.PlayStartTime.Value.ToString("HH:mm") : "Not assigned",
+                    playStartTime = c.PlayStartTime.HasValue
+                        ? c.PlayStartTime.Value.ToKSATime().ToString("HH:mm") // Convert to KSA time
+                        : "Not assigned",
                     hasCourtAssignment = !string.IsNullOrEmpty(c.CourtName)
                 })
-                .ToListAsync();
+                .ToList();
 
             return Json(new { success = true, checkIns = recentCheckIns });
         }
@@ -194,8 +211,7 @@ namespace PadelPassCheckInSystem.Controllers
                 {
                     id = c.Id,
                     name = c.EndUser.Name,
-                    checkInTime = c.CheckInDateTime.ToLocalTime()
-                        .ToString("HH:mm:ss"),
+                    checkInTime = c.CheckInDateTime.ToKSATime().ToString("HH:mm:ss"), // Convert to KSA time
                     image = c.EndUser.ImageUrl,
                     phoneNumber = c.EndUser.PhoneNumber
                 })
@@ -205,8 +221,7 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> CourtAssignment(
-            int checkInId)
+        public async Task<IActionResult> CourtAssignment(int checkInId)
         {
             var checkIn = await _context.CheckIns
                 .Include(c => c.EndUser)
@@ -236,29 +251,35 @@ namespace PadelPassCheckInSystem.Controllers
             {
                 CheckInId = checkIn.Id,
                 EndUserName = checkIn.EndUser.Name,
-                CheckInDateTime = checkIn.CheckInDateTime,
+                CheckInDateTime = checkIn.CheckInDateTime.ToKSATime(), // Convert to KSA time for display
                 BranchName = checkIn.Branch.Name,
                 PlayDurationMinutes = 90, // Default 90 minutes
-                PlayStartTime = DateTime.Now.AddMinutes(5) // Default to 5 minutes from now
+                PlayStartTime = KSADateTimeExtensions.GetKSANow().AddMinutes(5) // Default to 5 minutes from now in KSA
             };
 
             return View(viewModel);
         }
 
         [HttpPost]
-        public async Task<IActionResult> CourtAssignment(
-            CourtAssignmentViewModel model)
+        public async Task<IActionResult> CourtAssignment(CourtAssignmentViewModel model)
         {
             if (!ModelState.IsValid)
             {
                 return View(model);
             }
 
+            // Convert KSA play start time to UTC for storage
+            DateTime? playStartTimeUtc = null;
+            if (model.PlayStartTime.HasValue)
+            {
+                playStartTimeUtc = model.PlayStartTime.Value.ToUTCFromKSA();
+            }
+
             var result = await _checkInService.AssignCourtAsync(
                 model.CheckInId,
                 model.CourtName,
                 model.PlayDurationMinutes,
-                model.PlayStartTime,
+                playStartTimeUtc, // Pass UTC time to service
                 model.Notes
             );
 
@@ -273,7 +294,7 @@ namespace PadelPassCheckInSystem.Controllers
                 return View(model);
             }
         }
-        
+
         [HttpPost]
         public async Task<IActionResult> DeleteCheckIn([FromBody] DeleteCheckInRequest request)
         {
@@ -281,9 +302,9 @@ namespace PadelPassCheckInSystem.Controllers
             {
                 return Json(new { success = false, message = "Invalid check-in ID." });
             }
-        
+
             var user = await _userManager.GetUserAsync(User);
-            
+
             // For non-admin users, verify branch access
             int? branchId = null;
             if (!User.IsInRole("Admin"))
@@ -292,9 +313,10 @@ namespace PadelPassCheckInSystem.Controllers
                 {
                     return Json(new { success = false, message = "You are not assigned to any branch." });
                 }
+
                 branchId = user.BranchId;
             }
-        
+
             var result = await _checkInService.DeleteCheckInAsync(request.CheckInId, branchId);
             return Json(new { success = result.Success, message = result.Message });
         }
@@ -314,7 +336,8 @@ namespace PadelPassCheckInSystem.Controllers
             }
 
             // Get the end user details for the confirmation message
-            var (isValid, message, endUser) = await _checkInService.ValidateCheckInAsync(request.PhoneNumber, user.BranchId.Value);
+            var (isValid, message, endUser) =
+                await _checkInService.ValidateCheckInAsync(request.PhoneNumber, user.BranchId.Value);
 
             if (!isValid)
             {
@@ -338,7 +361,8 @@ namespace PadelPassCheckInSystem.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CheckInWithCourtAssignment([FromBody] CheckInWithCourtAssignmentRequest request)
+        public async Task<IActionResult> CheckInWithCourtAssignment(
+            [FromBody] CheckInWithCourtAssignmentRequest request)
         {
             if (string.IsNullOrWhiteSpace(request?.Identifier))
             {
@@ -358,19 +382,27 @@ namespace PadelPassCheckInSystem.Controllers
                 return Json(new { success = false, message = checkInResult.Message });
             }
 
+            // Convert KSA play start time to UTC for court assignment
+            DateTime? playStartTimeUtc = null;
+            if (request.PlayStartTime != default(DateTime))
+            {
+                playStartTimeUtc = request.PlayStartTime.ToUTCFromKSA();
+            }
+
             // Then, assign the court
             var courtResult = await _checkInService.AssignCourtAsync(
                 checkInResult.CheckInId.GetValueOrDefault(),
                 request.CourtName,
                 request.PlayDurationMinutes,
-                request.PlayStartTime,
+                playStartTimeUtc, // Pass UTC time to service
                 request.Notes
             );
 
             if (!courtResult.Success)
             {
                 // If court assignment fails, we should still return the check-in info
-                return Json(new { 
+                return Json(new
+                {
                     success = true,
                     checkInSuccess = true,
                     courtAssignmentSuccess = false,
@@ -380,7 +412,8 @@ namespace PadelPassCheckInSystem.Controllers
             }
 
             var endUser = await _context.EndUsers
-                .FirstOrDefaultAsync(u => u.UniqueIdentifier == request.Identifier || u.PhoneNumber == request.Identifier);
+                .FirstOrDefaultAsync(u =>
+                    u.UniqueIdentifier == request.Identifier || u.PhoneNumber == request.Identifier);
 
             return Json(new
             {
@@ -391,8 +424,8 @@ namespace PadelPassCheckInSystem.Controllers
                 userName = endUser?.Name,
                 userImage = endUser?.ImageUrl,
                 checkInId = checkInResult.CheckInId,
-                subEndDate = endUser?.SubscriptionEndDate.ToString("d"),
-                checkInTimeKSA = DateTime.UtcNow.ToKSATime().ToString("HH:mm:ss"),
+                subEndDate = endUser?.SubscriptionEndDate.ToKSATime().ToString("d"), // Convert to KSA for display
+                checkInTimeKSA = KSADateTimeExtensions.GetKSANow().ToString("HH:mm:ss"),
                 courtName = request.CourtName,
                 playDurationMinutes = request.PlayDurationMinutes,
                 playStartTime = request.PlayStartTime.ToString("HH:mm")
