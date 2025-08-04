@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
+using PadelPassCheckInSystem.Extensions;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
 using PadelPassCheckInSystem.Models.ViewModels.PadelPassCheckInSystem.Models.ViewModels;
@@ -33,11 +34,12 @@ namespace PadelPassCheckInSystem.Controllers
         [Authorize(Roles = "Admin")]
         public IActionResult Index()
         {
+            var currentDate = DateTime.UtcNow.ToKSATime().Date;
             var viewModel = new AdminDashboardViewModel
             {
                 TotalBranches = _context.Branches.Count(),
                 TotalEndUsers = _context.EndUsers.Count(),
-                TotalCheckInsToday = _context.CheckIns.Count(c => c.CheckInDateTime.Date == DateTime.UtcNow.Date),
+                TotalCheckInsToday = _context.CheckIns.Count(c => c.CheckInDateTime.AddHours(3).Date == currentDate),
                 ActiveSubscriptions = _context.EndUsers.Count(e =>
                     e.SubscriptionStartDate <= DateTime.UtcNow &&
                     e.SubscriptionEndDate >= DateTime.UtcNow)
