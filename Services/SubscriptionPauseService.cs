@@ -65,9 +65,9 @@ namespace PadelPassCheckInSystem.Services
                 var subscriptionPause = new SubscriptionPause
                 {
                     EndUserId = endUserId,
-                    PauseStartDate = pauseStartDate.ToUTCFromKSA(), // Convert KSA to UTC for storage
+                    PauseStartDate = pauseStartDate, // Convert KSA to UTC for storage
                     PauseDays = pauseDays,
-                    PauseEndDate = pauseEndDate.ToUTCFromKSA(), // Convert KSA to UTC for storage
+                    PauseEndDate = pauseEndDate, // Convert KSA to UTC for storage
                     Reason = reason,
                     CreatedByUserId = createdByUserId,
                     IsActive = true
@@ -77,8 +77,8 @@ namespace PadelPassCheckInSystem.Services
 
                 // Update end user pause status (store in UTC)
                 endUser.IsPaused = true;
-                endUser.CurrentPauseStartDate = pauseStartDate.ToUTCFromKSA();
-                endUser.CurrentPauseEndDate = pauseEndDate.ToUTCFromKSA();
+                endUser.CurrentPauseStartDate = pauseStartDate;
+                endUser.CurrentPauseEndDate = pauseEndDate;
 
                 // Extend subscription end date by pause days
                 endUser.SubscriptionEndDate = endUser.SubscriptionEndDate.AddDays(pauseDays);

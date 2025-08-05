@@ -52,13 +52,11 @@ namespace PadelPassCheckInSystem.Services
             {
                 return (false, "Court has already been assigned to this check-in");
             }
-
-            // Convert KSA play start time to UTC for storage
+            
             DateTime? playStartTimeUtc = null;
             if (playStartTime.HasValue)
             {
-                // playStartTime is in KSA time, convert to UTC for storage
-                playStartTimeUtc = playStartTime.Value.ToUTCFromKSA();
+                playStartTimeUtc = playStartTime.Value;
             }
 
             // Update check-in with court assignment
@@ -331,7 +329,7 @@ namespace PadelPassCheckInSystem.Services
             if (playStartTime.HasValue)
             {
                 // playStartTime is in KSA time, convert to UTC for storage
-                playStartTimeUtc = playStartTime.Value.ToUTCFromKSA();
+                playStartTimeUtc = playStartTime.Value;
             }
 
             // Update check-in details

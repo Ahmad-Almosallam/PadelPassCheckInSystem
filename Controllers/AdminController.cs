@@ -297,8 +297,8 @@ namespace PadelPassCheckInSystem.Controllers
                 }
 
                 // Convert KSA dates to UTC for storage
-                var subscriptionStartUtc = model.SubscriptionStartDate.ToUTCFromKSA();
-                var subscriptionEndUtc = model.SubscriptionEndDate.ToUTCFromKSA();
+                var subscriptionStartUtc = model.SubscriptionStartDate;
+                var subscriptionEndUtc = model.SubscriptionEndDate;
 
                 var endUser = new EndUser
                 {
@@ -342,8 +342,8 @@ namespace PadelPassCheckInSystem.Controllers
             }
 
             // Convert KSA dates to UTC for storage
-            var subscriptionStartUtc = model.SubscriptionStartDate.ToUTCFromKSA();
-            var subscriptionEndUtc = model.SubscriptionEndDate.ToUTCFromKSA();
+            var subscriptionStartUtc = model.SubscriptionStartDate;
+            var subscriptionEndUtc = model.SubscriptionEndDate;
 
             endUser.Name = model.Name;
             endUser.PhoneNumber = model.PhoneNumber;
@@ -432,14 +432,14 @@ namespace PadelPassCheckInSystem.Controllers
             // Convert date filters to UTC for database query
             if (fromDate.HasValue)
             {
-                var fromDateUtc = fromDate.Value.ToUTCFromKSA();
+                var fromDateUtc = fromDate.Value;
                 query = query.Where(c => c.CheckInDateTime >= fromDateUtc);
             }
 
             if (toDate.HasValue)
             {
                 // Add one day and convert to get the end of the day in KSA
-                var toDateUtc = toDate.Value.AddDays(1).ToUTCFromKSA();
+                var toDateUtc = toDate.Value.AddDays(1);
                 query = query.Where(c => c.CheckInDateTime < toDateUtc);
             }
 
@@ -479,14 +479,14 @@ namespace PadelPassCheckInSystem.Controllers
             // Convert date filters to UTC for database query
             if (fromDate.HasValue)
             {
-                var fromDateUtc = fromDate.Value.ToUTCFromKSA();
+                var fromDateUtc = fromDate.Value;
                 query = query.Where(c => c.CheckInDateTime >= fromDateUtc);
             }
 
             if (toDate.HasValue)
             {
                 // Add one day and convert to get the end of the day in KSA
-                var toDateUtc = toDate.Value.AddDays(1).ToUTCFromKSA();
+                var toDateUtc = toDate.Value.AddDays(1);
                 query = query.Where(c => c.CheckInDateTime < toDateUtc);
             }
 
@@ -777,7 +777,7 @@ namespace PadelPassCheckInSystem.Controllers
             DateTime? playStartTimeUtc = null;
             if (request.PlayStartTime.HasValue)
             {
-                playStartTimeUtc = request.PlayStartTime.Value.ToUTCFromKSA();
+                playStartTimeUtc = request.PlayStartTime.Value;
             }
 
             // Update check-in details

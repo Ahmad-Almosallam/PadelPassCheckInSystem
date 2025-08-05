@@ -139,7 +139,7 @@ namespace PadelPassCheckInSystem.Controllers
             DateTime? playStartTimeUtc = null;
             if (request.PlayStartTime.HasValue)
             {
-                playStartTimeUtc = request.PlayStartTime.Value.ToUTCFromKSA();
+                playStartTimeUtc = request.PlayStartTime.Value;
             }
 
             var result = await _checkInService.AssignCourtAsync(
@@ -272,7 +272,7 @@ namespace PadelPassCheckInSystem.Controllers
             DateTime? playStartTimeUtc = null;
             if (model.PlayStartTime.HasValue)
             {
-                playStartTimeUtc = model.PlayStartTime.Value.ToUTCFromKSA();
+                playStartTimeUtc = model.PlayStartTime.Value;
             }
 
             var result = await _checkInService.AssignCourtAsync(
@@ -386,7 +386,7 @@ namespace PadelPassCheckInSystem.Controllers
             DateTime? playStartTimeUtc = null;
             if (request.PlayStartTime != default(DateTime))
             {
-                playStartTimeUtc = request.PlayStartTime.ToUTCFromKSA();
+                playStartTimeUtc = request.PlayStartTime;
             }
 
             // Then, assign the court
