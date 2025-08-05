@@ -1,14 +1,22 @@
 @model List<CheckIn>
 @{
-ViewData["Title"] = "Check-Ins Report";
-var branches = ViewBag.Branches as List<Branch>;
+    ViewData["Title"] = "Check-Ins Report";
+    var branches = ViewBag.Branches as List<Branch>;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Check-Ins Report</h1>
-    <div class="text-muted">
-        <i class="bi bi-info-circle"></i> All times shown in KSA Time (UTC+3)
-        <br><small>Current Time: @KSADateTimeExtensions.GetKSANow().ToString("yyyy-MM-dd HH:mm:ss") KSA</small>
+    <div>
+        @if (User.IsInRole("Admin"))
+        {
+            <button type="button" class="btn btn-success me-2" onclick="showAdminManualCheckInModal()">
+                <i class="bi bi-person-plus"></i> Create Manual Check-In
+            </button>
+        }
+        <div class="text-muted">
+            <i class="bi bi-info-circle"></i> All times shown in KSA Time (UTC+3)
+            <br><small>Current Time: @KSADateTimeExtensions.GetKSANow().ToString("yyyy-MM-dd HH:mm:ss") KSA</small>
+        </div>
     </div>
 </div>
 
@@ -17,7 +25,8 @@ var branches = ViewBag.Branches as List<Branch>;
         <form method="get" asp-action="CheckIns" class="row g-3">
             <div class="col-md-3">
                 <label class="form-label">From Date <small class="text-muted">(KSA)</small></label>
-                <input type="date" name="fromDate" class="form-control" value="@ViewBag.FromDate?.ToString("yyyy-MM-dd")">
+                <input type="date" name="fromDate" class="form-control"
+                       value="@ViewBag.FromDate?.ToString("yyyy-MM-dd")">
             </div>
             <div class="col-md-3">
                 <label class="form-label">To Date <small class="text-muted">(KSA)</small></label>
@@ -25,16 +34,17 @@ var branches = ViewBag.Branches as List<Branch>;
             </div>
             @if (User.IsInRole("Admin"))
             {
-            <div class="col-md-3">
-                <label class="form-label">Branch</label>
-                <select name="branchId" class="form-select">
-                    <option value="">All Branches</option>
-                    @foreach (var branch in branches)
-                    {
-                    <option value="@branch.Id" selected="@(ViewBag.BranchId == branch.Id ? "selected" : null)">@branch.Name</option>
-                    }
-                </select>
-            </div>
+                <div class="col-md-3">
+                    <label class="form-label">Branch</label>
+                    <select name="branchId" class="form-select">
+                        <option value="">All Branches</option>
+                        @foreach (var branch in branches)
+                        {
+                            <option value="@branch.Id"
+                                    selected="@(ViewBag.BranchId == branch.Id ? "selected" : null)">@branch.Name</option>
+                        }
+                    </select>
+                </div>
             }
             <div class="col-md-3">
                 <label class="form-label">&nbsp;</label>
@@ -74,67 +84,68 @@ var branches = ViewBag.Branches as List<Branch>;
                 <tbody>
                 @foreach (var checkIn in Model)
                 {
-                <tr data-checkin-id="@checkIn.Id">
-                    <td>
-                        <div class="d-flex align-items-center">
-                            @if (!string.IsNullOrEmpty(checkIn.EndUser.ImageUrl))
-                            {
-                            <img src="@checkIn.EndUser.ImageUrl" alt="@checkIn.EndUser.Name"
-                                 class="rounded-circle me-2" style="width: 30px; height: 30px; object-fit: cover;">
-                            }
-                            <span>@checkIn.EndUser.Name</span>
-                        </div>
-                    </td>
-                    <td>@checkIn.EndUser.PhoneNumber</td>
-                    <td>@checkIn.Branch.Name</td>
-                    <td>@checkIn.CheckInDateTime.ToKSATime().ToString("yyyy-MM-dd")</td>
-                    <td>@checkIn.CheckInDateTime.ToKSATime().ToString("HH:mm:ss")</td>
-                    <td>
-                        @if (!string.IsNullOrEmpty(checkIn.CourtName))
-                        {
-                        <span class="badge bg-success">@checkIn.CourtName</span>
-                        }
-                        else
-                        {
-                        <span class="badge bg-warning">Not Assigned</span>
-                        }
-                    </td>
-                    <td>
-                        @if (checkIn.PlayDuration.HasValue)
-                        {
-                        <span>@((int)checkIn.PlayDuration.Value.TotalMinutes) min</span>
-                        }
-                        else
-                        {
-                        <span class="text-muted">Not Set</span>
-                        }
-                    </td>
-                    <td>
-                        @if (checkIn.PlayStartTime.HasValue)
-                        {
-                        <span>@checkIn.PlayStartTime.Value.ToKSATime().ToString("HH:mm:ss")</span>
-                        }
-                        else
-                        {
-                        <span class="text-muted">Not Set</span>
-                        }
-                    </td>
-                    <td>
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-primary btn-sm"
-                                        onclick="showEditCheckInModal(@checkIn.Id, '@Html.Raw(checkIn.EndUser.Name)', '@Html.Raw(checkIn.CourtName)', '@(checkIn.PlayDuration?.TotalMinutes ?? 0)', '@checkIn.PlayStartTime?.ToKSATime().ToString("HH:mm")', '@Html.Raw(checkIn.Notes)')">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </button>
-                                <button type="button" class="btn btn-danger btn-sm"
-                                        onclick="deleteCheckIn(@checkIn.Id, '@Html.Raw(checkIn.EndUser.Name)')">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
+                    <tr data-checkin-id="@checkIn.Id">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                @if (!string.IsNullOrEmpty(checkIn.EndUser.ImageUrl))
+                                {
+                                    <img src="@checkIn.EndUser.ImageUrl" alt="@checkIn.EndUser.Name"
+                                         class="rounded-circle me-2"
+                                         style="width: 30px; height: 30px; object-fit: cover;">
+                                }
+                                <span>@checkIn.EndUser.Name</span>
                             </div>
-                        }
-                    </td>
-                </tr>
+                        </td>
+                        <td>@checkIn.EndUser.PhoneNumber</td>
+                        <td>@checkIn.Branch.Name</td>
+                        <td>@checkIn.CheckInDateTime.ToKSATime().ToString("yyyy-MM-dd")</td>
+                        <td>@checkIn.CheckInDateTime.ToKSATime().ToString("HH:mm:ss")</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(checkIn.CourtName))
+                            {
+                                <span class="badge bg-success">@checkIn.CourtName</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning">Not Assigned</span>
+                            }
+                        </td>
+                        <td>
+                            @if (checkIn.PlayDuration.HasValue)
+                            {
+                                <span>@((int)checkIn.PlayDuration.Value.TotalMinutes) min</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not Set</span>
+                            }
+                        </td>
+                        <td>
+                            @if (checkIn.PlayStartTime.HasValue)
+                            {
+                                <span>@checkIn.PlayStartTime.Value.ToKSATime().ToString("HH:mm:ss")</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not Set</span>
+                            }
+                        </td>
+                        <td>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-primary btn-sm"
+                                            onclick="showEditCheckInModal(@checkIn.Id, '@Html.Raw(checkIn.EndUser.Name)', '@Html.Raw(checkIn.CourtName)', '@(checkIn.PlayDuration?.TotalMinutes ?? 0)', '@checkIn.PlayStartTime?.ToKSATime().ToString("HH:mm")', '@Html.Raw(checkIn.Notes)')">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-sm"
+                                            onclick="deleteCheckIn(@checkIn.Id, '@Html.Raw(checkIn.EndUser.Name)')">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </div>
+                            }
+                        </td>
+                    </tr>
                 }
                 </tbody>
             </table>
@@ -142,20 +153,20 @@ var branches = ViewBag.Branches as List<Branch>;
 
         @if (!Model.Any())
         {
-        <div class="text-center text-muted py-5">
-            <i class="bi bi-list-check fs-1 mb-3"></i>
-            <h5>No Check-Ins Found</h5>
-            <p>No check-ins found for the selected criteria.</p>
-        </div>
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-list-check fs-1 mb-3"></i>
+                <h5>No Check-Ins Found</h5>
+                <p>No check-ins found for the selected criteria.</p>
+            </div>
         }
         else
         {
-        <div class="mt-3 text-muted">
-            <small>
-                <i class="bi bi-info-circle"></i>
-                Showing @Model.Count check-in(s). All times displayed in KSA Time (UTC+3).
-            </small>
-        </div>
+            <div class="mt-3 text-muted">
+                <small>
+                    <i class="bi bi-info-circle"></i>
+                    Showing @Model.Count check-in(s). All times displayed in KSA Time (UTC+3).
+                </small>
+            </div>
         }
     </div>
 </div>
@@ -238,153 +249,496 @@ var branches = ViewBag.Branches as List<Branch>;
     </div>
 </div>
 
+<!-- Add the manual check-in modal after the existing modals -->
+<!-- Admin Manual Check-In Modal -->
+@if (User.IsInRole("Admin"))
+{
+    <div class="modal fade" id="adminManualCheckInModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-plus"></i> Create Manual Check-In
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="adminManualCheckInForm">
+                        <!-- User Lookup Section -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Step 1: Find User</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Phone Number *</label>
+                                            <input type="tel" id="manualPhoneNumber" class="form-control"
+                                                   placeholder="05xxxxxxxx" pattern="[0-9]{10}" maxlength="10" required>
+                                            <small class="text-muted">Enter 10-digit phone number</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Check-In Date *</label>
+                                            <input type="date" id="manualCheckInDate" class="form-control" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-primary"
+                                            onclick="validateUserForManualCheckIn()">
+                                        <i class="bi bi-search"></i> Find & Validate User
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Information Display -->
+                        <div id="userInfoSection" class="card mb-4 d-none">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-check-circle"></i> User Found & Validated
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div id="manualUserImage" class="me-3">
+                                        <!-- User image will be populated here -->
+                                    </div>
+                                    <div>
+                                        <h5 id="manualUserName" class="mb-1"><!-- User name --></h5>
+                                        <p class="mb-1"><strong>Phone:</strong> <span id="manualUserPhone"></span></p>
+                                        <small class="text-muted">
+                                            Subscription: <span id="manualUserSubscription"></span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Check-In Details Section -->
+                        <div id="checkInDetailsSection" class="card d-none">
+                            <div class="card-header">
+                                <h6 class="mb-0">Step 2: Check-In Details</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Branch *</label>
+                                            <select id="manualBranchId" class="form-select" required>
+                                                <option value="">Select Branch</option>
+                                                @foreach (var branch in branches)
+                                                {
+                                                    <option value="@branch.Id">@branch.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Check-In Time *</label>
+                                            <input type="time" id="manualCheckInTime" class="form-control" required>
+                                            <small class="text-muted">Time in KSA timezone</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Court Name/Number</label>
+                                            <input type="text" id="manualCourtName" class="form-control"
+                                                   placeholder="e.g., Court 1, Court A">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Play Duration (minutes)</label>
+                                            <select id="manualPlayDuration" class="form-select">
+                                                <option value="">Not specified</option>
+                                                <option value="60">60 minutes</option>
+                                                <option value="90" selected>90 minutes</option>
+                                                <option value="120">120 minutes</option>
+                                                <option value="150">150 minutes</option>
+                                                <option value="180">180 minutes</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Play Start Time</label>
+                                            <input type="time" id="manualPlayStartTime" class="form-control">
+                                            <small class="text-muted">Time in KSA timezone</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Notes</label>
+                                            <textarea id="manualNotes" class="form-control" rows="2"
+                                                      placeholder="Additional notes (optional)"
+                                                      maxlength="200"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    <strong>Manual Check-In:</strong> This will create a check-in record for the
+                                    specified date and time.
+                                    Make sure all details are accurate before proceeding.
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="createManualCheckInBtn" class="btn btn-success d-none"
+                            onclick="submitManualCheckIn()">
+                        <i class="bi bi-check-circle"></i> Create Check-In
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @section Scripts {
-<script>
-    function resetForm() {
-        window.location.href = '@Url.Action("CheckIns", "Admin")';
-    }
-
-    function showEditCheckInModal(checkInId, customerName, courtName, playDuration, playStartTime, notes) {
-        document.getElementById('editCheckInId').value = checkInId;
-        document.getElementById('editCustomerName').value = customerName;
-        document.getElementById('editCourtName').value = courtName || '';
-
-        // Set play duration
-        if (playDuration && playDuration !== 'NaN' && playDuration !== 'undefined' && playDuration > 0) {
-            document.getElementById('editPlayDuration').value = Math.round(parseFloat(playDuration));
-        } else {
-            document.getElementById('editPlayDuration').value = '0';
+    <script>
+        function resetForm() {
+            window.location.href = '@Url.Action("CheckIns", "Admin")';
         }
 
-        // Set play start time
-        document.getElementById('editPlayStartTime').value = playStartTime || '';
-        document.getElementById('editNotes').value = notes || '';
+        function showEditCheckInModal(checkInId, customerName, courtName, playDuration, playStartTime, notes) {
+            document.getElementById('editCheckInId').value = checkInId;
+            document.getElementById('editCustomerName').value = customerName;
+            document.getElementById('editCourtName').value = courtName || '';
 
-        new bootstrap.Modal(document.getElementById('editCheckInModal')).show();
-    }
+            // Set play duration
+            if (playDuration && playDuration !== 'NaN' && playDuration !== 'undefined' && playDuration > 0) {
+                document.getElementById('editPlayDuration').value = Math.round(parseFloat(playDuration));
+            } else {
+                document.getElementById('editPlayDuration').value = '0';
+            }
 
-    function submitEditCheckIn() {
-        const checkInId = parseInt(document.getElementById('editCheckInId').value);
-        const courtName = document.getElementById('editCourtName').value.trim();
-        const playDuration = parseInt(document.getElementById('editPlayDuration').value);
-        const playStartTime = document.getElementById('editPlayStartTime').value;
-        const notes = document.getElementById('editNotes').value.trim();
+            // Set play start time
+            document.getElementById('editPlayStartTime').value = playStartTime || '';
+            document.getElementById('editNotes').value = notes || '';
 
-        let playStartDateTime = null;
-        if (playStartTime) {
-            const today = new Date();
-            const [hours, minutes] = playStartTime.split(':');
-            playStartDateTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hours), parseInt(minutes));
+            new bootstrap.Modal(document.getElementById('editCheckInModal')).show();
         }
 
-        fetch('@Url.Action("EditCheckIn", "Admin")', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-            },
-            body: JSON.stringify({
-                checkInId: checkInId,
-                courtName: courtName || null,
-                playDurationMinutes: playDuration || 0,
-                playStartTime: playStartDateTime,
-                notes: notes || null
+        function submitEditCheckIn() {
+            const checkInId = parseInt(document.getElementById('editCheckInId').value);
+            const courtName = document.getElementById('editCourtName').value.trim();
+            const playDuration = parseInt(document.getElementById('editPlayDuration').value);
+            const playStartTime = document.getElementById('editPlayStartTime').value;
+            const notes = document.getElementById('editNotes').value.trim();
+
+            let playStartDateTime = null;
+            if (playStartTime) {
+                const today = new Date();
+                const [hours, minutes] = playStartTime.split(':');
+                playStartDateTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hours), parseInt(minutes));
+            }
+
+            fetch('@Url.Action("EditCheckIn", "Admin")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    checkInId: checkInId,
+                    courtName: courtName || null,
+                    playDurationMinutes: playDuration || 0,
+                    playStartTime: playStartDateTime,
+                    notes: notes || null
+                })
             })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    bootstrap.Modal.getInstance(document.getElementById('editCheckInModal')).hide();
-                    showAlert(data.message, 'success');
-                    // Refresh the page to show updated data
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
-                } else {
-                    showAlert(data.message, 'danger');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showAlert('An error occurred while updating check-in details.', 'danger');
-            });
-    }
-
-    function deleteCheckIn(checkInId, userName) {
-        document.getElementById('deleteCheckInId').value = checkInId;
-        document.getElementById('deleteUserName').textContent = userName;
-        new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
-    }
-
-    function confirmDeleteCheckIn() {
-        const checkInId = parseInt(document.getElementById('deleteCheckInId').value);
-
-        if (!checkInId) {
-            showAlert('Invalid check-in ID.', 'danger');
-            return;
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('editCheckInModal')).hide();
+                        showAlert(data.message, 'success');
+                        // Refresh the page to show updated data
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        showAlert(data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('An error occurred while updating check-in details.', 'danger');
+                });
         }
 
-        fetch('@Url.Action("DeleteCheckIn", "CheckIn")', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-            },
-            body: JSON.stringify({ checkInId: checkInId })
-        })
-            .then(response => response.json())
-            .then(data => {
-                bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
+        function deleteCheckIn(checkInId, userName) {
+            document.getElementById('deleteCheckInId').value = checkInId;
+            document.getElementById('deleteUserName').textContent = userName;
+            new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
+        }
 
-                if (data.success) {
-                    // Remove the row from the table
-                    document.querySelector(`tr[data-checkin-id="${checkInId}"]`).remove();
-                    showAlert(data.message, 'success');
-                } else {
-                    showAlert(data.message, 'danger');
-                }
+        function confirmDeleteCheckIn() {
+            const checkInId = parseInt(document.getElementById('deleteCheckInId').value);
+
+            if (!checkInId) {
+                showAlert('Invalid check-in ID.', 'danger');
+                return;
+            }
+
+            fetch('@Url.Action("DeleteCheckIn", "CheckIn")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({checkInId: checkInId})
             })
-            .catch(error => {
-                console.error('Error:', error);
-                bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
-                showAlert('An error occurred while deleting the check-in.', 'danger');
-            });
-    }
+                .then(response => response.json())
+                .then(data => {
+                    bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
 
-    function showAlert(message, type) {
-        // Remove existing alerts
-        const existingAlerts = document.querySelectorAll('.dynamic-alert');
-        existingAlerts.forEach(alert => alert.remove());
+                    if (data.success) {
+                        // Remove the row from the table
+                        document.querySelector(`tr[data-checkin-id="${checkInId}"]`).remove();
+                        showAlert(data.message, 'success');
+                    } else {
+                        showAlert(data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
+                    showAlert('An error occurred while deleting the check-in.', 'danger');
+                });
+        }
 
-        // Create new alert
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed dynamic-alert`;
-        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-        alertDiv.innerHTML = `
+        function showAlert(message, type) {
+            // Remove existing alerts
+            const existingAlerts = document.querySelectorAll('.dynamic-alert');
+            existingAlerts.forEach(alert => alert.remove());
+
+            // Create new alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed dynamic-alert`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
                 <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
                 <strong>${type === 'success' ? 'Success!' : 'Error!'}</strong> ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-        document.body.appendChild(alertDiv);
+            document.body.appendChild(alertDiv);
 
-        // Remove alert after 5 seconds
-        setTimeout(() => {
-            if (alertDiv && alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 5000);
-    }
-
-    // Add CSRF token to all requests
-    document.addEventListener('DOMContentLoaded', function() {
-        // Add anti-forgery token to the page if it doesn't exist
-        if (!document.querySelector('input[name="__RequestVerificationToken"]')) {
-            const tokenInput = document.createElement('input');
-            tokenInput.type = 'hidden';
-            tokenInput.name = '__RequestVerificationToken';
-            tokenInput.value = '@Html.AntiForgeryToken()'.match(/value="([^"]+)"/)?.[1] || '';
-            document.body.appendChild(tokenInput);
+            // Remove alert after 5 seconds
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
         }
-    });
-</script>
+
+        // Add CSRF token to all requests
+        document.addEventListener('DOMContentLoaded', function () {
+            // Add anti-forgery token to the page if it doesn't exist
+            if (!document.querySelector('input[name="__RequestVerificationToken"]')) {
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = '@Html.AntiForgeryToken()'.match(/value="([^"]+)"/)?.[1] || '';
+                document.body.appendChild(tokenInput);
+            }
+        });
+
+
+        // Add these new JavaScript functions for manual check-in functionality
+        let validatedUserData = null;
+
+        function showAdminManualCheckInModal() {
+            // Reset form
+            document.getElementById('adminManualCheckInForm').reset();
+            document.getElementById('userInfoSection').classList.add('d-none');
+            document.getElementById('checkInDetailsSection').classList.add('d-none');
+            document.getElementById('createManualCheckInBtn').classList.add('d-none');
+            validatedUserData = null;
+
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('manualCheckInDate').value = today;
+
+            // Set default time to current time
+            const now = new Date();
+            const timeString = now.toTimeString().substring(0, 5);
+            document.getElementById('manualCheckInTime').value = timeString;
+
+            new bootstrap.Modal(document.getElementById('adminManualCheckInModal')).show();
+        }
+
+        function validateUserForManualCheckIn() {
+            const phoneNumber = document.getElementById('manualPhoneNumber').value.trim();
+            const checkInDate = document.getElementById('manualCheckInDate').value;
+
+            if (!phoneNumber || !/^[0-9]{10}$/.test(phoneNumber)) {
+                showAlert('Please enter a valid 10-digit phone number.', 'danger');
+                return;
+            }
+
+            if (!checkInDate) {
+                showAlert('Please select a check-in date.', 'danger');
+                return;
+            }
+
+            // Convert date to proper format for the request
+            const checkInDateTime = new Date(checkInDate + 'T00:00:00');
+
+            fetch('@Url.Action("ValidateUserForManualCheckIn", "Admin")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    phoneNumber: phoneNumber,
+                    checkInDate: checkInDateTime.toISOString()
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Store validated user data
+                        validatedUserData = data;
+
+                        // Show user information
+                        displayValidatedUser(data);
+
+                        // Show check-in details section
+                        document.getElementById('checkInDetailsSection').classList.remove('d-none');
+                        document.getElementById('createManualCheckInBtn').classList.remove('d-none');
+
+                        showAlert('User validated successfully!', 'success');
+                    } else {
+                        showAlert(data.message, 'danger');
+
+                        // Hide sections if validation failed
+                        document.getElementById('userInfoSection').classList.add('d-none');
+                        document.getElementById('checkInDetailsSection').classList.add('d-none');
+                        document.getElementById('createManualCheckInBtn').classList.add('d-none');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('An error occurred while validating user.', 'danger');
+                });
+        }
+
+        function displayValidatedUser(userData) {
+            // Show user image
+            const userImageDiv = document.getElementById('manualUserImage');
+            if (userData.userImage) {
+                userImageDiv.innerHTML = `
+                <img src="${userData.userImage}" alt="${userData.userName}" 
+                     class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">`;
+            } else {
+                userImageDiv.innerHTML = `
+                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" 
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-person-fill text-white" style="font-size: 2rem;"></i>
+                </div>`;
+            }
+
+            // Set user details
+            document.getElementById('manualUserName').textContent = userData.userName;
+            document.getElementById('manualUserPhone').textContent = userData.phoneNumber;
+            document.getElementById('manualUserSubscription').textContent =
+                `${userData.subscriptionStartDate} to ${userData.subscriptionEndDate}`;
+
+            // Show user info section
+            document.getElementById('userInfoSection').classList.remove('d-none');
+        }
+
+        function submitManualCheckIn() {
+            if (!validatedUserData) {
+                showAlert('Please validate user first.', 'warning');
+                return;
+            }
+
+            const form = document.getElementById('adminManualCheckInForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const phoneNumber = document.getElementById('manualPhoneNumber').value.trim();
+            const branchId = parseInt(document.getElementById('manualBranchId').value);
+            const checkInDate = document.getElementById('manualCheckInDate').value;
+            const checkInTime = document.getElementById('manualCheckInTime').value;
+            const courtName = document.getElementById('manualCourtName').value.trim();
+            const playDuration = document.getElementById('manualPlayDuration').value;
+            const playStartTime = document.getElementById('manualPlayStartTime').value;
+            const notes = document.getElementById('manualNotes').value.trim();
+
+            // Combine date and time
+            const checkInDateTime = new Date(`${checkInDate}T${checkInTime}:00`);
+
+            // Handle play start time
+            let playStartDateTime = null;
+            if (playStartTime) {
+                playStartDateTime = new Date(`${checkInDate}T${playStartTime}:00`);
+            }
+
+            const requestData = {
+                phoneNumber: phoneNumber,
+                branchId: branchId,
+                checkInDateTime: checkInDateTime.toISOString(),
+                courtName: courtName || null,
+                playDurationMinutes: playDuration ? parseInt(playDuration) : null,
+                playStartTime: playStartDateTime ? playStartDateTime.toISOString() : null,
+                notes: notes || null
+            };
+
+            fetch('@Url.Action("CreateManualCheckIn", "Admin")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify(requestData)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('adminManualCheckInModal')).hide();
+                        showAlert(data.message, 'success');
+
+                        // Refresh the check-ins list
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1500);
+                    } else {
+                        showAlert(data.message, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('An error occurred while creating manual check-in.', 'danger');
+                });
+        }
+
+        // Reset form when modal is closed
+        document.getElementById('adminManualCheckInModal')?.addEventListener('hidden.bs.modal', function () {
+            document.getElementById('adminManualCheckInForm').reset();
+            document.getElementById('userInfoSection').classList.add('d-none');
+            document.getElementById('checkInDetailsSection').classList.add('d-none');
+            document.getElementById('createManualCheckInBtn').classList.add('d-none');
+            validatedUserData = null;
+        });
+    </script>
 }

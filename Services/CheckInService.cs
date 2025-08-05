@@ -17,7 +17,7 @@ namespace PadelPassCheckInSystem.Services
         public async Task<(bool Success, string Message, int? CheckInId)> CheckInAsync(string identifier, int branchId)
         {
             var (isValid, message, endUser) = await ValidateCheckInAsync(identifier, branchId);
-            
+
             if (!isValid)
             {
                 return (false, message, null);
@@ -37,7 +37,8 @@ namespace PadelPassCheckInSystem.Services
             return (true, $"Check-in successful for {endUser.Name}", checkIn.Id);
         }
 
-        public async Task<(bool Success, string Message)> AssignCourtAsync(int checkInId, string courtName, int playDurationMinutes, DateTime? playStartTime, string notes)
+        public async Task<(bool Success, string Message)> AssignCourtAsync(int checkInId, string courtName,
+            int playDurationMinutes, DateTime? playStartTime, string notes)
         {
             var checkIn = await _context.CheckIns
                 .Include(c => c.EndUser)
@@ -52,7 +53,7 @@ namespace PadelPassCheckInSystem.Services
             {
                 return (false, "Court has already been assigned to this check-in");
             }
-            
+
             DateTime? playStartTimeUtc = null;
             if (playStartTime.HasValue)
             {
@@ -100,7 +101,7 @@ namespace PadelPassCheckInSystem.Services
             }
 
             var userName = checkIn.EndUser.Name;
-            
+
             _context.CheckIns.Remove(checkIn);
             await _context.SaveChangesAsync();
 
@@ -111,7 +112,7 @@ namespace PadelPassCheckInSystem.Services
         {
             // Use KSA date for comparison
             var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
-            
+
             // Get all check-ins for this user and convert to KSA time for comparison
             var userCheckIns = await _context.CheckIns
                 .Where(c => c.EndUserId == endUserId)
@@ -123,9 +124,9 @@ namespace PadelPassCheckInSystem.Services
         private async Task<bool> IsWithinAllowedTimeSlotAsync(int branchId, DayOfWeek dayOfWeek, TimeSpan currentTime)
         {
             var timeSlots = await _context.BranchTimeSlots
-                .Where(ts => ts.BranchId == branchId && 
-                           ts.DayOfWeek == dayOfWeek && 
-                           ts.IsActive)
+                .Where(ts => ts.BranchId == branchId &&
+                             ts.DayOfWeek == dayOfWeek &&
+                             ts.IsActive)
                 .ToListAsync();
 
             if (!timeSlots.Any())
@@ -161,9 +162,9 @@ namespace PadelPassCheckInSystem.Services
         private async Task<string> GetBranchTimeSlotDisplayAsync(int branchId, DayOfWeek dayOfWeek)
         {
             var timeSlots = await _context.BranchTimeSlots
-                .Where(ts => ts.BranchId == branchId && 
-                           ts.DayOfWeek == dayOfWeek && 
-                           ts.IsActive)
+                .Where(ts => ts.BranchId == branchId &&
+                             ts.DayOfWeek == dayOfWeek &&
+                             ts.IsActive)
                 .OrderBy(ts => ts.StartTime)
                 .ToListAsync();
 
@@ -172,7 +173,7 @@ namespace PadelPassCheckInSystem.Services
                 return "No specific time restrictions";
             }
 
-            var timeRanges = timeSlots.Select(ts => 
+            var timeRanges = timeSlots.Select(ts =>
                 $"{ts.StartTime:hh\\:mm} - {ts.EndTime:hh\\:mm}");
 
             return string.Join(", ", timeRanges);
@@ -221,7 +222,7 @@ namespace PadelPassCheckInSystem.Services
         {
             // Use KSA date for filtering today's check-ins
             var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
-            
+
             var allCheckIns = await _context.CheckIns
                 .Include(c => c.EndUser)
                 .Where(c => c.BranchId == branchId && string.IsNullOrEmpty(c.CourtName))
@@ -238,7 +239,7 @@ namespace PadelPassCheckInSystem.Services
         {
             // Use KSA date for filtering today's check-ins
             var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
-            
+
             var allCheckIns = await _context.CheckIns
                 .Include(c => c.EndUser)
                 .Where(c => c.BranchId == branchId)
@@ -251,7 +252,8 @@ namespace PadelPassCheckInSystem.Services
                 .ToList();
         }
 
-        public async Task<(bool IsValid, string Message, EndUser User)> ValidateCheckInAsync(string identifier, int branchId)
+        public async Task<(bool IsValid, string Message, EndUser User)> ValidateCheckInAsync(string identifier,
+            int branchId)
         {
             // Find user by phone or unique identifier
             var endUser = await _context.EndUsers
@@ -278,7 +280,8 @@ namespace PadelPassCheckInSystem.Services
                 var pauseEndDateKSA = endUser.CurrentPauseEndDate?.ToKSATime().Date;
                 if (pauseEndDateKSA.HasValue && todayKSA <= pauseEndDateKSA.Value)
                 {
-                    return (false, $"Subscription is currently paused until {pauseEndDateKSA.Value:MMM dd, yyyy}", null);
+                    return (false, $"Subscription is currently paused until {pauseEndDateKSA.Value:MMM dd, yyyy}",
+                        null);
                 }
                 else
                 {
@@ -312,8 +315,9 @@ namespace PadelPassCheckInSystem.Services
 
             return (true, "Validation successful", endUser);
         }
-        
-        public async Task<(bool Success, string Message)> EditCheckInAsync(int checkInId, string courtName, int playDurationMinutes, DateTime? playStartTime, string notes)
+
+        public async Task<(bool Success, string Message)> EditCheckInAsync(int checkInId, string courtName,
+            int playDurationMinutes, DateTime? playStartTime, string notes)
         {
             var checkIn = await _context.CheckIns
                 .Include(c => c.EndUser)
@@ -341,6 +345,148 @@ namespace PadelPassCheckInSystem.Services
             await _context.SaveChangesAsync();
 
             return (true, $"Check-in details updated successfully for {checkIn.EndUser.Name}");
+        }
+
+        public async Task<(bool Success, string Message, int? CheckInId)> AdminManualCheckInAsync(
+            string phoneNumber,
+            int branchId,
+            DateTime checkInDateTime,
+            string courtName = null,
+            int? playDurationMinutes = null,
+            DateTime? playStartTime = null,
+            string notes = null)
+        {
+            try
+            {
+                // Find user by phone number
+                var endUser = await _context.EndUsers
+                    .FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+
+                if (endUser == null)
+                {
+                    return (false, "User not found with the provided phone number", null);
+                }
+
+                // Validate branch exists
+                var branch = await _context.Branches.FindAsync(branchId);
+                if (branch == null)
+                {
+                    return (false, "Selected branch not found", null);
+                }
+
+                if (!branch.IsActive)
+                {
+                    return (false, "Selected branch is not active", null);
+                }
+
+                // Convert KSA check-in date to UTC for database storage
+                var checkInDateTimeUtc = checkInDateTime;
+
+                // Check if user already has a check-in on this date
+                var checkInDateKSA = checkInDateTime.Date;
+                var existingCheckIns = await _context.CheckIns
+                    .Where(c => c.EndUserId == endUser.Id)
+                    .ToListAsync();
+
+                var hasExistingCheckIn = existingCheckIns.Any(c =>
+                    c.CheckInDateTime.ToKSATime().Date == checkInDateKSA);
+
+                if (hasExistingCheckIn)
+                {
+                    return (false, $"User already has a check-in record for {checkInDateKSA:MMM dd, yyyy}", null);
+                }
+
+                // Create check-in record
+                var checkIn = new CheckIn
+                {
+                    EndUserId = endUser.Id,
+                    BranchId = branchId,
+                    CheckInDateTime = checkInDateTimeUtc,
+                    CourtName = !string.IsNullOrWhiteSpace(courtName) ? courtName.Trim() : null,
+                    PlayDuration =
+                        playDurationMinutes.HasValue ? TimeSpan.FromMinutes(playDurationMinutes.Value) : null,
+                    PlayStartTime = playStartTime,
+                    Notes = !string.IsNullOrWhiteSpace(notes) ? notes.Trim() : null
+                };
+
+                _context.CheckIns.Add(checkIn);
+                await _context.SaveChangesAsync();
+
+                var courtInfo = !string.IsNullOrEmpty(courtName) ? $" to {courtName}" : "";
+                return (true, $"Manual check-in created successfully for {endUser.Name}{courtInfo}", checkIn.Id);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception here
+                return (false, "An error occurred while creating manual check-in", null);
+            }
+        }
+
+        public async Task<(bool IsValid, string Message, EndUser User)> ValidateEndUserForManualCheckInAsync(
+            string phoneNumber,
+            DateTime checkInDate)
+        {
+            try
+            {
+                // Find user by phone number
+                var endUser = await _context.EndUsers
+                    .FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+
+                if (endUser == null)
+                {
+                    return (false, "User not found with the provided phone number", null);
+                }
+
+                // Convert dates to KSA for validation
+                var checkInDateKSA = checkInDate.Date;
+                var subscriptionStartKSA = endUser.SubscriptionStartDate.ToKSATime().Date;
+                var subscriptionEndKSA = endUser.SubscriptionEndDate.ToKSATime().Date;
+
+                // Check subscription validity for the selected date
+                if (checkInDateKSA < subscriptionStartKSA || checkInDateKSA > subscriptionEndKSA)
+                {
+                    var startDateStr = subscriptionStartKSA.ToString("MMM dd, yyyy");
+                    var endDateStr = subscriptionEndKSA.ToString("MMM dd, yyyy");
+                    return (false,
+                        $"Subscription is not valid for selected date. Valid period: {startDateStr} to {endDateStr}",
+                        null);
+                }
+
+                // Check if subscription was paused on the selected date
+                if (endUser.IsPaused)
+                {
+                    var pauseStartKSA = endUser.CurrentPauseStartDate?.ToKSATime().Date;
+                    var pauseEndKSA = endUser.CurrentPauseEndDate?.ToKSATime().Date;
+
+                    if (pauseStartKSA.HasValue && pauseEndKSA.HasValue &&
+                        checkInDateKSA >= pauseStartKSA.Value && checkInDateKSA <= pauseEndKSA.Value)
+                    {
+                        return (false,
+                            $"Subscription was paused on the selected date ({pauseStartKSA.Value:MMM dd, yyyy} to {pauseEndKSA.Value:MMM dd, yyyy})",
+                            null);
+                    }
+                }
+
+                // Check if user already has a check-in on this date
+                var existingCheckIns = await _context.CheckIns
+                    .Where(c => c.EndUserId == endUser.Id)
+                    .ToListAsync();
+
+                var hasExistingCheckIn = existingCheckIns.Any(c =>
+                    c.CheckInDateTime.ToKSATime().Date == checkInDateKSA);
+
+                if (hasExistingCheckIn)
+                {
+                    return (false, $"User already has a check-in record for {checkInDateKSA:MMM dd, yyyy}", null);
+                }
+
+                return (true, "User is valid for manual check-in", endUser);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception here
+                return (false, "An error occurred while validating user", null);
+            }
         }
     }
 }
