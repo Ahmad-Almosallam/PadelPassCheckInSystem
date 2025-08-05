@@ -222,7 +222,7 @@ ViewData["Title"] = "End Users Management";
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -240,9 +240,9 @@ ViewData["Title"] = "End Users Management";
 
                     <div class="alert alert-info">
                         <h6><i class="bi bi-info-circle"></i> Subscription Period</h6>
-                        <p class="mb-0">You can either set the duration in months (auto-calculated) or manually set the end date.</p>
+                        <p class="mb-0">You can either set the duration in days (auto-calculated) or manually set the end date.</p>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
@@ -252,9 +252,9 @@ ViewData["Title"] = "End Users Management";
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label">Duration (Months)</label>
-                                <input type="number" id="createDurationMonths" name="SubscriptionDurationMonths" 
-                                       class="form-control" min="1" max="60" placeholder="e.g., 12" value="0"
+                                <label class="form-label">Duration (Days)</label>
+                                <input type="number" id="createDurationDays" name="SubscriptionDurationDays"
+                                       class="form-control" min="1" max="1825" placeholder="e.g., 365" value="0"
                                        onchange="calculateEndDate()">
                                 <small class="text-muted">Auto-calculates end date</small>
                             </div>
@@ -269,7 +269,7 @@ ViewData["Title"] = "End Users Management";
                     </div>
 
                     <div class="alert alert-warning d-none" id="dateCalculationAlert">
-                        <i class="bi bi-calculator"></i> <strong>Auto-calculated:</strong> 
+                        <i class="bi bi-calculator"></i> <strong>Auto-calculated:</strong>
                         <span id="calculationDetails"></span>
                     </div>
                 </div>
@@ -307,7 +307,7 @@ ViewData["Title"] = "End Users Management";
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -325,9 +325,9 @@ ViewData["Title"] = "End Users Management";
 
                     <div class="alert alert-info">
                         <h6><i class="bi bi-info-circle"></i> Subscription Period</h6>
-                        <p class="mb-0">You can either set the duration in months (auto-calculated) or manually set the end date.</p>
+                        <p class="mb-0">You can either set the duration in days (auto-calculated) or manually set the end date.</p>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
@@ -337,9 +337,9 @@ ViewData["Title"] = "End Users Management";
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label">Duration (Months)</label>
-                                <input type="number" id="editDurationMonths" name="SubscriptionDurationMonths" 
-                                       class="form-control" min="1" max="60" placeholder="e.g., 12"
+                                <label class="form-label">Duration (Days)</label>
+                                <input type="number" id="editDurationDays" name="SubscriptionDurationDays"
+                                       class="form-control" min="1" max="1825" placeholder="e.g., 365"
                                        onchange="calculateEditEndDate()">
                                 <small class="text-muted">Auto-calculates end date</small>
                             </div>
@@ -354,7 +354,7 @@ ViewData["Title"] = "End Users Management";
                     </div>
 
                     <div class="alert alert-warning d-none" id="editDateCalculationAlert">
-                        <i class="bi bi-calculator"></i> <strong>Auto-calculated:</strong> 
+                        <i class="bi bi-calculator"></i> <strong>Auto-calculated:</strong>
                         <span id="editCalculationDetails"></span>
                     </div>
                 </div>
@@ -455,7 +455,7 @@ ViewData["Title"] = "End Users Management";
         document.getElementById('editEndDate').value = endDate;
 
         // Clear duration field and calculation alert when editing existing user
-        document.getElementById('editDurationMonths').value = '';
+        document.getElementById('editDurationDays').value = '';
         document.getElementById('editDateCalculationAlert').classList.add('d-none');
 
         new bootstrap.Modal(document.getElementById('editModal')).show();
@@ -464,25 +464,25 @@ ViewData["Title"] = "End Users Management";
     // Calculate end date based on start date and duration (Create Modal)
     function calculateEndDate() {
         const startDateInput = document.getElementById('createStartDate');
-        const durationInput = document.getElementById('createDurationMonths');
+        const durationInput = document.getElementById('createDurationDays');
         const endDateInput = document.getElementById('createEndDate');
         const alert = document.getElementById('dateCalculationAlert');
         const details = document.getElementById('calculationDetails');
 
         if (startDateInput.value && durationInput.value) {
             const startDate = new Date(startDateInput.value);
-            const months = parseInt(durationInput.value);
-            
-            // Calculate end date by adding months
+            const days = parseInt(durationInput.value);
+
+            // Calculate end date by adding days
             const endDate = new Date(startDate);
-            endDate.setMonth(endDate.getMonth() + months);
-            
+            endDate.setDate(endDate.getDate() + (days - 1));
+
             // Format date for input (YYYY-MM-DD)
             const formattedEndDate = endDate.toISOString().split('T')[0];
             endDateInput.value = formattedEndDate;
-            
+
             // Show calculation details
-            details.textContent = `${months} month${months > 1 ? 's' : ''} from ${startDate.toLocaleDateString()} = ${endDate.toLocaleDateString()}`;
+            details.textContent = `${days} day${days > 1 ? 's' : ''} from ${startDate.toLocaleDateString()} = ${endDate.toLocaleDateString()}`;
             alert.classList.remove('d-none');
         } else {
             alert.classList.add('d-none');
@@ -492,25 +492,25 @@ ViewData["Title"] = "End Users Management";
     // Calculate end date based on start date and duration (Edit Modal)
     function calculateEditEndDate() {
         const startDateInput = document.getElementById('editStartDate');
-        const durationInput = document.getElementById('editDurationMonths');
+        const durationInput = document.getElementById('editDurationDays');
         const endDateInput = document.getElementById('editEndDate');
         const alert = document.getElementById('editDateCalculationAlert');
         const details = document.getElementById('editCalculationDetails');
 
         if (startDateInput.value && durationInput.value) {
             const startDate = new Date(startDateInput.value);
-            const months = parseInt(durationInput.value);
-            
-            // Calculate end date by adding months
+            const days = parseInt(durationInput.value);
+
+            // Calculate end date by adding days
             const endDate = new Date(startDate);
-            endDate.setMonth(endDate.getMonth() + months);
-            
+            endDate.setDate(endDate.getDate() + (days - 1));
+
             // Format date for input (YYYY-MM-DD)
             const formattedEndDate = endDate.toISOString().split('T')[0];
             endDateInput.value = formattedEndDate;
-            
+
             // Show calculation details
-            details.textContent = `${months} month${months > 1 ? 's' : ''} from ${startDate.toLocaleDateString()} = ${endDate.toLocaleDateString()}`;
+            details.textContent = `${days} day${days > 1 ? 's' : ''} from ${startDate.toLocaleDateString()} = ${endDate.toLocaleDateString()}`;
             alert.classList.remove('d-none');
         } else {
             alert.classList.add('d-none');
@@ -519,9 +519,9 @@ ViewData["Title"] = "End Users Management";
 
     // Clear duration when end date is manually changed (Create Modal)
     function clearDuration() {
-        const durationInput = document.getElementById('createDurationMonths');
+        const durationInput = document.getElementById('createDurationDays');
         const alert = document.getElementById('dateCalculationAlert');
-        
+
         // Clear the duration field to indicate manual override
         durationInput.value = '';
         alert.classList.add('d-none');
@@ -529,9 +529,9 @@ ViewData["Title"] = "End Users Management";
 
     // Clear duration when end date is manually changed (Edit Modal)
     function clearEditDuration() {
-        const durationInput = document.getElementById('editDurationMonths');
+        const durationInput = document.getElementById('editDurationDays');
         const alert = document.getElementById('editDateCalculationAlert');
-        
+
         // Clear the duration field to indicate manual override
         durationInput.value = '';
         alert.classList.add('d-none');
@@ -541,10 +541,10 @@ ViewData["Title"] = "End Users Management";
     document.getElementById('createModal').addEventListener('show.bs.modal', function() {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('createStartDate').value = today;
-        
-        // Set default duration to 12 months
-        document.getElementById('createDurationMonths').value = '';
-        
+
+        // Set default duration to 365 days
+        document.getElementById('createDurationDays').value = '';
+
         // Calculate initial end date
         calculateEndDate();
     });
@@ -765,10 +765,10 @@ ViewData["Title"] = "End Users Management";
 
         // Add input event listeners for real-time calculation
         const startDateInput = document.getElementById('createStartDate');
-        const durationInput = document.getElementById('createDurationMonths');
+        const durationInput = document.getElementById('createDurationDays');
         const editStartDateInput = document.getElementById('editStartDate');
-        const editDurationInput = document.getElementById('editDurationMonths');
-        
+        const editDurationInput = document.getElementById('editDurationDays');
+
         if (startDateInput && durationInput) {
             startDateInput.addEventListener('input', calculateEndDate);
             durationInput.addEventListener('input', calculateEndDate);
