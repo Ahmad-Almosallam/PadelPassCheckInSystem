@@ -597,7 +597,7 @@
             }
 
             // Convert date to proper format for the request
-            const checkInDateTime = new Date(checkInDate + 'T00:00:00');
+            const checkInDateTime = new Date(checkInDate);
 
             fetch('@Url.Action("ValidateUserForManualCheckIn", "Admin")', {
                 method: 'POST',
@@ -607,7 +607,7 @@
                 },
                 body: JSON.stringify({
                     phoneNumber: phoneNumber,
-                    checkInDate: checkInDateTime.toISOString()
+                    checkInDate: checkInDateTime
                 })
             })
                 .then(response => response.json())
