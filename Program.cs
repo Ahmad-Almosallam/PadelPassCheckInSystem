@@ -51,6 +51,9 @@ builder.Services.AddScoped<IQRCodeService, QRCodeService>();
 builder.Services.AddScoped<IExcelService, ExcelService>();
 builder.Services.AddScoped<ISubscriptionPauseService, SubscriptionPauseService>();
 builder.Services.AddScoped<IBranchTimeSlotService, BranchTimeSlotService>();
+builder.Services.AddScoped<IPlaytomicSyncService, PlaytomicSyncService>();
+
+builder.Services.AddHttpClient();
 
 builder.Services.AddControllersWithViews();
 

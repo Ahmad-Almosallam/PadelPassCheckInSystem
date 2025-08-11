@@ -15,6 +15,9 @@ ViewData["Title"] = "End Users Management";
         <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#createModal">
             <i class="bi bi-plus-circle"></i> Add New End User
         </button>
+        <button type="button" class="btn btn-warning ms-2" data-bs-toggle="modal" data-bs-target="#syncPlaytomicModal">
+            <i class="bi bi-cloud-upload"></i> Sync Users to Playtomic
+        </button>
     </div>
 </div>
 
@@ -193,6 +196,75 @@ ViewData["Title"] = "End Users Management";
             <div class="card-body text-center">
                 <h5 class="card-title">Expired</h5>
                 <h2 class="text-danger">@Model.Count(u => u.SubscriptionEndDate.ToKSATime().Date < KSADateTimeExtensions.GetKSANow().Date)</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sync to Playtomic Modal -->
+<div class="modal fade" id="syncPlaytomicModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-cloud-upload"></i> Sync Active Users to Playtomic
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <h6><i class="bi bi-info-circle"></i> What will this do?</h6>
+                    <ul class="mb-0">
+                        <li>Export all active users (active subscription & not paused) to CSV format</li>
+                        <li>Upload to Playtomic for each branch that has a Tenant ID configured</li>
+                        <li>CSV includes: name, email, phone, category (Padel Pass), and subscription end date</li>
+                    </ul>
+                </div>
+
+                <form id="syncPlaytomicForm">
+                    <div class="mb-3">
+                        <label class="form-label">Playtomic Access Token *</label>
+                        <input type="password" id="playtomicAccessToken" class="form-control" 
+                               placeholder="Enter your Playtomic access token" required>
+                        <small class="text-muted">This token will not be saved and is only used for this sync operation.</small>
+                    </div>
+
+                    <div id="syncPreview" class="card bg-light d-none">
+                        <div class="card-body">
+                            <h6>Sync Preview:</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Active Users:</strong> <span id="previewActiveUsers">Loading...</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Branches with Tenant ID:</strong> <span id="previewBranches">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <div id="syncProgress" class="d-none">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Syncing...</span>
+                        </div>
+                        <p class="mt-2">Syncing users to Playtomic... Please wait.</p>
+                    </div>
+                </div>
+
+                <div id="syncResults" class="d-none">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" id="previewSyncBtn" class="btn btn-info" onclick="previewSync()">
+                    <i class="bi bi-eye"></i> Preview Sync
+                </button>
+                <button type="button" id="startSyncBtn" class="btn btn-warning d-none" onclick="startPlaytomicSync()">
+                    <i class="bi bi-cloud-upload"></i> Start Sync
+                </button>
             </div>
         </div>
     </div>
@@ -443,7 +515,7 @@ ViewData["Title"] = "End Users Management";
 </div>
 
 @section Scripts {
-<script>
+    <script>
     function editUser(id, name, phone, email, imageUrl, startDate, endDate) {
         document.getElementById('editId').value = id;
         document.getElementById('editName').value = name;
@@ -778,6 +850,189 @@ ViewData["Title"] = "End Users Management";
             editStartDateInput.addEventListener('input', calculateEditEndDate);
             editDurationInput.addEventListener('input', calculateEditEndDate);
         }
+    });
+</script>
+    
+    
+    <script>
+    // Playtomic Sync Functions
+    function previewSync() {
+        const previewDiv = document.getElementById('syncPreview');
+        const activeUsersSpan = document.getElementById('previewActiveUsers');
+        const branchesSpan = document.getElementById('previewBranches');
+        const startSyncBtn = document.getElementById('startSyncBtn');
+
+        // Show preview section
+        previewDiv.classList.remove('d-none');
+        activeUsersSpan.textContent = 'Loading...';
+        branchesSpan.textContent = 'Loading...';
+
+        // Get preview data
+        fetch('/Admin/GetSyncPreview', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                activeUsersSpan.textContent = data.activeUsers;
+                branchesSpan.textContent = data.branches;
+                
+                if (data.activeUsers > 0 && data.branches > 0) {
+                    startSyncBtn.classList.remove('d-none');
+                } else {
+                    if (data.activeUsers === 0) {
+                        showAlert('No active users found to sync.', 'warning');
+                    }
+                    if (data.branches === 0) {
+                        showAlert('No branches with Playtomic Tenant ID found.', 'warning');
+                    }
+                }
+            } else {
+                showAlert('Failed to load sync preview.', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('Error loading sync preview.', 'danger');
+        });
+    }
+
+    function startPlaytomicSync() {
+        const accessToken = document.getElementById('playtomicAccessToken').value.trim();
+        
+        if (!accessToken) {
+            showAlert('Please enter your Playtomic access token.', 'warning');
+            return;
+        }
+
+        // Show progress
+        const formDiv = document.querySelector('#syncPlaytomicForm');
+        const progressDiv = document.getElementById('syncProgress');
+        const resultsDiv = document.getElementById('syncResults');
+        const footer = document.querySelector('#syncPlaytomicModal .modal-footer');
+
+        formDiv.classList.add('d-none');
+        progressDiv.classList.remove('d-none');
+        resultsDiv.classList.add('d-none');
+        footer.style.display = 'none';
+
+        // Start sync
+        fetch('/Admin/SyncUsersToPlaytomic', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify({
+                accessToken: accessToken
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Hide progress
+            progressDiv.classList.add('d-none');
+            resultsDiv.classList.remove('d-none');
+            footer.style.display = 'flex';
+
+            // Show results
+            displaySyncResults(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            progressDiv.classList.add('d-none');
+            resultsDiv.classList.remove('d-none');
+            footer.style.display = 'flex';
+            
+            resultsDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Error:</strong> An unexpected error occurred during sync.
+                </div>
+            `;
+        });
+    }
+
+    function displaySyncResults(data) {
+        const resultsDiv = document.getElementById('syncResults');
+        
+        if (data.success) {
+            let resultHtml = `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    <strong>Sync Completed!</strong> ${data.message}
+                </div>
+            `;
+
+            if (data.result && data.result.branchResults && data.result.branchResults.length > 0) {
+                resultHtml += `
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Branch Results</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Branch</th>
+                                            <th>Status</th>
+                                            <th>Users</th>
+                                            <th>Error</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                `;
+
+                data.result.branchResults.forEach(branch => {
+                    const statusBadge = branch.isSuccess 
+                        ? '<span class="badge bg-success">Success</span>'
+                        : '<span class="badge bg-danger">Failed</span>';
+                    
+                    const userCount = branch.isSuccess ? branch.userCount : 0;
+                    const errorMessage = branch.errorMessage || '';
+
+                    resultHtml += `
+                        <tr>
+                            <td>${branch.branchName}</td>
+                            <td>${statusBadge}</td>
+                            <td>${userCount}</td>
+                            <td><small class="text-danger">${errorMessage}</small></td>
+                        </tr>
+                    `;
+                });
+
+                resultHtml += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            resultsDiv.innerHTML = resultHtml;
+        } else {
+            resultsDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Sync Failed:</strong> ${data.message}
+                </div>
+            `;
+        }
+    }
+
+    // Reset modal when closed
+    document.getElementById('syncPlaytomicModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('syncPlaytomicForm').reset();
+        document.getElementById('syncPreview').classList.add('d-none');
+        document.getElementById('syncProgress').classList.add('d-none');
+        document.getElementById('syncResults').classList.add('d-none');
+        document.getElementById('startSyncBtn').classList.add('d-none');
+        document.querySelector('#syncPlaytomicForm').classList.remove('d-none');
+        document.querySelector('#syncPlaytomicModal .modal-footer').style.display = 'flex';
     });
 </script>
 }

@@ -19,18 +19,23 @@ namespace PadelPassCheckInSystem.Controllers
         private readonly IQRCodeService _qrCodeService;
         private readonly IExcelService _excelService;
         private readonly ICheckInService _checkInService;
+        private readonly IPlaytomicSyncService _playtomicSyncService;
+        private readonly ILogger<AdminController> _logger;
 
         public AdminController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             IQRCodeService qrCodeService,
-            IExcelService excelService, ICheckInService checkInService)
+            IExcelService excelService, ICheckInService checkInService, IPlaytomicSyncService playtomicSyncService,
+            ILogger<AdminController> logger)
         {
             _context = context;
             _userManager = userManager;
             _qrCodeService = qrCodeService;
             _excelService = excelService;
             _checkInService = checkInService;
+            _playtomicSyncService = playtomicSyncService;
+            _logger = logger;
         }
 
         [Authorize(Roles = "Admin")]
@@ -873,11 +878,132 @@ namespace PadelPassCheckInSystem.Controllers
                 checkInId = result.CheckInId
             });
         }
+
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetSyncPreview()
+        {
+            try
+            {
+                // Get active users count
+                var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
+                var allUsers = await _context.EndUsers.ToListAsync();
+
+                var activeUsersCount = allUsers.Count(user =>
+                {
+                    var startKSA = user.SubscriptionStartDate.ToKSATime().Date;
+                    var endKSA = user.SubscriptionEndDate.ToKSATime().Date;
+                    var isSubscriptionActive = startKSA <= todayKSA && endKSA >= todayKSA;
+                    var isNotPaused = !user.IsPaused ||
+                                      (user.CurrentPauseStartDate?.ToKSATime().Date > todayKSA ||
+                                       user.CurrentPauseEndDate?.ToKSATime().Date < todayKSA);
+                    return isSubscriptionActive && isNotPaused;
+                });
+
+                // Get branches with tenant ID count
+                var branchesWithTenantCount = await _context.Branches
+                    .CountAsync(b => b.PlaytomicTenantId.HasValue && b.IsActive);
+
+                return Json(new
+                {
+                    success = true,
+                    activeUsers = activeUsersCount,
+                    branches = branchesWithTenantCount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sync preview: {Error}", ex.Message);
+                return Json(new { success = false, message = "Error loading preview data." });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SyncUsersToPlaytomic([FromBody] SyncUsersToPlaytomicRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.AccessToken))
+            {
+                return Json(new { success = false, message = "Access token is required." });
+            }
+
+            try
+            {
+                var playtomicSyncService = HttpContext.RequestServices.GetRequiredService<IPlaytomicSyncService>();
+                var result = await playtomicSyncService.SyncActiveUsersToPlaytomicAsync(request.AccessToken.Trim());
+
+                if (result.IsSuccess)
+                {
+                    var message =
+                        $"Sync completed! Successfully synced {result.TotalUsers} users to {result.SuccessfulBranches}/{result.TotalBranches} branches.";
+
+                    if (result.FailedBranches > 0)
+                    {
+                        message += $" {result.FailedBranches} branches failed.";
+                    }
+
+                    return Json(new
+                    {
+                        success = true,
+                        message = message,
+                        result = new
+                        {
+                            totalBranches = result.TotalBranches,
+                            successfulBranches = result.SuccessfulBranches,
+                            failedBranches = result.FailedBranches,
+                            totalUsers = result.TotalUsers,
+                            branchResults = result.BranchResults.Select(br => new
+                            {
+                                branchName = br.BranchName,
+                                tenantId = br.TenantId,
+                                isSuccess = br.IsSuccess,
+                                errorMessage = br.ErrorMessage,
+                                userCount = br.UserCount
+                            })
+                        }
+                    });
+                }
+                else
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = result.ErrorMessage ?? "Sync failed with unknown error.",
+                        result = new
+                        {
+                            totalBranches = result.TotalBranches,
+                            successfulBranches = result.SuccessfulBranches,
+                            failedBranches = result.FailedBranches,
+                            totalUsers = result.TotalUsers,
+                            branchResults = result.BranchResults.Select(br => new
+                            {
+                                branchName = br.BranchName,
+                                tenantId = br.TenantId,
+                                isSuccess = br.IsSuccess,
+                                errorMessage = br.ErrorMessage,
+                                userCount = br.UserCount
+                            })
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during Playtomic sync: {Error}", ex.Message);
+                return Json(new { success = false, message = $"An error occurred during sync: {ex.Message}" });
+            }
+        }
     }
-    
+
     public class ValidateUserRequest
     {
         public string PhoneNumber { get; set; }
         public DateTime CheckInDate { get; set; }
+    }
+    
+    public class SyncUsersToPlaytomicRequest
+    {
+        public string AccessToken { get; set; }
     }
 }
