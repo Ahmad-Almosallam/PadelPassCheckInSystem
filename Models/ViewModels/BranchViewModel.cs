@@ -13,6 +13,9 @@ namespace PadelPassCheckInSystem.Models.ViewModels
         [StringLength(200)]
         public string Address { get; set; }
         
+        [Display(Name = "Playtomic Tenant ID")]
+        public Guid? PlaytomicTenantId { get; set; }
+        
         public bool IsActive { get; set; }
     }
 }

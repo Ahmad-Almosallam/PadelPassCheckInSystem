@@ -85,7 +85,8 @@ namespace PadelPassCheckInSystem.Controllers
                 {
                     Name = model.Name,
                     Address = model.Address,
-                    IsActive = true
+                    IsActive = true,
+                    PlaytomicTenantId = model.PlaytomicTenantId
                 };
 
                 _context.Branches.Add(branch);
@@ -110,6 +111,7 @@ namespace PadelPassCheckInSystem.Controllers
                 branch.Name = model.Name;
                 branch.Address = model.Address;
                 branch.IsActive = model.IsActive;
+                branch.PlaytomicTenantId = model.PlaytomicTenantId;
 
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Branch updated successfully!";
