@@ -45,6 +45,9 @@
                     </select>
                 </div>
             }
+            
+            <input type="hidden" name="pageSize" id="pageSize" />
+            <input type="hidden" name="page" id="page" />
             <div class="col-md-3">
                 <label class="form-label">&nbsp;</label>
                 <div>
@@ -546,7 +549,7 @@
         function changePageSize(pageSize) {
             const url = new URL(window.location);
             url.searchParams.set('pageSize', pageSize);
-            url.searchParams.set('page', '1'); // Reset to first page when changing page size
+            url.searchParams.set('page', '1');
             window.location.href = url.toString();
         }
 
@@ -697,6 +700,8 @@
             }
             // write it in plain js
             document.getElementById('page-select').value = '@Model.CheckIns.PageSize';
+            document.getElementById('pageSize').value = '@Model.CheckIns.PageSize';
+            document.getElementById('page').value = '@Model.CheckIns.CurrentPage';
         });
 
 
