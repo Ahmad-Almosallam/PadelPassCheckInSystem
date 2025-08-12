@@ -34,10 +34,13 @@ namespace PadelPassCheckInSystem.Models.Entities
         public DateTime? CurrentPauseStartDate { get; set; }
         public DateTime? CurrentPauseEndDate { get; set; }
         
+        public bool IsStopped { get; set; } = false;
+        public DateTime? StoppedDate { get; set; }
+        public string StopReason { get; set; }
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
         public virtual ICollection<CheckIn> CheckIns { get; set; }
         public virtual ICollection<SubscriptionPause> SubscriptionPauses { get; set; }
     }
 }
-

@@ -1,13 +1,14 @@
 @model EndUsersPaginatedViewModel
 @{
-ViewData["Title"] = "End Users Management";
+    ViewData["Title"] = "End Users Management";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>End Users Management</h1>
     <div>
         <div class="text-muted small mb-2">
-            <i class="bi bi-clock"></i> Current Time: @KSADateTimeExtensions.GetKSANow().ToString("yyyy-MM-dd HH:mm:ss") KSA
+            <i class="bi bi-clock"></i> Current
+            Time: @KSADateTimeExtensions.GetKSANow().ToString("yyyy-MM-dd HH:mm:ss") KSA
         </div>
         <a href="@Url.Action("PauseHistory")" class="btn btn-outline-info">
             <i class="bi bi-clock-history"></i> View All Pause History
@@ -35,12 +36,16 @@ ViewData["Title"] = "End Users Management";
         <div class="card bg-light">
             <div class="card-body text-center">
                 <h5 class="card-title">Active Subscriptions</h5>
-                <h2 class="text-success">@Model.EndUsers.Items.Count(u => {
-                                             var today = KSADateTimeExtensions.GetKSANow().Date;
-                                             var startKSA = u.SubscriptionStartDate.ToKSATime().Date;
-                                             var endKSA = u.SubscriptionEndDate.ToKSATime().Date;
-                                             return startKSA <= today && endKSA >= today && !u.IsPaused;
-                                         })</h2>
+                <h2 class="text-success">@Model.EndUsers.Items.Count(u =>
+                    {
+                        var today = KSADateTimeExtensions.GetKSANow()
+                            .Date;
+                        var startKSA = u.SubscriptionStartDate.ToKSATime()
+                            .Date;
+                        var endKSA = u.SubscriptionEndDate.ToKSATime()
+                            .Date;
+                        return startKSA <= today && endKSA >= today && !u.IsPaused && !u.IsStopped;
+                    })</h2>
             </div>
         </div>
     </div>
@@ -48,18 +53,32 @@ ViewData["Title"] = "End Users Management";
         <div class="card bg-light">
             <div class="card-body text-center">
                 <h5 class="card-title">Currently Paused</h5>
-                <h2 class="text-warning">@Model.EndUsers.Items.Count(u => {
-                                             var today = KSADateTimeExtensions.GetKSANow().Date;
-                                             return u.IsPaused && u.CurrentPauseStartDate?.ToKSATime().Date <= today && u.CurrentPauseEndDate?.ToKSATime().Date >= today;
-                                         })</h2>
+                <h2 class="text-warning">@Model.EndUsers.Items.Count(u =>
+                    {
+                        var today = KSADateTimeExtensions.GetKSANow()
+                            .Date;
+                        return u.IsPaused && !u.IsStopped && u.CurrentPauseStartDate?.ToKSATime()
+                            .Date <= today && u.CurrentPauseEndDate?.ToKSATime()
+                            .Date >= today;
+                    })</h2>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card bg-light">
             <div class="card-body text-center">
+                <h5 class="card-title">Stopped</h5>
+                <h2 class="text-danger">@Model.EndUsers.Items.Count(u => u.IsStopped)</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-12 mt-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
                 <h5 class="card-title">Expired</h5>
-                <h2 class="text-danger">@Model.EndUsers.Items.Count(u => u.SubscriptionEndDate.ToKSATime().Date < KSADateTimeExtensions.GetKSANow().Date)</h2>
+                <h2 class="text-muted">@Model.EndUsers.Items.Count(u => !u.IsStopped && u.SubscriptionEndDate.ToKSATime()
+                        .Date < KSADateTimeExtensions.GetKSANow()
+                        .Date)</h2>
             </div>
         </div>
     </div>
@@ -74,7 +93,7 @@ ViewData["Title"] = "End Users Management";
                 <label class="form-label">Search by Phone Number</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="searchPhoneNumber" class="form-control" 
+                    <input type="text" name="searchPhoneNumber" class="form-control"
                            placeholder="Enter phone number (e.g., 05xxxxxxxx)"
                            value="@Model.SearchPhoneNumber">
                 </div>
@@ -113,7 +132,8 @@ ViewData["Title"] = "End Users Management";
                 </div>
                 <div class="d-flex align-items-center">
                     <label class="form-label me-2 mb-0">Page size:</label>
-                    <select class="form-select form-select-sm" id="page-select" style="width: auto;" onchange="changePageSize(this.value)">
+                    <select class="form-select form-select-sm" id="page-select" style="width: auto;"
+                            onchange="changePageSize(this.value)">
                         <option value="10">10</option>
                         <option value="20">20</option>
                         <option value="50">50</option>
@@ -140,116 +160,168 @@ ViewData["Title"] = "End Users Management";
                 <tbody>
                 @foreach (var user in Model.EndUsers.Items)
                 {
-                var today = KSADateTimeExtensions.GetKSANow().Date;
-                var subscriptionStartKSA = user.SubscriptionStartDate.ToKSATime().Date;
-                var subscriptionEndKSA = user.SubscriptionEndDate.ToKSATime().Date;
-                var isActive = subscriptionStartKSA <= today && subscriptionEndKSA >= today;
-                var isPaused = user.IsPaused && user.CurrentPauseStartDate?.ToKSATime().Date <= today && user.CurrentPauseEndDate?.ToKSATime().Date >= today;
+                    var today = KSADateTimeExtensions.GetKSANow()
+                        .Date;
+                    var subscriptionStartKSA = user.SubscriptionStartDate.ToKSATime()
+                        .Date;
+                    var subscriptionEndKSA = user.SubscriptionEndDate.ToKSATime()
+                        .Date;
+                    var isActive = subscriptionStartKSA <= today && subscriptionEndKSA >= today;
+                    var isPaused = user.IsPaused && user.CurrentPauseStartDate?.ToKSATime()
+                        .Date <= today && user.CurrentPauseEndDate?.ToKSATime()
+                        .Date >= today;
 
-                <tr class="@(isPaused ? "table-warning" : "")">
-                    <td>
-                        @if (!string.IsNullOrEmpty(user.ImageUrl))
-                        {
-                        <img src="@user.ImageUrl" alt="@user.Name" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">
-                        }
-                        else
-                        {
-                        <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                            <i class="bi bi-person text-white"></i>
-                        </div>
-                        }
-                    </td>
-                    <td>
-                        <strong>@user.Name</strong>
-                        @if (isPaused)
-                        {
-                        <br><small class="text-warning"><i class="bi bi-pause-circle"></i> Currently Paused</small>
-                        }
-                    </td>
-                    <td>@user.PhoneNumber</td>
-                    <td>@user.Email</td>
-                    <td>
-                        <small>
-                            <strong>Start:</strong> @user.SubscriptionStartDate.ToKSATime().ToString("MMM dd, yyyy")<br>
-                            <strong>End:</strong> @user.SubscriptionEndDate.ToKSATime().ToString("MMM dd, yyyy")
-                        </small>
-                        @if (user.IsPaused)
-                        {
-                        <br><small class="text-warning">
-                            Paused until @user.CurrentPauseEndDate?.ToKSATime().ToString("MMM dd, yyyy")
-                        </small>
-                        }
-                    </td>
-                    <td>
-                        @if (isPaused)
-                        {
-                        <span class="badge bg-warning">Paused</span>
-                        }
-                        else if (isActive)
-                        {
-                        <span class="badge bg-success">Active</span>
-                        }
-                        else
-                        {
-                        <span class="badge bg-danger">Inactive</span>
-                        }
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-info" onclick="generateQRCode(@user.Id)">
-                            <i class="bi bi-qr-code"></i> Generate
-                        </button>
-                    </td>
-                    <td>
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                                <i class="bi bi-gear"></i> Actions
+                    <tr class="@(isPaused ? "table-warning" : "")">
+                        <td>
+                            @if (!string.IsNullOrEmpty(user.ImageUrl))
+                            {
+                                <img src="@user.ImageUrl" alt="@user.Name" class="rounded-circle"
+                                     style="width: 40px; height: 40px; object-fit: cover;">
+                            }
+                            else
+                            {
+                                <div
+                                    class="bg-secondary rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 40px; height: 40px;">
+                                    <i class="bi bi-person text-white"></i>
+                                </div>
+                            }
+                        </td>
+                        <td>
+                            <strong>@user.Name</strong>
+                            @if (isPaused)
+                            {
+                                <br>
+                                <small class="text-warning"><i class="bi bi-pause-circle"></i> Currently Paused</small>
+                            }
+                        </td>
+                        <td>@user.PhoneNumber</td>
+                        <td>@user.Email</td>
+                        <td>
+                            <small>
+                                <strong>Start:</strong> @user.SubscriptionStartDate.ToKSATime().ToString("MMM dd, yyyy")<br>
+                                <strong>End:</strong> @user.SubscriptionEndDate.ToKSATime().ToString("MMM dd, yyyy")
+                            </small>
+                            @if (user.IsPaused)
+                            {
+                                <br>
+                                <small class="text-warning">
+                                    Paused until @user.CurrentPauseEndDate?.ToKSATime().ToString("MMM dd, yyyy")
+                                </small>
+                            }
+                        </td>
+                        <td>
+                            @if (user.IsStopped)
+                            { 
+                                <span class="badge bg-danger" style="cursor: pointer; text-decoration: underline;" 
+                                      onclick="showStopDetails('@user.StoppedDate?.ToKSATime().ToString("MMM dd, yyyy hh:mm tt")', '@Html.Raw(user.StopReason?.Replace("'", "\\'"))')"
+                                      title="Click to view stop details">
+                                    <i class="bi bi-info-circle me-1"></i>Stopped
+                                </span> 
+                            }
+                            else if (isPaused)
+                            {
+                                <span class="badge bg-warning">Paused</span>
+                            }
+                            else if (isActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="generateQRCode(@user.Id)">
+                                <i class="bi bi-qr-code"></i> Generate
                             </button>
-                            <ul class="dropdown-menu">
-                                <li>
-                                    <button class="dropdown-item" onclick="editUser(@user.Id, '@user.Name', '@user.PhoneNumber', '@user.Email', '@user.ImageUrl', '@user.SubscriptionStartDate.ToKSATime().ToString("yyyy-MM-dd")', '@user.SubscriptionEndDate.ToKSATime().ToString("yyyy-MM-dd")')">
-                                        <i class="bi bi-pencil"></i> Edit Details
-                                    </button>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                @if (user.IsPaused)
-                                {
-                                <li>
-                                    <form asp-action="UnpauseSubscription" method="post" style="display: inline;"
-                                          onsubmit="return confirm('Are you sure you want to unpause this subscription?');">
-                                        <input type="hidden" name="endUserId" value="@user.Id" />
-                                        <button type="submit" class="dropdown-item text-success">
-                                            <i class="bi bi-play-circle"></i> Unpause Subscription
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                        data-bs-toggle="dropdown">
+                                    <i class="bi bi-gear"></i> Actions
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <button class="dropdown-item"
+                                                onclick="editUser(@user.Id, '@user.Name', '@user.PhoneNumber', '@user.Email', '@user.ImageUrl', '@user.SubscriptionStartDate.ToKSATime().ToString("yyyy-MM-dd")', '@user.SubscriptionEndDate.ToKSATime().ToString("yyyy-MM-dd")')">
+                                            <i class="bi bi-pencil"></i> Edit Details
                                         </button>
-                                    </form>
-                                </li>
-                                }
-                                else
-                                {
-                                <li>
-                                    <a class="dropdown-item text-warning" href="@Url.Action("PauseSubscription", new { endUserId = user.Id })">
-                                        <i class="bi bi-pause-circle"></i> Pause Subscription
-                                    </a>
-                                </li>
-                                }
-                                <li>
-                                    <a class="dropdown-item" href="@Url.Action("PauseHistory", new { endUserId = user.Id })">
-                                        <i class="bi bi-clock-history"></i> View Pause History
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form asp-action="DeleteEndUser" method="post" style="display: inline;"
-                                          onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone.');">
-                                        <input type="hidden" name="id" value="@user.Id" />
-                                        <button type="submit" class="dropdown-item text-danger">
-                                            <i class="bi bi-trash"></i> Delete User
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </div>
-                    </td>
-                </tr>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    @if (user.IsPaused)
+                                    {
+                                        <li>
+                                            <form asp-action="UnpauseSubscription" method="post"
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Are you sure you want to unpause this subscription?');">
+                                                <input type="hidden" name="endUserId" value="@user.Id"/>
+                                                <button type="submit" class="dropdown-item text-success">
+                                                    <i class="bi bi-play-circle"></i> Unpause Subscription
+                                                </button>
+                                            </form>
+                                        </li>
+                                    }
+                                    else
+                                    {
+                                        <li>
+                                            <a class="dropdown-item text-warning"
+                                               href="@Url.Action("PauseSubscription", new { endUserId = user.Id })">
+                                                <i class="bi bi-pause-circle"></i> Pause Subscription
+                                            </a>
+                                        </li>
+                                    }
+                                    <li>
+                                        <a class="dropdown-item"
+                                           href="@Url.Action("PauseHistory", new { endUserId = user.Id })">
+                                            <i class="bi bi-clock-history"></i> View Pause History
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    @if (user.IsStopped)
+                                    {
+                                        <li>
+                                            <form asp-action="ReactivateSubscription" method="post"
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Are you sure you want to reactivate this subscription?');">
+                                                <input type="hidden" name="endUserId" value="@user.Id"/>
+                                                <button type="submit" class="dropdown-item text-success">
+                                                    <i class="bi bi-play-fill"></i> Reactivate Subscription
+                                                </button>
+                                            </form>
+                                        </li>
+                                    }
+                                    else
+                                    {
+                                        <li>
+                                            <button class="dropdown-item text-danger"
+                                                    onclick="showStopSubscriptionModal(@user.Id, '@user.Name', '@user.PhoneNumber')">
+                                                <i class="bi bi-stop-circle"></i> Stop Subscription
+                                            </button>
+                                        </li>
+                                    }
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li>
+                                        <form asp-action="DeleteEndUser" method="post" style="display: inline;"
+                                              onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone.');">
+                                            <input type="hidden" name="id" value="@user.Id"/>
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="bi bi-trash"></i> Delete User
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
                 }
                 </tbody>
             </table>
@@ -339,8 +411,10 @@ ViewData["Title"] = "End Users Management";
                                 <span class="page-link">...</span>
                             </li>
                         }
+
                         <li class="page-item">
-                            <a class="page-link" href="@GetPageUrl(Model.EndUsers.TotalPages)">@Model.EndUsers.TotalPages</a>
+                            <a class="page-link"
+                               href="@GetPageUrl(Model.EndUsers.TotalPages)">@Model.EndUsers.TotalPages</a>
                         </li>
                     }
 
@@ -372,7 +446,8 @@ ViewData["Title"] = "End Users Management";
             <div class="mt-3 text-muted">
                 <small>
                     <i class="bi bi-info-circle"></i>
-                    Showing @Model.EndUsers.StartIndex - @Model.EndUsers.EndIndex of @Model.EndUsers.TotalItems user(s). All dates displayed in KSA Time (UTC+3).
+                    Showing @Model.EndUsers.StartIndex - @Model.EndUsers.EndIndex of @Model.EndUsers.TotalItems user(s).
+                    All dates displayed in KSA Time (UTC+3).
                 </small>
             </div>
         }
@@ -404,9 +479,10 @@ ViewData["Title"] = "End Users Management";
                 <form id="syncPlaytomicForm">
                     <div class="mb-3">
                         <label class="form-label">Playtomic Access Token *</label>
-                        <input type="password" id="playtomicAccessToken" class="form-control" 
+                        <input type="password" id="playtomicAccessToken" class="form-control"
                                placeholder="Enter your Playtomic access token" required>
-                        <small class="text-muted">This token will not be saved and is only used for this sync operation.</small>
+                        <small class="text-muted">This token will not be saved and is only used for this sync
+                            operation.</small>
                     </div>
 
                     <div id="syncPreview" class="card bg-light d-none">
@@ -417,7 +493,8 @@ ViewData["Title"] = "End Users Management";
                                     <strong>Active Users:</strong> <span id="previewActiveUsers">Loading...</span>
                                 </div>
                                 <div class="col-md-6">
-                                    <strong>Branches with Tenant ID:</strong> <span id="previewBranches">Loading...</span>
+                                    <strong>Branches with Tenant ID:</strong> <span
+                                        id="previewBranches">Loading...</span>
                                 </div>
                             </div>
                         </div>
@@ -492,14 +569,16 @@ ViewData["Title"] = "End Users Management";
 
                     <div class="alert alert-info">
                         <h6><i class="bi bi-info-circle"></i> Subscription Period</h6>
-                        <p class="mb-0">You can either set the duration in days (auto-calculated) or manually set the end date.</p>
+                        <p class="mb-0">You can either set the duration in days (auto-calculated) or manually set the
+                            end date.</p>
                     </div>
 
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Subscription Start Date *</label>
-                                <input type="date" id="createStartDate" name="SubscriptionStartDate" class="form-control" required onchange="calculateEndDate()">
+                                <input type="date" id="createStartDate" name="SubscriptionStartDate"
+                                       class="form-control" required onchange="calculateEndDate()">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -514,7 +593,8 @@ ViewData["Title"] = "End Users Management";
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Subscription End Date *</label>
-                                <input type="date" id="createEndDate" name="SubscriptionEndDate" class="form-control" required onchange="clearDuration()">
+                                <input type="date" id="createEndDate" name="SubscriptionEndDate" class="form-control"
+                                       required onchange="clearDuration()">
                                 <small class="text-muted">Or set manually</small>
                             </div>
                         </div>
@@ -577,14 +657,16 @@ ViewData["Title"] = "End Users Management";
 
                     <div class="alert alert-info">
                         <h6><i class="bi bi-info-circle"></i> Subscription Period</h6>
-                        <p class="mb-0">You can either set the duration in days (auto-calculated) or manually set the end date.</p>
+                        <p class="mb-0">You can either set the duration in days (auto-calculated) or manually set the
+                            end date.</p>
                     </div>
 
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Subscription Start Date *</label>
-                                <input type="date" id="editStartDate" name="SubscriptionStartDate" class="form-control" required onchange="calculateEditEndDate()">
+                                <input type="date" id="editStartDate" name="SubscriptionStartDate" class="form-control"
+                                       required onchange="calculateEditEndDate()">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -599,7 +681,8 @@ ViewData["Title"] = "End Users Management";
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Subscription End Date *</label>
-                                <input type="date" id="editEndDate" name="SubscriptionEndDate" class="form-control" required onchange="clearEditDuration()">
+                                <input type="date" id="editEndDate" name="SubscriptionEndDate" class="form-control"
+                                       required onchange="clearEditDuration()">
                                 <small class="text-muted">Or set manually</small>
                             </div>
                         </div>
@@ -640,7 +723,8 @@ ViewData["Title"] = "End Users Management";
                 </button>
                 <hr>
                 <p class="text-muted small">
-                    <i class="bi bi-info-circle"></i> Save this QR code to your phone or print it for easy access at check-in.
+                    <i class="bi bi-info-circle"></i> Save this QR code to your phone or print it for easy access at
+                    check-in.
                 </p>
             </div>
         </div>
@@ -675,7 +759,8 @@ ViewData["Title"] = "End Users Management";
                     <button class="btn btn-primary" onclick="openQRLink()">
                         <i class="bi bi-box-arrow-up-right"></i> Open QR Download Page
                     </button>
-                    <button class="btn btn-outline-success" onclick="shareQRLink()" id="shareButton" style="display: none;">
+                    <button class="btn btn-outline-success" onclick="shareQRLink()" id="shareButton"
+                            style="display: none;">
                         <i class="bi bi-share"></i> Share Link
                     </button>
                 </div>
@@ -694,8 +779,97 @@ ViewData["Title"] = "End Users Management";
     </div>
 </div>
 
+<!-- Stop Subscription Modal -->
+<div class="modal fade" id="stopSubscriptionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-stop-circle"></i> Stop Subscription
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Warning:</strong> This action will permanently stop the subscription. The user will no
+                    longer be able to check in.
+                </div>
+
+                <div class="mb-3">
+                    <h6>User Information</h6>
+                    <div class="bg-light p-3 rounded">
+                        <p class="mb-1"><strong>Name:</strong> <span id="stopUserName"></span></p>
+                        <p class="mb-0"><strong>Phone:</strong> <span id="stopUserPhone"></span></p>
+                    </div>
+                </div>
+
+                <form id="stopSubscriptionForm">
+                    <input type="hidden" id="stopEndUserId" name="endUserId"/>
+
+                    <div class="mb-3">
+                        <label for="stopReason" class="form-label">
+                            <i class="bi bi-chat-text"></i> Reason for Stopping Subscription *
+                        </label>
+                        <textarea id="stopReason" name="stopReason" class="form-control" rows="4"
+                                  placeholder="Please provide a reason for stopping this subscription (e.g., User requested cancellation, Payment issues, etc.)"
+                                  required maxlength="500"></textarea>
+                        <div class="form-text">Maximum 500 characters</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="submitStopSubscription()">
+                    <i class="bi bi-stop-circle"></i> Stop Subscription
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stop Details Modal -->
+<div class="modal fade" id="stopDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-info-circle"></i> Subscription Stop Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-calendar-x"></i> Stopped Date:
+                    </label>
+                    <p id="stopDetailsDate" class="mb-0 text-muted"></p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        <i class="bi bi-chat-text"></i> Reason:
+                    </label>
+                    <div class="bg-light p-3 rounded">
+                        <p id="stopDetailsReason" class="mb-0"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @functions {
-    public string GetPageUrl(int page)
+
+    public string GetPageUrl(
+        int page)
     {
         var routeValues = new RouteValueDictionary
         {
@@ -708,319 +882,320 @@ ViewData["Title"] = "End Users Management";
 
         return Url.Action("EndUsers", routeValues);
     }
+
 }
 
 @section Scripts {
     <script>
-    function editUser(id, name, phone, email, imageUrl, startDate, endDate) {
-        document.getElementById('editId').value = id;
-        document.getElementById('editName').value = name;
-        document.getElementById('editPhone').value = phone;
-        document.getElementById('editEmail').value = email;
-        document.getElementById('editImageUrl').value = imageUrl;
-        // Dates are already converted to KSA format in the server
-        document.getElementById('editStartDate').value = startDate;
-        document.getElementById('editEndDate').value = endDate;
+        function editUser(id, name, phone, email, imageUrl, startDate, endDate) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editName').value = name;
+            document.getElementById('editPhone').value = phone;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editImageUrl').value = imageUrl;
+            // Dates are already converted to KSA format in the server
+            document.getElementById('editStartDate').value = startDate;
+            document.getElementById('editEndDate').value = endDate;
 
-        // Clear duration field and calculation alert when editing existing user
-        document.getElementById('editDurationDays').value = '';
-        document.getElementById('editDateCalculationAlert').classList.add('d-none');
+            // Clear duration field and calculation alert when editing existing user
+            document.getElementById('editDurationDays').value = '';
+            document.getElementById('editDateCalculationAlert').classList.add('d-none');
 
-        new bootstrap.Modal(document.getElementById('editModal')).show();
-    }
+            new bootstrap.Modal(document.getElementById('editModal')).show();
+        }
 
-    // Calculate end date based on start date and duration (Create Modal)
-    function calculateEndDate() {
-        const startDateInput = document.getElementById('createStartDate');
-        const durationInput = document.getElementById('createDurationDays');
-        const endDateInput = document.getElementById('createEndDate');
-        const alert = document.getElementById('dateCalculationAlert');
-        const details = document.getElementById('calculationDetails');
+        // Calculate end date based on start date and duration (Create Modal)
+        function calculateEndDate() {
+            const startDateInput = document.getElementById('createStartDate');
+            const durationInput = document.getElementById('createDurationDays');
+            const endDateInput = document.getElementById('createEndDate');
+            const alert = document.getElementById('dateCalculationAlert');
+            const details = document.getElementById('calculationDetails');
 
-        if (startDateInput.value && durationInput.value) {
-            const startDate = new Date(startDateInput.value);
-            const days = parseInt(durationInput.value);
+            if (startDateInput.value && durationInput.value) {
+                const startDate = new Date(startDateInput.value);
+                const days = parseInt(durationInput.value);
 
-            // Calculate end date by adding days
-            const endDate = new Date(startDate);
-            endDate.setDate(endDate.getDate() + (days - 1));
+                // Calculate end date by adding days
+                const endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + (days - 1));
 
-            // Format date for input (YYYY-MM-DD)
-            const formattedEndDate = endDate.toISOString().split('T')[0];
-            endDateInput.value = formattedEndDate;
+                // Format date for input (YYYY-MM-DD)
+                const formattedEndDate = endDate.toISOString().split('T')[0];
+                endDateInput.value = formattedEndDate;
 
-            // Show calculation details
-            details.textContent = `${days} day${days > 1 ? 's' : ''} from ${startDate.toLocaleDateString()} = ${endDate.toLocaleDateString()}`;
-            alert.classList.remove('d-none');
-        } else {
+                // Show calculation details
+                details.textContent = `${days} day${days > 1 ? 's' : ''} from ${startDate.toLocaleDateString()} = ${endDate.toLocaleDateString()}`;
+                alert.classList.remove('d-none');
+            } else {
+                alert.classList.add('d-none');
+            }
+        }
+
+        // Calculate end date based on start date and duration (Edit Modal)
+        function calculateEditEndDate() {
+            const startDateInput = document.getElementById('editStartDate');
+            const durationInput = document.getElementById('editDurationDays');
+            const endDateInput = document.getElementById('editEndDate');
+            const alert = document.getElementById('editDateCalculationAlert');
+            const details = document.getElementById('editCalculationDetails');
+
+            if (startDateInput.value && durationInput.value) {
+                const startDate = new Date(startDateInput.value);
+                const days = parseInt(durationInput.value);
+
+                // Calculate end date by adding days
+                const endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + (days - 1));
+
+                // Format date for input (YYYY-MM-DD)
+                const formattedEndDate = endDate.toISOString().split('T')[0];
+                endDateInput.value = formattedEndDate;
+
+                // Show calculation details
+                details.textContent = `${days} day${days > 1 ? 's' : ''} from ${startDate.toLocaleDateString()} = ${endDate.toLocaleDateString()}`;
+                alert.classList.remove('d-none');
+            } else {
+                alert.classList.add('d-none');
+            }
+        }
+
+        // Clear duration when end date is manually changed (Create Modal)
+        function clearDuration() {
+            const durationInput = document.getElementById('createDurationDays');
+            const alert = document.getElementById('dateCalculationAlert');
+
+            // Clear the duration field to indicate manual override
+            durationInput.value = '';
             alert.classList.add('d-none');
         }
-    }
 
-    // Calculate end date based on start date and duration (Edit Modal)
-    function calculateEditEndDate() {
-        const startDateInput = document.getElementById('editStartDate');
-        const durationInput = document.getElementById('editDurationDays');
-        const endDateInput = document.getElementById('editEndDate');
-        const alert = document.getElementById('editDateCalculationAlert');
-        const details = document.getElementById('editCalculationDetails');
+        // Clear duration when end date is manually changed (Edit Modal)
+        function clearEditDuration() {
+            const durationInput = document.getElementById('editDurationDays');
+            const alert = document.getElementById('editDateCalculationAlert');
 
-        if (startDateInput.value && durationInput.value) {
-            const startDate = new Date(startDateInput.value);
-            const days = parseInt(durationInput.value);
-
-            // Calculate end date by adding days
-            const endDate = new Date(startDate);
-            endDate.setDate(endDate.getDate() + (days - 1));
-
-            // Format date for input (YYYY-MM-DD)
-            const formattedEndDate = endDate.toISOString().split('T')[0];
-            endDateInput.value = formattedEndDate;
-
-            // Show calculation details
-            details.textContent = `${days} day${days > 1 ? 's' : ''} from ${startDate.toLocaleDateString()} = ${endDate.toLocaleDateString()}`;
-            alert.classList.remove('d-none');
-        } else {
+            // Clear the duration field to indicate manual override
+            durationInput.value = '';
             alert.classList.add('d-none');
         }
-    }
 
-    // Clear duration when end date is manually changed (Create Modal)
-    function clearDuration() {
-        const durationInput = document.getElementById('createDurationDays');
-        const alert = document.getElementById('dateCalculationAlert');
+        // Set default start date to today when modal opens
+        document.getElementById('createModal').addEventListener('show.bs.modal', function () {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('createStartDate').value = today;
 
-        // Clear the duration field to indicate manual override
-        durationInput.value = '';
-        alert.classList.add('d-none');
-    }
+            // Set default duration to 365 days
+            document.getElementById('createDurationDays').value = '';
 
-    // Clear duration when end date is manually changed (Edit Modal)
-    function clearEditDuration() {
-        const durationInput = document.getElementById('editDurationDays');
-        const alert = document.getElementById('editDateCalculationAlert');
+            // Calculate initial end date
+            calculateEndDate();
+        });
 
-        // Clear the duration field to indicate manual override
-        durationInput.value = '';
-        alert.classList.add('d-none');
-    }
+        // Reset form when modal closes
+        document.getElementById('createModal').addEventListener('hidden.bs.modal', function () {
+            document.querySelector('#createModal form').reset();
+            document.getElementById('dateCalculationAlert').classList.add('d-none');
+        });
 
-    // Set default start date to today when modal opens
-    document.getElementById('createModal').addEventListener('show.bs.modal', function() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('createStartDate').value = today;
+        // Reset edit form when modal closes
+        document.getElementById('editModal').addEventListener('hidden.bs.modal', function () {
+            document.getElementById('editDateCalculationAlert').classList.add('d-none');
+        });
 
-        // Set default duration to 365 days
-        document.getElementById('createDurationDays').value = '';
-
-        // Calculate initial end date
-        calculateEndDate();
-    });
-
-    // Reset form when modal closes
-    document.getElementById('createModal').addEventListener('hidden.bs.modal', function() {
-        document.querySelector('#createModal form').reset();
-        document.getElementById('dateCalculationAlert').classList.add('d-none');
-    });
-
-    // Reset edit form when modal closes
-    document.getElementById('editModal').addEventListener('hidden.bs.modal', function() {
-        document.getElementById('editDateCalculationAlert').classList.add('d-none');
-    });
-
-    function generateQRCode(userId) {
-        fetch(`/Admin/GenerateQRCode?endUserId=${userId}`)
-            .then(response => response.json())
-            .then(async data => {
-                if (data.success) {
-                    // Show the QR link modal with multiple options
-                    showQRLinkModal(data.downloadUrl);
-                } else if (data.message === "QR code has already been downloaded.") {
-                    if (confirm("This QR code has already been downloaded. Would you like to generate a new one?")) {
-                        regenerateQRCode(userId);
+        function generateQRCode(userId) {
+            fetch(`/Admin/GenerateQRCode?endUserId=${userId}`)
+                .then(response => response.json())
+                .then(async data => {
+                    if (data.success) {
+                        // Show the QR link modal with multiple options
+                        showQRLinkModal(data.downloadUrl);
+                    } else if (data.message === "QR code has already been downloaded.") {
+                        if (confirm("This QR code has already been downloaded. Would you like to generate a new one?")) {
+                            regenerateQRCode(userId);
+                        }
+                    } else {
+                        // Show error message
+                        showErrorAlert(data.message || 'Failed to generate QR code');
                     }
-                } else {
-                    // Show error message
-                    showErrorAlert(data.message || 'Failed to generate QR code');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showErrorAlert('Error generating QR code');
-            });
-    }
-
-    function regenerateQRCode(userId) {
-        fetch(`/Admin/GenerateQRCode?endUserId=${userId}&forceRegenerate=true`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showQRLinkModal(data.downloadUrl);
-                } else {
-                    showErrorAlert(data.message || 'Failed to regenerate QR code');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showErrorAlert('Error regenerating QR code');
-            });
-    }
-
-    function showQRLinkModal(downloadUrl) {
-        document.getElementById('qrDownloadLink').value = downloadUrl;
-
-        // Show share button if Web Share API is supported
-        if (navigator.share) {
-            document.getElementById('shareButton').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showErrorAlert('Error generating QR code');
+                });
         }
 
-        new bootstrap.Modal(document.getElementById('qrLinkModal')).show();
-        showSuccessAlert('QR code download link generated successfully!');
-    }
-
-    function copyLinkFallback() {
-        const linkInput = document.getElementById('qrDownloadLink');
-        const copyIcon = document.getElementById('copyIcon');
-
-        // Try multiple methods for copying
-        let copySuccess = false;
-
-        // Method 1: Modern clipboard API (works on HTTPS)
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(linkInput.value).then(() => {
-                copySuccess = true;
-                updateCopyButton(copyIcon, true);
-            }).catch(() => {
-                // Fallback to method 2
-                copySuccess = fallbackCopyMethod(linkInput);
-                updateCopyButton(copyIcon, copySuccess);
-            });
-        } else {
-            // Method 2: Fallback for older browsers and non-HTTPS
-            copySuccess = fallbackCopyMethod(linkInput);
-            updateCopyButton(copyIcon, copySuccess);
+        function regenerateQRCode(userId) {
+            fetch(`/Admin/GenerateQRCode?endUserId=${userId}&forceRegenerate=true`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showQRLinkModal(data.downloadUrl);
+                    } else {
+                        showErrorAlert(data.message || 'Failed to regenerate QR code');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showErrorAlert('Error regenerating QR code');
+                });
         }
-    }
 
-    function fallbackCopyMethod(input) {
-        try {
-            // Select the text
-            input.select();
-            input.setSelectionRange(0, 99999); // For mobile devices
+        function showQRLinkModal(downloadUrl) {
+            document.getElementById('qrDownloadLink').value = downloadUrl;
 
-            // Copy the text
-            const successful = document.execCommand('copy');
-
-            // Deselect
-            if (window.getSelection) {
-                window.getSelection().removeAllRanges();
+            // Show share button if Web Share API is supported
+            if (navigator.share) {
+                document.getElementById('shareButton').style.display = 'block';
             }
 
-            return successful;
-        } catch (err) {
-            console.error('Fallback copy failed:', err);
-            return false;
+            new bootstrap.Modal(document.getElementById('qrLinkModal')).show();
+            showSuccessAlert('QR code download link generated successfully!');
         }
-    }
 
-    function updateCopyButton(icon, success) {
-        if (success) {
-            icon.className = 'bi bi-check-circle text-success';
-            setTimeout(() => {
-                icon.className = 'bi bi-clipboard';
-            }, 2000);
-            showSuccessAlert('Link copied to clipboard!');
-        } else {
-            icon.className = 'bi bi-x-circle text-danger';
-            setTimeout(() => {
-                icon.className = 'bi bi-clipboard';
-            }, 2000);
-            showErrorAlert('Failed to copy link. Please manually select and copy the text.');
-
-            // Automatically select the text for manual copying
+        function copyLinkFallback() {
             const linkInput = document.getElementById('qrDownloadLink');
-            linkInput.focus();
-            linkInput.select();
+            const copyIcon = document.getElementById('copyIcon');
+
+            // Try multiple methods for copying
+            let copySuccess = false;
+
+            // Method 1: Modern clipboard API (works on HTTPS)
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(linkInput.value).then(() => {
+                    copySuccess = true;
+                    updateCopyButton(copyIcon, true);
+                }).catch(() => {
+                    // Fallback to method 2
+                    copySuccess = fallbackCopyMethod(linkInput);
+                    updateCopyButton(copyIcon, copySuccess);
+                });
+            } else {
+                // Method 2: Fallback for older browsers and non-HTTPS
+                copySuccess = fallbackCopyMethod(linkInput);
+                updateCopyButton(copyIcon, copySuccess);
+            }
         }
-    }
 
-    function openQRLink() {
-        const link = document.getElementById('qrDownloadLink').value;
-        window.open(link, '_blank');
-    }
+        function fallbackCopyMethod(input) {
+            try {
+                // Select the text
+                input.select();
+                input.setSelectionRange(0, 99999); // For mobile devices
 
-    function shareQRLink() {
-        const link = document.getElementById('qrDownloadLink').value;
+                // Copy the text
+                const successful = document.execCommand('copy');
 
-        if (navigator.share) {
-            navigator.share({
-                title: 'QR Code Download',
-                text: 'Download your QR code for check-in',
-                url: link
-            }).then(() => {
-                console.log('Successfully shared');
-            }).catch((error) => {
-                console.log('Error sharing:', error);
+                // Deselect
+                if (window.getSelection) {
+                    window.getSelection().removeAllRanges();
+                }
+
+                return successful;
+            } catch (err) {
+                console.error('Fallback copy failed:', err);
+                return false;
+            }
+        }
+
+        function updateCopyButton(icon, success) {
+            if (success) {
+                icon.className = 'bi bi-check-circle text-success';
+                setTimeout(() => {
+                    icon.className = 'bi bi-clipboard';
+                }, 2000);
+                showSuccessAlert('Link copied to clipboard!');
+            } else {
+                icon.className = 'bi bi-x-circle text-danger';
+                setTimeout(() => {
+                    icon.className = 'bi bi-clipboard';
+                }, 2000);
+                showErrorAlert('Failed to copy link. Please manually select and copy the text.');
+
+                // Automatically select the text for manual copying
+                const linkInput = document.getElementById('qrDownloadLink');
+                linkInput.focus();
+                linkInput.select();
+            }
+        }
+
+        function openQRLink() {
+            const link = document.getElementById('qrDownloadLink').value;
+            window.open(link, '_blank');
+        }
+
+        function shareQRLink() {
+            const link = document.getElementById('qrDownloadLink').value;
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'QR Code Download',
+                    text: 'Download your QR code for check-in',
+                    url: link
+                }).then(() => {
+                    console.log('Successfully shared');
+                }).catch((error) => {
+                    console.log('Error sharing:', error);
+                    // Fallback to copy
+                    copyLinkFallback();
+                });
+            } else {
                 // Fallback to copy
                 copyLinkFallback();
-            });
-        } else {
-            // Fallback to copy
-            copyLinkFallback();
+            }
         }
-    }
 
-    function downloadQR() {
-        const link = document.createElement('a');
-        const qrImage = document.getElementById('qrCodeImage').src;
-        const memberId = document.getElementById('uniqueId').textContent;
+        function downloadQR() {
+            const link = document.createElement('a');
+            const qrImage = document.getElementById('qrCodeImage').src;
+            const memberId = document.getElementById('uniqueId').textContent;
 
-        link.href = qrImage;
-        link.download = `QRCode_${memberId}.png`;
-        link.click();
-    }
+            link.href = qrImage;
+            link.download = `QRCode_${memberId}.png`;
+            link.click();
+        }
 
-    function showSuccessAlert(message) {
-        showAlert(message, 'success');
-    }
+        function showSuccessAlert(message) {
+            showAlert(message, 'success');
+        }
 
-    function showErrorAlert(message) {
-        showAlert(message, 'danger');
-    }
+        function showErrorAlert(message) {
+            showAlert(message, 'danger');
+        }
 
-    function showAlert(message, type) {
-        // Remove existing alerts
-        const existingAlerts = document.querySelectorAll('.dynamic-alert');
-        existingAlerts.forEach(alert => alert.remove());
+        function showAlert(message, type) {
+            // Remove existing alerts
+            const existingAlerts = document.querySelectorAll('.dynamic-alert');
+            existingAlerts.forEach(alert => alert.remove());
 
-        // Create new alert
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed dynamic-alert`;
-        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-        alertDiv.innerHTML = `
+            // Create new alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed dynamic-alert`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
                 <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
                 <strong>${type === 'success' ? 'Success!' : 'Error!'}</strong> ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             `;
-        document.body.appendChild(alertDiv);
+            document.body.appendChild(alertDiv);
 
-        // Remove alert after 5 seconds
-        setTimeout(() => {
-            if (alertDiv && alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 5000);
-    }
+            // Remove alert after 5 seconds
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
 
-    // Initialize page
-    document.addEventListener('DOMContentLoaded', function() {
-        // Check if we're on a mobile device
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function () {
+            // Check if we're on a mobile device
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // Add mobile-specific styles if needed
-        if (isMobile) {
-            const style = document.createElement('style');
-            style.textContent = `
+            // Add mobile-specific styles if needed
+            if (isMobile) {
+                const style = document.createElement('style');
+                style.textContent = `
                     .input-group input {
                         font-size: 16px; /* Prevent zoom on iOS */
                     }
@@ -1028,141 +1203,141 @@ ViewData["Title"] = "End Users Management";
                         margin: 10px;
                     }
                 `;
-            document.head.appendChild(style);
-        }
-
-        // Add input event listeners for real-time calculation
-        const startDateInput = document.getElementById('createStartDate');
-        const durationInput = document.getElementById('createDurationDays');
-        const editStartDateInput = document.getElementById('editStartDate');
-        const editDurationInput = document.getElementById('editDurationDays');
-
-        if (startDateInput && durationInput) {
-            startDateInput.addEventListener('input', calculateEndDate);
-            durationInput.addEventListener('input', calculateEndDate);
-        }
-
-        if (editStartDateInput && editDurationInput) {
-            editStartDateInput.addEventListener('input', calculateEditEndDate);
-            editDurationInput.addEventListener('input', calculateEditEndDate);
-        }
-        // set value of select list #page-select
-        document.getElementById('page-select').value = "@Model.EndUsers.PageSize";
-    });
-
-    // Playtomic Sync Functions
-    function previewSync() {
-        const previewDiv = document.getElementById('syncPreview');
-        const activeUsersSpan = document.getElementById('previewActiveUsers');
-        const branchesSpan = document.getElementById('previewBranches');
-        const startSyncBtn = document.getElementById('startSyncBtn');
-
-        // Show preview section
-        previewDiv.classList.remove('d-none');
-        activeUsersSpan.textContent = 'Loading...';
-        branchesSpan.textContent = 'Loading...';
-
-        // Get preview data
-        fetch('/Admin/GetSyncPreview', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
+                document.head.appendChild(style);
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                activeUsersSpan.textContent = data.activeUsers;
-                branchesSpan.textContent = data.branches;
 
-                if (data.activeUsers > 0 && data.branches > 0) {
-                    startSyncBtn.classList.remove('d-none');
-                } else {
-                    if (data.activeUsers === 0) {
-                        showAlert('No active users found to sync.', 'warning');
-                    }
-                    if (data.branches === 0) {
-                        showAlert('No branches with Playtomic Tenant ID found.', 'warning');
-                    }
-                }
-            } else {
-                showAlert('Failed to load sync preview.', 'danger');
+            // Add input event listeners for real-time calculation
+            const startDateInput = document.getElementById('createStartDate');
+            const durationInput = document.getElementById('createDurationDays');
+            const editStartDateInput = document.getElementById('editStartDate');
+            const editDurationInput = document.getElementById('editDurationDays');
+
+            if (startDateInput && durationInput) {
+                startDateInput.addEventListener('input', calculateEndDate);
+                durationInput.addEventListener('input', calculateEndDate);
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showAlert('Error loading sync preview.', 'danger');
+
+            if (editStartDateInput && editDurationInput) {
+                editStartDateInput.addEventListener('input', calculateEditEndDate);
+                editDurationInput.addEventListener('input', calculateEditEndDate);
+            }
+            // set value of select list #page-select
+            document.getElementById('page-select').value = "@Model.EndUsers.PageSize";
         });
-    }
 
-    function startPlaytomicSync() {
-        const accessToken = document.getElementById('playtomicAccessToken').value.trim();
+        // Playtomic Sync Functions
+        function previewSync() {
+            const previewDiv = document.getElementById('syncPreview');
+            const activeUsersSpan = document.getElementById('previewActiveUsers');
+            const branchesSpan = document.getElementById('previewBranches');
+            const startSyncBtn = document.getElementById('startSyncBtn');
 
-        if (!accessToken) {
-            showAlert('Please enter your Playtomic access token.', 'warning');
-            return;
+            // Show preview section
+            previewDiv.classList.remove('d-none');
+            activeUsersSpan.textContent = 'Loading...';
+            branchesSpan.textContent = 'Loading...';
+
+            // Get preview data
+            fetch('/Admin/GetSyncPreview', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        activeUsersSpan.textContent = data.activeUsers;
+                        branchesSpan.textContent = data.branches;
+
+                        if (data.activeUsers > 0 && data.branches > 0) {
+                            startSyncBtn.classList.remove('d-none');
+                        } else {
+                            if (data.activeUsers === 0) {
+                                showAlert('No active users found to sync.', 'warning');
+                            }
+                            if (data.branches === 0) {
+                                showAlert('No branches with Playtomic Tenant ID found.', 'warning');
+                            }
+                        }
+                    } else {
+                        showAlert('Failed to load sync preview.', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('Error loading sync preview.', 'danger');
+                });
         }
 
-        // Show progress
-        const formDiv = document.querySelector('#syncPlaytomicForm');
-        const progressDiv = document.getElementById('syncProgress');
-        const resultsDiv = document.getElementById('syncResults');
-        const footer = document.querySelector('#syncPlaytomicModal .modal-footer');
+        function startPlaytomicSync() {
+            const accessToken = document.getElementById('playtomicAccessToken').value.trim();
 
-        formDiv.classList.add('d-none');
-        progressDiv.classList.remove('d-none');
-        resultsDiv.classList.add('d-none');
-        footer.style.display = 'none';
+            if (!accessToken) {
+                showAlert('Please enter your Playtomic access token.', 'warning');
+                return;
+            }
 
-        // Start sync
-        fetch('/Admin/SyncUsersToPlaytomic', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-            },
-            body: JSON.stringify({
-                accessToken: accessToken
+            // Show progress
+            const formDiv = document.querySelector('#syncPlaytomicForm');
+            const progressDiv = document.getElementById('syncProgress');
+            const resultsDiv = document.getElementById('syncResults');
+            const footer = document.querySelector('#syncPlaytomicModal .modal-footer');
+
+            formDiv.classList.add('d-none');
+            progressDiv.classList.remove('d-none');
+            resultsDiv.classList.add('d-none');
+            footer.style.display = 'none';
+
+            // Start sync
+            fetch('/Admin/SyncUsersToPlaytomic', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    accessToken: accessToken
+                })
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Hide progress
-            progressDiv.classList.add('d-none');
-            resultsDiv.classList.remove('d-none');
-            footer.style.display = 'flex';
+                .then(response => response.json())
+                .then(data => {
+                    // Hide progress
+                    progressDiv.classList.add('d-none');
+                    resultsDiv.classList.remove('d-none');
+                    footer.style.display = 'flex';
 
-            // Show results
-            displaySyncResults(data);
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            progressDiv.classList.add('d-none');
-            resultsDiv.classList.remove('d-none');
-            footer.style.display = 'flex';
+                    // Show results
+                    displaySyncResults(data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    progressDiv.classList.add('d-none');
+                    resultsDiv.classList.remove('d-none');
+                    footer.style.display = 'flex';
 
-            resultsDiv.innerHTML = `
+                    resultsDiv.innerHTML = `
                 <div class="alert alert-danger">
                     <i class="bi bi-exclamation-triangle"></i>
                     <strong>Error:</strong> An unexpected error occurred during sync.
                 </div>
             `;
-        });
-    }
+                });
+        }
 
-    function displaySyncResults(data) {
-        const resultsDiv = document.getElementById('syncResults');
+        function displaySyncResults(data) {
+            const resultsDiv = document.getElementById('syncResults');
 
-        if (data.success) {
-            let resultHtml = `
+            if (data.success) {
+                let resultHtml = `
                 <div class="alert alert-success">
                     <i class="bi bi-check-circle"></i>
                     <strong>Sync Completed!</strong> ${data.message}
                 </div>
             `;
 
-            if (data.result && data.result.branchResults && data.result.branchResults.length > 0) {
-                resultHtml += `
+                if (data.result && data.result.branchResults && data.result.branchResults.length > 0) {
+                    resultHtml += `
                     <div class="card">
                         <div class="card-header">
                             <h6 class="mb-0">Branch Results</h6>
@@ -1181,15 +1356,15 @@ ViewData["Title"] = "End Users Management";
                                     <tbody>
                 `;
 
-                data.result.branchResults.forEach(branch => {
-                    const statusBadge = branch.isSuccess
-                        ? '<span class="badge bg-success">Success</span>'
-                        : '<span class="badge bg-danger">Failed</span>';
+                    data.result.branchResults.forEach(branch => {
+                        const statusBadge = branch.isSuccess
+                            ? '<span class="badge bg-success">Success</span>'
+                            : '<span class="badge bg-danger">Failed</span>';
 
-                    const userCount = branch.isSuccess ? branch.userCount : 0;
-                    const errorMessage = branch.errorMessage || '';
+                        const userCount = branch.isSuccess ? branch.userCount : 0;
+                        const errorMessage = branch.errorMessage || '';
 
-                    resultHtml += `
+                        resultHtml += `
                         <tr>
                             <td>${branch.branchName}</td>
                             <td>${statusBadge}</td>
@@ -1197,50 +1372,121 @@ ViewData["Title"] = "End Users Management";
                             <td><small class="text-danger">${errorMessage}</small></td>
                         </tr>
                     `;
-                });
+                    });
 
-                resultHtml += `
+                    resultHtml += `
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
                 `;
-            }
+                }
 
-            resultsDiv.innerHTML = resultHtml;
-        } else {
-            resultsDiv.innerHTML = `
+                resultsDiv.innerHTML = resultHtml;
+            } else {
+                resultsDiv.innerHTML = `
                 <div class="alert alert-danger">
                     <i class="bi bi-exclamation-triangle"></i>
                     <strong>Sync Failed:</strong> ${data.message}
                 </div>
             `;
+            }
         }
-    }
 
-    // Reset modal when closed
-    document.getElementById('syncPlaytomicModal').addEventListener('hidden.bs.modal', function() {
-        document.getElementById('syncPlaytomicForm').reset();
-        document.getElementById('syncPreview').classList.add('d-none');
-        document.getElementById('syncProgress').classList.add('d-none');
-        document.getElementById('syncResults').classList.add('d-none');
-        document.getElementById('startSyncBtn').classList.add('d-none');
-        document.querySelector('#syncPlaytomicForm').classList.remove('d-none');
-        document.querySelector('#syncPlaytomicModal .modal-footer').style.display = 'flex';
-    });
+        // Reset modal when closed
+        document.getElementById('syncPlaytomicModal').addEventListener('hidden.bs.modal', function () {
+            document.getElementById('syncPlaytomicForm').reset();
+            document.getElementById('syncPreview').classList.add('d-none');
+            document.getElementById('syncProgress').classList.add('d-none');
+            document.getElementById('syncResults').classList.add('d-none');
+            document.getElementById('startSyncBtn').classList.add('d-none');
+            document.querySelector('#syncPlaytomicForm').classList.remove('d-none');
+            document.querySelector('#syncPlaytomicModal .modal-footer').style.display = 'flex';
+        });
 
-    function changePageSize(pageSize) {
-        const url = new URL(window.location);
-        url.searchParams.set('pageSize', pageSize);
-        url.searchParams.set('page', '1'); // Reset to first page when changing page size
-        window.location.href = url.toString();
-    }
+        function changePageSize(pageSize) {
+            const url = new URL(window.location);
+            url.searchParams.set('pageSize', pageSize);
+            url.searchParams.set('page', '1'); // Reset to first page when changing page size
+            window.location.href = url.toString();
+        }
 
-    function resetSearch() {
-        window.location.href = '@Url.Action("EndUsers")';
-    }
-</script>
+        function resetSearch() {
+            window.location.href = '@Url.Action("EndUsers")';
+        }
+
+        function showStopSubscriptionModal(userId, userName, userPhone) {
+            document.getElementById('stopEndUserId').value = userId;
+            document.getElementById('stopUserName').textContent = userName;
+            document.getElementById('stopUserPhone').textContent = userPhone;
+
+            new bootstrap.Modal(document.getElementById('stopSubscriptionModal')).show();
+        }
+
+        function submitStopSubscription() {
+            const form = document.getElementById('stopSubscriptionForm');
+            const endUserId = document.getElementById('stopEndUserId').value;
+            const stopReason = document.getElementById('stopReason').value.trim();
+
+            if (!stopReason) {
+                showErrorAlert('Please provide a reason for stopping the subscription.');
+                return;
+            }
+
+            if (stopReason.length > 500) {
+                showErrorAlert('Reason cannot exceed 500 characters.');
+                return;
+            }
+
+            // Show confirmation dialog
+
+            // Create form data for submission
+            const formData = new FormData();
+            formData.append('EndUserId', endUserId);
+            formData.append('StopReason', stopReason);
+
+            // Submit via fetch to handle the response
+            fetch('/Admin/StopSubscription', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        // Success - reload the page to show updated data
+                        window.location.reload();
+                    } else {
+                        // Handle error response
+                        response.text().then(text => {
+                            showErrorAlert('Failed to stop subscription. Please try again.');
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showErrorAlert('An error occurred while stopping the subscription.');
+                });
+
+            // Close the modal
+            bootstrap.Modal.getInstance(document.getElementById('stopSubscriptionModal')).hide();
+        
+        }
+
+        // Reset stop subscription form when modal closes
+        document.getElementById('stopSubscriptionModal').addEventListener('hidden.bs.modal', function () {
+            document.getElementById('stopSubscriptionForm').reset();
+        });
+
+        function showStopDetails(stoppedDate, reason) {
+            document.getElementById('stopDetailsDate').textContent = stoppedDate;
+            document.getElementById('stopDetailsReason').textContent = reason;
+
+            new bootstrap.Modal(document.getElementById('stopDetailsModal')).show();
+        }
+    </script>
 
 
 }
