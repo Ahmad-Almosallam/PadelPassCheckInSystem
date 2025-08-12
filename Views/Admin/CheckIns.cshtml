@@ -1,7 +1,6 @@
-@model List<CheckIn>
+@model CheckInsPaginatedViewModel
 @{
     ViewData["Title"] = "Check-Ins Report";
-    var branches = ViewBag.Branches as List<Branch>;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -26,11 +25,11 @@
             <div class="col-md-3">
                 <label class="form-label">From Date <small class="text-muted">(KSA)</small></label>
                 <input type="date" name="fromDate" class="form-control"
-                       value="@ViewBag.FromDate?.ToString("yyyy-MM-dd")">
+                       value="@Model.FromDate?.ToString("yyyy-MM-dd")">
             </div>
             <div class="col-md-3">
                 <label class="form-label">To Date <small class="text-muted">(KSA)</small></label>
-                <input type="date" name="toDate" class="form-control" value="@ViewBag.ToDate?.ToString("yyyy-MM-dd")">
+                <input type="date" name="toDate" class="form-control" value="@Model.ToDate?.ToString("yyyy-MM-dd")">
             </div>
             @if (User.IsInRole("Admin"))
             {
@@ -38,10 +37,10 @@
                     <label class="form-label">Branch</label>
                     <select name="branchId" class="form-select">
                         <option value="">All Branches</option>
-                        @foreach (var branch in branches)
+                        @foreach (var branch in Model.Branches)
                         {
                             <option value="@branch.Id"
-                                    selected="@(ViewBag.BranchId == branch.Id ? "selected" : null)">@branch.Name</option>
+                                    selected="@(Model.BranchId == branch.Id ? "selected" : null)">@branch.Name</option>
                         }
                     </select>
                 </div>
@@ -66,6 +65,27 @@
 
 <div class="card">
     <div class="card-body">
+        <!-- Pagination Info -->
+        @if (Model.CheckIns.TotalItems > 0)
+        {
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="text-muted">
+                    <small>
+                        Showing @Model.CheckIns.StartIndex - @Model.CheckIns.EndIndex of @Model.CheckIns.TotalItems check-ins
+                    </small>
+                </div>
+                <div class="d-flex align-items-center">
+                    <label class="form-label me-2 mb-0">Page size:</label>
+                    <select class="form-select form-select-sm" id="page-select" style="width: auto;" onchange="changePageSize(this.value)">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+        }
+
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -82,7 +102,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                @foreach (var checkIn in Model)
+                @foreach (var checkIn in Model.CheckIns.Items)
                 {
                     <tr data-checkin-id="@checkIn.Id">
                         <td>
@@ -151,7 +171,7 @@
             </table>
         </div>
 
-        @if (!Model.Any())
+        @if (!Model.CheckIns.Items.Any())
         {
             <div class="text-center text-muted py-5">
                 <i class="bi bi-list-check fs-1 mb-3"></i>
@@ -159,12 +179,102 @@
                 <p>No check-ins found for the selected criteria.</p>
             </div>
         }
-        else
+
+        <!-- Pagination Controls -->
+        @if (Model.CheckIns.TotalPages > 1)
+        {
+            <nav aria-label="Check-ins pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- First Page -->
+                    @if (Model.CheckIns.CurrentPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(1)">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- Previous Page -->
+                    @if (Model.CheckIns.HasPreviousPage)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.CheckIns.CurrentPage - 1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- Page Numbers -->
+                    @{
+                        var startPage = Math.Max(1, Model.CheckIns.CurrentPage - 2);
+                        var endPage = Math.Min(Model.CheckIns.TotalPages, Model.CheckIns.CurrentPage + 2);
+                    }
+
+                    @if (startPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(1)">1</a>
+                        </li>
+                        @if (startPage > 2)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+                    }
+
+                    @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+                    {
+                        <li class="page-item @(pageNumber == Model.CheckIns.CurrentPage ? "active" : "")">
+                            <a class="page-link" href="@GetPageUrl(pageNumber)">
+                                @pageNumber
+                            </a>
+                        </li>
+                    }
+
+                    @if (endPage < Model.CheckIns.TotalPages)
+                    {
+                        @if (endPage < Model.CheckIns.TotalPages - 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.CheckIns.TotalPages)">@Model.CheckIns.TotalPages</a>
+                        </li>
+                    }
+
+                    <!-- Next Page -->
+                    @if (Model.CheckIns.HasNextPage)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.CheckIns.CurrentPage + 1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- Last Page -->
+                    @if (Model.CheckIns.CurrentPage < Model.CheckIns.TotalPages)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.CheckIns.TotalPages)">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+
+        @if (Model.CheckIns.Items.Any())
         {
             <div class="mt-3 text-muted">
                 <small>
                     <i class="bi bi-info-circle"></i>
-                    Showing @Model.Count check-in(s). All times displayed in KSA Time (UTC+3).
+                    Showing @Model.CheckIns.StartIndex - @Model.CheckIns.EndIndex of @Model.CheckIns.TotalItems check-in(s). All times displayed in KSA Time (UTC+3).
                 </small>
             </div>
         }
@@ -330,7 +440,7 @@
                                             <label class="form-label">Branch *</label>
                                             <select id="manualBranchId" class="form-select" required>
                                                 <option value="">Select Branch</option>
-                                                @foreach (var branch in branches)
+                                                @foreach (var branch in Model.Branches)
                                                 {
                                                     <option value="@branch.Id">@branch.Name</option>
                                                 }
@@ -409,10 +519,39 @@
     </div>
 }
 
+@functions {
+    public string GetPageUrl(int page)
+    {
+        var routeValues = new RouteValueDictionary
+        {
+            ["page"] = page,
+            ["pageSize"] = Model.CheckIns.PageSize
+        };
+
+        if (Model.FromDate.HasValue)
+            routeValues["fromDate"] = Model.FromDate.Value.ToString("yyyy-MM-dd");
+        
+        if (Model.ToDate.HasValue)
+            routeValues["toDate"] = Model.ToDate.Value.ToString("yyyy-MM-dd");
+        
+        if (Model.BranchId.HasValue)
+            routeValues["branchId"] = Model.BranchId.Value;
+
+        return Url.Action("CheckIns", routeValues);
+    }
+}
+
 @section Scripts {
     <script>
+        function changePageSize(pageSize) {
+            const url = new URL(window.location);
+            url.searchParams.set('pageSize', pageSize);
+            url.searchParams.set('page', '1'); // Reset to first page when changing page size
+            window.location.href = url.toString();
+        }
+
         function resetForm() {
-            window.location.href = '@Url.Action("CheckIns", "Admin")';
+            window.location.href = '@Url.Action("CheckIns")';
         }
 
         function showEditCheckInModal(checkInId, customerName, courtName, playDuration, playStartTime, notes) {
@@ -556,6 +695,8 @@
                 tokenInput.value = '@Html.AntiForgeryToken()'.match(/value="([^"]+)"/)?.[1] || '';
                 document.body.appendChild(tokenInput);
             }
+            // write it in plain js
+            document.getElementById('page-select').value = '@Model.CheckIns.PageSize';
         });
 
 

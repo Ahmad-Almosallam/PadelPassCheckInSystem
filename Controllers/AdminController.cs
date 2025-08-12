@@ -424,7 +424,7 @@ namespace PadelPassCheckInSystem.Controllers
 
         // Check-ins Management
 
-        public async Task<IActionResult> CheckIns(DateTime? fromDate, DateTime? toDate, int? branchId)
+        public async Task<IActionResult> CheckIns(DateTime? fromDate, DateTime? toDate, int? branchId, int page = 1, int pageSize = 20)
         {
             // check if user is BranchUser and filter by branch
             if (User.IsInRole("BranchUser"))
@@ -457,16 +457,36 @@ namespace PadelPassCheckInSystem.Controllers
                 query = query.Where(c => c.BranchId == branchId.Value);
             }
 
+            // Order the query before pagination
+            query = query.OrderByDescending(c => c.CheckInDateTime);
+
+            // Get total count for pagination
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+            // Apply pagination
             var checkIns = await query
-                .OrderByDescending(c => c.CheckInDateTime)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            ViewBag.Branches = await _context.Branches.ToListAsync();
-            ViewBag.FromDate = fromDate;
-            ViewBag.ToDate = toDate;
-            ViewBag.BranchId = branchId;
+            var viewModel = new CheckInsPaginatedViewModel
+            {
+                CheckIns = new PaginatedResult<CheckIn>
+                {
+                    Items = checkIns,
+                    CurrentPage = page,
+                    TotalPages = totalPages,
+                    TotalItems = totalItems,
+                    PageSize = pageSize
+                },
+                FromDate = fromDate,
+                ToDate = toDate,
+                BranchId = branchId,
+                Branches = await _context.Branches.ToListAsync()
+            };
 
-            return View(checkIns);
+            return View(viewModel);
         }
 
 // Export to Excel with KSA time filtering
@@ -1007,3 +1027,4 @@ namespace PadelPassCheckInSystem.Controllers
         public string AccessToken { get; set; }
     }
 }
+
