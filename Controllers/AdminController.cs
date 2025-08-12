@@ -281,12 +281,44 @@ namespace PadelPassCheckInSystem.Controllers
 
         // End Users Management
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> EndUsers()
+        public async Task<IActionResult> EndUsers(string searchPhoneNumber, int page = 1, int pageSize = 10)
         {
-            var endUsers = await _context.EndUsers
-                .OrderByDescending(e => e.CreatedAt)
+            var query = _context.EndUsers.AsQueryable();
+
+            // Apply phone number search filter
+            if (!string.IsNullOrWhiteSpace(searchPhoneNumber))
+            {
+                searchPhoneNumber = searchPhoneNumber.Trim();
+                query = query.Where(e => e.PhoneNumber.Contains(searchPhoneNumber));
+            }
+
+            // Order the query before pagination
+            query = query.OrderByDescending(e => e.CreatedAt);
+
+            // Get total count for pagination
+            var totalItems = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+            // Apply pagination
+            var endUsers = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
-            return View(endUsers);
+
+            var viewModel = new EndUsersPaginatedViewModel
+            {
+                EndUsers = new PaginatedResult<EndUser>
+                {
+                    Items = endUsers,
+                    CurrentPage = page,
+                    TotalPages = totalPages,
+                    TotalItems = totalItems,
+                    PageSize = pageSize
+                },
+                SearchPhoneNumber = searchPhoneNumber
+            };
+
+            return View(viewModel);
         }
 
         [HttpPost]
@@ -424,7 +456,7 @@ namespace PadelPassCheckInSystem.Controllers
 
         // Check-ins Management
 
-        public async Task<IActionResult> CheckIns(DateTime? fromDate, DateTime? toDate, int? branchId, int page = 1, int pageSize = 20)
+        public async Task<IActionResult> CheckIns(DateTime? fromDate, DateTime? toDate, int? branchId, int page = 1, int pageSize = 10)
         {
             // check if user is BranchUser and filter by branch
             if (User.IsInRole("BranchUser"))

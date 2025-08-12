@@ -1,4 +1,4 @@
-@model List<PadelPassCheckInSystem.Models.Entities.EndUser>
+@model EndUsersPaginatedViewModel
 @{
 ViewData["Title"] = "End Users Management";
 }
@@ -21,8 +21,108 @@ ViewData["Title"] = "End Users Management";
     </div>
 </div>
 
+<!-- Statistics Card -->
+<div class="row my-4">
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total Users</h5>
+                <h2 class="text-primary">@Model.EndUsers.TotalItems</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h5 class="card-title">Active Subscriptions</h5>
+                <h2 class="text-success">@Model.EndUsers.Items.Count(u => {
+                                             var today = KSADateTimeExtensions.GetKSANow().Date;
+                                             var startKSA = u.SubscriptionStartDate.ToKSATime().Date;
+                                             var endKSA = u.SubscriptionEndDate.ToKSATime().Date;
+                                             return startKSA <= today && endKSA >= today && !u.IsPaused;
+                                         })</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h5 class="card-title">Currently Paused</h5>
+                <h2 class="text-warning">@Model.EndUsers.Items.Count(u => {
+                                             var today = KSADateTimeExtensions.GetKSANow().Date;
+                                             return u.IsPaused && u.CurrentPauseStartDate?.ToKSATime().Date <= today && u.CurrentPauseEndDate?.ToKSATime().Date >= today;
+                                         })</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h5 class="card-title">Expired</h5>
+                <h2 class="text-danger">@Model.EndUsers.Items.Count(u => u.SubscriptionEndDate.ToKSATime().Date < KSADateTimeExtensions.GetKSANow().Date)</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Search and Filter Section -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="EndUsers" class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Search by Phone Number</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="searchPhoneNumber" class="form-control" 
+                           placeholder="Enter phone number (e.g., 05xxxxxxxx)"
+                           value="@Model.SearchPhoneNumber">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">&nbsp;</label>
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="resetSearch()">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body">
+        <!-- Pagination Info -->
+        @if (Model.EndUsers.TotalItems > 0)
+        {
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="text-muted">
+                    <small>
+                        Showing @Model.EndUsers.StartIndex - @Model.EndUsers.EndIndex of @Model.EndUsers.TotalItems users
+                        @if (!string.IsNullOrWhiteSpace(Model.SearchPhoneNumber))
+                        {
+                            <span class="badge bg-info ms-2">
+                                <i class="bi bi-funnel"></i> Filtered by: @Model.SearchPhoneNumber
+                            </span>
+                        }
+                    </small>
+                </div>
+                <div class="d-flex align-items-center">
+                    <label class="form-label me-2 mb-0">Page size:</label>
+                    <select class="form-select form-select-sm" id="page-select" style="width: auto;" onchange="changePageSize(this.value)">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+        }
+
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -38,7 +138,7 @@ ViewData["Title"] = "End Users Management";
                 </tr>
                 </thead>
                 <tbody>
-                @foreach (var user in Model)
+                @foreach (var user in Model.EndUsers.Items)
                 {
                 var today = KSADateTimeExtensions.GetKSANow().Date;
                 var subscriptionStartKSA = user.SubscriptionStartDate.ToKSATime().Date;
@@ -154,52 +254,132 @@ ViewData["Title"] = "End Users Management";
                 </tbody>
             </table>
         </div>
+
+        @if (!Model.EndUsers.Items.Any())
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-people fs-1 mb-3"></i>
+                @if (!string.IsNullOrWhiteSpace(Model.SearchPhoneNumber))
+                {
+                    <h5>No Users Found</h5>
+                    <p>No users found matching phone number "@Model.SearchPhoneNumber".</p>
+                    <button type="button" class="btn btn-primary" onclick="resetSearch()">
+                        <i class="bi bi-arrow-left"></i> Show All Users
+                    </button>
+                }
+                else
+                {
+                    <h5>No End Users Found</h5>
+                    <p>No end users have been created yet.</p>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+                        <i class="bi bi-plus-circle"></i> Add First End User
+                    </button>
+                }
+            </div>
+        }
+
+        <!-- Pagination Controls -->
+        @if (Model.EndUsers.TotalPages > 1)
+        {
+            <nav aria-label="End users pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- First Page -->
+                    @if (Model.EndUsers.CurrentPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(1)">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- Previous Page -->
+                    @if (Model.EndUsers.HasPreviousPage)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.EndUsers.CurrentPage - 1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- Page Numbers -->
+                    @{
+                        var startPage = Math.Max(1, Model.EndUsers.CurrentPage - 2);
+                        var endPage = Math.Min(Model.EndUsers.TotalPages, Model.EndUsers.CurrentPage + 2);
+                    }
+
+                    @if (startPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(1)">1</a>
+                        </li>
+                        @if (startPage > 2)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+                    }
+
+                    @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+                    {
+                        <li class="page-item @(pageNumber == Model.EndUsers.CurrentPage ? "active" : "")">
+                            <a class="page-link" href="@GetPageUrl(pageNumber)">
+                                @pageNumber
+                            </a>
+                        </li>
+                    }
+
+                    @if (endPage < Model.EndUsers.TotalPages)
+                    {
+                        @if (endPage < Model.EndUsers.TotalPages - 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.EndUsers.TotalPages)">@Model.EndUsers.TotalPages</a>
+                        </li>
+                    }
+
+                    <!-- Next Page -->
+                    @if (Model.EndUsers.HasNextPage)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.EndUsers.CurrentPage + 1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- Last Page -->
+                    @if (Model.EndUsers.CurrentPage < Model.EndUsers.TotalPages)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.EndUsers.TotalPages)">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+
+        @if (Model.EndUsers.Items.Any())
+        {
+            <div class="mt-3 text-muted">
+                <small>
+                    <i class="bi bi-info-circle"></i>
+                    Showing @Model.EndUsers.StartIndex - @Model.EndUsers.EndIndex of @Model.EndUsers.TotalItems user(s). All dates displayed in KSA Time (UTC+3).
+                </small>
+            </div>
+        }
     </div>
 </div>
 
-<!-- Statistics Card -->
-<div class="row mt-4">
-    <div class="col-md-3">
-        <div class="card bg-light">
-            <div class="card-body text-center">
-                <h5 class="card-title">Total Users</h5>
-                <h2 class="text-primary">@Model.Count</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-light">
-            <div class="card-body text-center">
-                <h5 class="card-title">Active Subscriptions</h5>
-                <h2 class="text-success">@Model.Count(u => {
-                    var today = KSADateTimeExtensions.GetKSANow().Date;
-                    var startKSA = u.SubscriptionStartDate.ToKSATime().Date;
-                    var endKSA = u.SubscriptionEndDate.ToKSATime().Date;
-                    return startKSA <= today && endKSA >= today && !u.IsPaused;
-                    })</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-light">
-            <div class="card-body text-center">
-                <h5 class="card-title">Currently Paused</h5>
-                <h2 class="text-warning">@Model.Count(u => {
-                    var today = KSADateTimeExtensions.GetKSANow().Date;
-                    return u.IsPaused && u.CurrentPauseStartDate?.ToKSATime().Date <= today && u.CurrentPauseEndDate?.ToKSATime().Date >= today;
-                    })</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-light">
-            <div class="card-body text-center">
-                <h5 class="card-title">Expired</h5>
-                <h2 class="text-danger">@Model.Count(u => u.SubscriptionEndDate.ToKSATime().Date < KSADateTimeExtensions.GetKSANow().Date)</h2>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Sync to Playtomic Modal -->
 <div class="modal fade" id="syncPlaytomicModal" tabindex="-1">
@@ -513,6 +693,22 @@ ViewData["Title"] = "End Users Management";
         </div>
     </div>
 </div>
+
+@functions {
+    public string GetPageUrl(int page)
+    {
+        var routeValues = new RouteValueDictionary
+        {
+            ["page"] = page,
+            ["pageSize"] = Model.EndUsers.PageSize
+        };
+
+        if (!string.IsNullOrWhiteSpace(Model.SearchPhoneNumber))
+            routeValues["searchPhoneNumber"] = Model.SearchPhoneNumber;
+
+        return Url.Action("EndUsers", routeValues);
+    }
+}
 
 @section Scripts {
     <script>
@@ -850,11 +1046,10 @@ ViewData["Title"] = "End Users Management";
             editStartDateInput.addEventListener('input', calculateEditEndDate);
             editDurationInput.addEventListener('input', calculateEditEndDate);
         }
+        // set value of select list #page-select
+        document.getElementById('page-select').value = "@Model.EndUsers.PageSize";
     });
-</script>
-    
-    
-    <script>
+
     // Playtomic Sync Functions
     function previewSync() {
         const previewDiv = document.getElementById('syncPreview');
@@ -879,7 +1074,7 @@ ViewData["Title"] = "End Users Management";
             if (data.success) {
                 activeUsersSpan.textContent = data.activeUsers;
                 branchesSpan.textContent = data.branches;
-                
+
                 if (data.activeUsers > 0 && data.branches > 0) {
                     startSyncBtn.classList.remove('d-none');
                 } else {
@@ -902,7 +1097,7 @@ ViewData["Title"] = "End Users Management";
 
     function startPlaytomicSync() {
         const accessToken = document.getElementById('playtomicAccessToken').value.trim();
-        
+
         if (!accessToken) {
             showAlert('Please enter your Playtomic access token.', 'warning');
             return;
@@ -945,7 +1140,7 @@ ViewData["Title"] = "End Users Management";
             progressDiv.classList.add('d-none');
             resultsDiv.classList.remove('d-none');
             footer.style.display = 'flex';
-            
+
             resultsDiv.innerHTML = `
                 <div class="alert alert-danger">
                     <i class="bi bi-exclamation-triangle"></i>
@@ -957,7 +1152,7 @@ ViewData["Title"] = "End Users Management";
 
     function displaySyncResults(data) {
         const resultsDiv = document.getElementById('syncResults');
-        
+
         if (data.success) {
             let resultHtml = `
                 <div class="alert alert-success">
@@ -987,10 +1182,10 @@ ViewData["Title"] = "End Users Management";
                 `;
 
                 data.result.branchResults.forEach(branch => {
-                    const statusBadge = branch.isSuccess 
+                    const statusBadge = branch.isSuccess
                         ? '<span class="badge bg-success">Success</span>'
                         : '<span class="badge bg-danger">Failed</span>';
-                    
+
                     const userCount = branch.isSuccess ? branch.userCount : 0;
                     const errorMessage = branch.errorMessage || '';
 
@@ -1034,5 +1229,18 @@ ViewData["Title"] = "End Users Management";
         document.querySelector('#syncPlaytomicForm').classList.remove('d-none');
         document.querySelector('#syncPlaytomicModal .modal-footer').style.display = 'flex';
     });
+
+    function changePageSize(pageSize) {
+        const url = new URL(window.location);
+        url.searchParams.set('pageSize', pageSize);
+        url.searchParams.set('page', '1'); // Reset to first page when changing page size
+        window.location.href = url.toString();
+    }
+
+    function resetSearch() {
+        window.location.href = '@Url.Action("EndUsers")';
+    }
 </script>
+
+
 }

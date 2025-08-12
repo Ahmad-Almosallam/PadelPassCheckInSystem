@@ -23,4 +23,10 @@ namespace PadelPassCheckInSystem.Models.ViewModels
         public int? BranchId { get; set; }
         public List<Branch> Branches { get; set; } = new List<Branch>();
     }
+
+    public class EndUsersPaginatedViewModel
+    {
+        public PaginatedResult<EndUser> EndUsers { get; set; } = new PaginatedResult<EndUser>();
+        public string SearchPhoneNumber { get; set; }
+    }
 }
