@@ -1,0 +1,63 @@
+@model EndUsersPaginatedViewModel
+
+<!-- Statistics Cards -->
+<div class="row my-4">
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total Users</h5>
+                <h2 class="text-primary">@Model.EndUsers.TotalItems</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h5 class="card-title">Active Subscriptions</h5>
+                <h2 class="text-success">@Model.EndUsers.Items.Count(u =>
+                    {
+                        var today = KSADateTimeExtensions.GetKSANow()
+                            .Date;
+                        var startKSA = u.SubscriptionStartDate.ToKSATime()
+                            .Date;
+                        var endKSA = u.SubscriptionEndDate.ToKSATime()
+                            .Date;
+                        return startKSA <= today && endKSA >= today && !u.IsPaused && !u.IsStopped;
+                    })</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h5 class="card-title">Currently Paused</h5>
+                <h2 class="text-warning">@Model.EndUsers.Items.Count(u =>
+                    {
+                        var today = KSADateTimeExtensions.GetKSANow()
+                            .Date;
+                        return u.IsPaused && !u.IsStopped && u.CurrentPauseStartDate?.ToKSATime()
+                            .Date <= today && u.CurrentPauseEndDate?.ToKSATime()
+                            .Date >= today;
+                    })</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h5 class="card-title">Stopped</h5>
+                <h2 class="text-danger">@Model.EndUsers.Items.Count(u => u.IsStopped)</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-12 mt-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h5 class="card-title">Expired</h5>
+                <h2 class="text-muted">@Model.EndUsers.Items.Count(u => !u.IsStopped && u.SubscriptionEndDate.ToKSATime()
+                        .Date < KSADateTimeExtensions.GetKSANow()
+                        .Date)</h2>
+            </div>
+        </div>
+    </div>
+</div>

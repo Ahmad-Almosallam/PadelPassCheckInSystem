@@ -1,0 +1,29 @@
+@model EndUsersPaginatedViewModel
+
+<!-- Search and Filter Section -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" asp-action="EndUsers" class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Search by Phone Number</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="searchPhoneNumber" class="form-control"
+                           placeholder="Enter phone number (e.g., 05xxxxxxxx)"
+                           value="@Model.SearchPhoneNumber">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">&nbsp;</label>
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="resetSearch()">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

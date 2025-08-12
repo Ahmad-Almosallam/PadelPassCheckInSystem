@@ -1,0 +1,107 @@
+@model EndUsersPaginatedViewModel
+
+@functions {
+    public string GetPageUrl(int page)
+    {
+        var routeValues = new RouteValueDictionary
+        {
+            ["page"] = page,
+            ["pageSize"] = Model.EndUsers.PageSize
+        };
+
+        if (!string.IsNullOrWhiteSpace(Model.SearchPhoneNumber))
+            routeValues["searchPhoneNumber"] = Model.SearchPhoneNumber;
+
+        return Url.Action("EndUsers", routeValues);
+    }
+}
+
+<!-- Pagination Controls -->
+@if (Model.EndUsers.TotalPages > 1)
+{
+    <nav aria-label="End users pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <!-- First Page -->
+            @if (Model.EndUsers.CurrentPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(1)">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+            }
+
+            <!-- Previous Page -->
+            @if (Model.EndUsers.HasPreviousPage)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(Model.EndUsers.CurrentPage - 1)">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            }
+
+            <!-- Page Numbers -->
+            @{
+                var startPage = Math.Max(1, Model.EndUsers.CurrentPage - 2);
+                var endPage = Math.Min(Model.EndUsers.TotalPages, Model.EndUsers.CurrentPage + 2);
+            }
+
+            @if (startPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(1)">1</a>
+                </li>
+                @if (startPage > 2)
+                {
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                }
+            }
+
+            @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+            {
+                <li class="page-item @(pageNumber == Model.EndUsers.CurrentPage ? "active" : "")">
+                    <a class="page-link" href="@GetPageUrl(pageNumber)">
+                        @pageNumber
+                    </a>
+                </li>
+            }
+
+            @if (endPage < Model.EndUsers.TotalPages)
+            {
+                @if (endPage < Model.EndUsers.TotalPages - 1)
+                {
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                }
+
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(Model.EndUsers.TotalPages)">@Model.EndUsers.TotalPages</a>
+                </li>
+            }
+
+            <!-- Next Page -->
+            @if (Model.EndUsers.HasNextPage)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(Model.EndUsers.CurrentPage + 1)">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            }
+
+            <!-- Last Page -->
+            @if (Model.EndUsers.CurrentPage < Model.EndUsers.TotalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(Model.EndUsers.TotalPages)">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

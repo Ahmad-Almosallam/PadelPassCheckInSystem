@@ -1,0 +1,21 @@
+@model EndUsersPaginatedViewModel
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>End Users Management</h1>
+    <div>
+        <div class="text-muted small mb-2">
+            <i class="bi bi-clock"></i> Current
+            Time: @KSADateTimeExtensions.GetKSANow().ToString("yyyy-MM-dd HH:mm:ss") KSA
+        </div>
+        <a href="@Url.Action("PauseHistory")" class="btn btn-outline-info">
+            <i class="bi bi-clock-history"></i> View All Pause History
+        </a>
+        <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#createModal">
+            <i class="bi bi-plus-circle"></i> Add New End User
+        </button>
+        <button type="button" class="btn btn-warning ms-2" data-bs-toggle="modal" data-bs-target="#syncPlaytomicModal">
+            <i class="bi bi-cloud-upload"></i> Sync Users to Playtomic
+        </button>
+    </div>
+</div>
