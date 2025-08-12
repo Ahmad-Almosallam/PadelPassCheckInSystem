@@ -488,16 +488,17 @@ namespace PadelPassCheckInSystem.Controllers
                 .AsQueryable();
 
             // Convert date filters to UTC for database query
+            
             if (fromDate.HasValue)
             {
-                var fromDateUtc = fromDate.Value;
+                var fromDateUtc = fromDate.Value.ToUTCFromKSA();
                 query = query.Where(c => c.CheckInDateTime >= fromDateUtc);
             }
 
             if (toDate.HasValue)
             {
                 // Add one day and convert to get the end of the day in KSA
-                var toDateUtc = toDate.Value.AddDays(1);
+                var toDateUtc = toDate.Value.ToUTCFromKSA();
                 query = query.Where(c => c.CheckInDateTime < toDateUtc);
             }
 
