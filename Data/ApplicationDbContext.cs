@@ -17,6 +17,7 @@ namespace PadelPassCheckInSystem.Data
         public DbSet<CheckIn> CheckIns { get; set; }
         public DbSet<SubscriptionPause> SubscriptionPauses { get; set; }
         public DbSet<BranchTimeSlot> BranchTimeSlots { get; set; }
+        public DbSet<PlaytomicIntegration> PlaytomicIntegrations { get; set; }
 
         protected override void OnModelCreating(
             ModelBuilder builder)

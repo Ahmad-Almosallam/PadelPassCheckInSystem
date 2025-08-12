@@ -20,6 +20,7 @@ namespace PadelPassCheckInSystem.Controllers
         private readonly IExcelService _excelService;
         private readonly ICheckInService _checkInService;
         private readonly IPlaytomicSyncService _playtomicSyncService;
+        private readonly IPlaytomicIntegrationService _playtomicIntegrationService;
         private readonly ILogger<AdminController> _logger;
 
         public AdminController(
@@ -29,6 +30,7 @@ namespace PadelPassCheckInSystem.Controllers
             IExcelService excelService,
             ICheckInService checkInService,
             IPlaytomicSyncService playtomicSyncService,
+            IPlaytomicIntegrationService playtomicIntegrationService,
             ILogger<AdminController> logger)
         {
             _context = context;
@@ -37,6 +39,7 @@ namespace PadelPassCheckInSystem.Controllers
             _excelService = excelService;
             _checkInService = checkInService;
             _playtomicSyncService = playtomicSyncService;
+            _playtomicIntegrationService = playtomicIntegrationService;
             _logger = logger;
         }
 
@@ -1169,6 +1172,150 @@ namespace PadelPassCheckInSystem.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during Playtomic sync: {Error}", ex.Message);
+                return Json(new { success = false, message = $"An error occurred during sync: {ex.Message}" });
+            }
+        }
+
+        #endregion
+
+        #region Playtomic Integration Management
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetPlaytomicIntegration()
+        {
+            try
+            {
+                var integration = await _playtomicIntegrationService.GetActiveIntegrationAsync();
+                
+                if (integration == null)
+                {
+                    return Json(new { success = false, message = "No integration configured" });
+                }
+
+                var viewModel = new PlaytomicIntegrationViewModel
+                {
+                    Id = integration.Id,
+                    AccessToken = integration.AccessToken,
+                    AccessTokenExpiration = integration.AccessTokenExpiration.ToKSATime(),
+                    RefreshToken = integration.RefreshToken,
+                    RefreshTokenExpiration = integration.RefreshTokenExpiration.ToKSATime(),
+                };
+
+                return Json(new { success = true, integration = viewModel });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting Playtomic integration");
+                return Json(new { success = false, message = "Error loading integration data" });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SavePlaytomicIntegration([FromBody] PlaytomicIntegrationViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return Json(new { success = false, message = "Invalid integration data" });
+            }
+
+            try
+            {
+                var integration = await _playtomicIntegrationService.SaveIntegrationAsync(model);
+                
+                return Json(new { 
+                    success = true, 
+                    message = "Integration saved successfully",
+                    integration = new PlaytomicIntegrationViewModel
+                    {
+                        Id = integration.Id,
+                        AccessToken = integration.AccessToken,
+                        AccessTokenExpiration = integration.AccessTokenExpiration,
+                        RefreshToken = integration.RefreshToken,
+                        RefreshTokenExpiration = integration.RefreshTokenExpiration,
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving Playtomic integration");
+                return Json(new { success = false, message = "Error saving integration data" });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SyncUsersWithIntegration()
+        {
+            try
+            {
+                // Get valid access token (will refresh if needed)
+                var accessToken = await _playtomicIntegrationService.GetValidAccessTokenAsync();
+                
+                var result = await _playtomicSyncService.SyncActiveUsersToPlaytomicAsync(accessToken);
+
+                if (result.IsSuccess)
+                {
+                    var message = $"Sync completed! Successfully synced {result.TotalUsers} users to {result.SuccessfulBranches}/{result.TotalBranches} branches.";
+
+                    if (result.FailedBranches > 0)
+                    {
+                        message += $" {result.FailedBranches} branches failed.";
+                    }
+
+                    return Json(new
+                    {
+                        success = true,
+                        message = message,
+                        result = new
+                        {
+                            totalBranches = result.TotalBranches,
+                            successfulBranches = result.SuccessfulBranches,
+                            failedBranches = result.FailedBranches,
+                            totalUsers = result.TotalUsers,
+                            branchResults = result.BranchResults.Select(br => new
+                            {
+                                branchName = br.BranchName,
+                                tenantId = br.TenantId,
+                                isSuccess = br.IsSuccess,
+                                errorMessage = br.ErrorMessage,
+                                userCount = br.UserCount
+                            })
+                        }
+                    });
+                }
+                else
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = result.ErrorMessage ?? "Sync failed with unknown error.",
+                        result = new
+                        {
+                            totalBranches = result.TotalBranches,
+                            successfulBranches = result.SuccessfulBranches,
+                            failedBranches = result.FailedBranches,
+                            totalUsers = result.TotalUsers,
+                            branchResults = result.BranchResults.Select(br => new
+                            {
+                                branchName = br.BranchName,
+                                tenantId = br.TenantId,
+                                isSuccess = br.IsSuccess,
+                                errorMessage = br.ErrorMessage,
+                                userCount = br.UserCount
+                            })
+                        }
+                    });
+                }
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Json(new { success = false, message = ex.Message, requiresSetup = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during Playtomic sync with integration");
                 return Json(new { success = false, message = $"An error occurred during sync: {ex.Message}" });
             }
         }
