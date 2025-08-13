@@ -1106,24 +1106,7 @@ namespace PadelPassCheckInSystem.Controllers
             try
             {
                 // Get active users count
-                var todayKSA = KSADateTimeExtensions.GetKSANow()
-                    .Date;
-                var allUsers = await _context.EndUsers.ToListAsync();
-
-                var activeUsersCount = allUsers.Count(user =>
-                {
-                    var startKSA = user.SubscriptionStartDate.ToKSATime()
-                        .Date;
-                    var endKSA = user.SubscriptionEndDate.ToKSATime()
-                        .Date;
-                    var isSubscriptionActive = startKSA <= todayKSA && endKSA >= todayKSA;
-                    var isNotPaused = !user.IsPaused ||
-                                      (user.CurrentPauseStartDate?.ToKSATime()
-                                           .Date > todayKSA ||
-                                       user.CurrentPauseEndDate?.ToKSATime()
-                                           .Date < todayKSA);
-                    return isSubscriptionActive && isNotPaused;
-                });
+                var activeUsersCount = await _playtomicSyncService.GetActiveUsersAsync();
 
                 // Get branches with tenant ID count
                 var branchesWithTenantCount = await _context.Branches
@@ -1132,7 +1115,7 @@ namespace PadelPassCheckInSystem.Controllers
                 return Json(new
                 {
                     success = true,
-                    activeUsers = activeUsersCount,
+                    activeUsers = activeUsersCount.Count,
                     branches = branchesWithTenantCount
                 });
             }

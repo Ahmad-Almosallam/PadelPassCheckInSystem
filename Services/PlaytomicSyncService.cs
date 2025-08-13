@@ -15,6 +15,8 @@ public interface IPlaytomicSyncService
     Task<PlaytomicSyncResponse> GetUserImportStatusAsync(
         string accessToken,
         string userImportId);
+
+    Task<List<Models.Entities.EndUser>> GetActiveUsersAsync();
 }
 
 public class PlaytomicSyncService : IPlaytomicSyncService
@@ -219,7 +221,7 @@ public class PlaytomicSyncService : IPlaytomicSyncService
         }
     }
 
-    private async Task<List<Models.Entities.EndUser>> GetActiveUsersAsync()
+    public async Task<List<Models.Entities.EndUser>> GetActiveUsersAsync()
     {
         var todayKSA = KSADateTimeExtensions.GetKSANow()
             .Date;
@@ -242,7 +244,7 @@ public class PlaytomicSyncService : IPlaytomicSyncService
                                    user.CurrentPauseEndDate?.ToKSATime()
                                        .Date < todayKSA);
 
-                return isSubscriptionActive && isNotPaused;
+                return isSubscriptionActive && isNotPaused && !user.IsStopped;
             })
             .ToList();
     }
