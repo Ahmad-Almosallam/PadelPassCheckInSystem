@@ -274,6 +274,13 @@ namespace PadelPassCheckInSystem.Services
             var subscriptionStartKSA = endUser.SubscriptionStartDate.ToKSATime().Date;
             var subscriptionEndKSA = endUser.SubscriptionEndDate.ToKSATime().Date;
 
+
+            if (endUser.IsStopped)
+            {
+                return (false, $"Subscription is currently stopped by admin",
+                    null);
+            }
+
             // Check if subscription is paused (using KSA dates)
             if (endUser.IsPaused)
             {
