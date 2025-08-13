@@ -27,7 +27,8 @@
                             <div class="mb-3">
                                 <label asp-for="PauseStartDate" class="form-label"></label>
                                 <input asp-for="PauseStartDate" type="date" class="form-control"
-                                       min="@DateTime.UtcNow.ToString("yyyy-MM-dd")"
+                                       value="@DateTime.UtcNow.AddDays(2).ToString("yyyy-MM-dd")"
+                                       min="@DateTime.UtcNow.AddDays(2).ToString("yyyy-MM-dd")"
                                        max="@Model.CurrentSubscriptionEndDate.ToString("yyyy-MM-dd")"/>
                                 <span asp-validation-for="PauseStartDate" class="text-danger"></span>
                             </div>

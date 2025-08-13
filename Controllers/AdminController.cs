@@ -63,14 +63,14 @@ namespace PadelPassCheckInSystem.Controllers
                     .Date;
                 var endKSA = e.SubscriptionEndDate.ToKSATime()
                     .Date;
-                
+
                 var inDateRange = startKSA <= currentDateKSA && endKSA >= currentDateKSA;
 
-                var isCurrentlyPaused = e.IsPaused 
-                                         && e.CurrentPauseStartDate.HasValue 
-                                         && e.CurrentPauseEndDate.HasValue
-                                         && e.CurrentPauseStartDate.Value.ToKSATime().Date <= currentDateKSA
-                                         && e.CurrentPauseEndDate.Value.ToKSATime().Date >= currentDateKSA;
+                var isCurrentlyPaused = e.IsPaused
+                                        && e.CurrentPauseStartDate.HasValue
+                                        && e.CurrentPauseEndDate.HasValue
+                                        && e.CurrentPauseStartDate.Value.ToKSATime().Date <= currentDateKSA
+                                        && e.CurrentPauseEndDate.Value.ToKSATime().Date >= currentDateKSA;
 
                 return inDateRange && !isCurrentlyPaused;
             });
@@ -324,9 +324,9 @@ namespace PadelPassCheckInSystem.Controllers
                                  && !(
                                      u.IsPaused &&
                                      u.CurrentPauseStartDate != null &&
-                                     u.CurrentPauseEndDate   != null &&
+                                     u.CurrentPauseEndDate != null &&
                                      u.CurrentPauseStartDate <= endOfKsaDayUtc &&
-                                     u.CurrentPauseEndDate   >= startOfKsaDayUtc
+                                     u.CurrentPauseEndDate >= startOfKsaDayUtc
                                  )
                                  && !u.IsStopped);
 
@@ -536,7 +536,7 @@ namespace PadelPassCheckInSystem.Controllers
                 .AsQueryable();
 
             // Convert date filters to UTC for database query
-            
+
             if (fromDate.HasValue)
             {
                 var fromDateUtc = fromDate.Value.ToUTCFromKSA();
@@ -690,6 +690,12 @@ namespace PadelPassCheckInSystem.Controllers
             if (!ModelState.IsValid)
             {
                 return View(model);
+            }
+
+            if (DateTime.UtcNow.AddDays(2) > model.PauseStartDate)
+            {
+                TempData["Error"] = "Pause Start date must be two days from now";
+                return RedirectToAction("EndUsers");
             }
 
             var pauseService = HttpContext.RequestServices.GetRequiredService<ISubscriptionPauseService>();
@@ -1229,7 +1235,7 @@ namespace PadelPassCheckInSystem.Controllers
             try
             {
                 var integration = await _playtomicIntegrationService.GetActiveIntegrationAsync();
-                
+
                 if (integration == null)
                 {
                     return Json(new { success = false, message = "No integration configured" });
@@ -1265,9 +1271,10 @@ namespace PadelPassCheckInSystem.Controllers
             try
             {
                 var integration = await _playtomicIntegrationService.SaveIntegrationAsync(model);
-                
-                return Json(new { 
-                    success = true, 
+
+                return Json(new
+                {
+                    success = true,
                     message = "Integration saved successfully",
                     integration = new PlaytomicIntegrationViewModel
                     {
@@ -1294,12 +1301,13 @@ namespace PadelPassCheckInSystem.Controllers
             {
                 // Get valid access token (will refresh if needed)
                 var accessToken = await _playtomicIntegrationService.GetValidAccessTokenAsync();
-                
+
                 var result = await _playtomicSyncService.SyncActiveUsersToPlaytomicAsync(accessToken);
 
                 if (result.IsSuccess)
                 {
-                    var message = $"Sync completed! Successfully synced {result.TotalUsers} users to {result.SuccessfulBranches}/{result.TotalBranches} branches.";
+                    var message =
+                        $"Sync completed! Successfully synced {result.TotalUsers} users to {result.SuccessfulBranches}/{result.TotalBranches} branches.";
 
                     if (result.FailedBranches > 0)
                     {
@@ -1361,8 +1369,8 @@ namespace PadelPassCheckInSystem.Controllers
                 return Json(new { success = false, message = $"An error occurred during sync: {ex.Message}" });
             }
         }
-        
-        
+
+
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SyncPlaytomicUserIds()
