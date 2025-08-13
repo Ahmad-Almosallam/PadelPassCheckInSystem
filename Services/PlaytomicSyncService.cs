@@ -231,7 +231,7 @@ public class PlaytomicSyncService : IPlaytomicSyncService
         return allUsers.Where(user =>
             {
                 // Check if subscription is active (using KSA dates)
-                var startKSA = user.SubscriptionStartDate.ToKSATime()
+                var startKSA = user.SubscriptionStartDate.AddDays(-1).ToKSATime()
                     .Date;
                 var endKSA = user.SubscriptionEndDate.ToKSATime()
                     .Date;
