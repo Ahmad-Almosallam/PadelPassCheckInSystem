@@ -1334,6 +1334,24 @@ namespace PadelPassCheckInSystem.Controllers
                 return Json(new { success = false, message = $"An error occurred during sync: {ex.Message}" });
             }
         }
+        
+        
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SyncPlaytomicUserIds()
+        {
+            try
+            {
+                var updatedCount = await _playtomicIntegrationService.SyncCategoryMembersPlaytomicUserIdsAsync();
+
+                return Json(new { success = true, updatedCount });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting Playtomic integration");
+                return Json(new { success = false, message = "Error loading integration data" });
+            }
+        }
 
         #endregion
     }

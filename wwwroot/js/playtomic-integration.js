@@ -420,4 +420,67 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
     }
+
+    // New: Auto call SyncPlaytomicUserIds when the modal is opened
+    const syncIdsModal = document.getElementById('syncPlaytomicUserIdsModal');
+    if (syncIdsModal) {
+        syncIdsModal.addEventListener('show.bs.modal', function () {
+            const progress = document.getElementById('syncPlaytomicUserIdsProgress');
+            const result = document.getElementById('syncPlaytomicUserIdsResult');
+            if (result) {
+                result.innerHTML = '';
+            }
+            if (progress) {
+                progress.classList.remove('d-none');
+            }
+
+            fetch('/Admin/SyncPlaytomicUserIds', { method: 'GET' })
+                .then(resp => resp.json())
+                .then(data => {
+                    if (progress) progress.classList.add('d-none');
+
+                    if (data && data.success) {
+                        const count = data.updatedCount || 0;
+                        if (result) {
+                            result.innerHTML = `
+                                <div class="alert alert-success">
+                                    <i class="bi bi-check-circle"></i>
+                                    Updated PlaytomicUserId for <strong>${count}</strong> user(s).
+                                </div>
+                            `;
+                        }
+                    } else {
+                        const message = (data && data.message) ? data.message : 'Failed to sync Playtomic User IDs.';
+                        if (result) {
+                            result.innerHTML = `
+                                <div class="alert alert-danger">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    ${message}
+                                </div>
+                            `;
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('Error syncing Playtomic User IDs:', err);
+                    if (progress) progress.classList.add('d-none');
+                    if (result) {
+                        result.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                An error occurred while syncing Playtomic User IDs. Please try again.
+                            </div>
+                        `;
+                    }
+                });
+        });
+
+        // Optional: reset modal when hidden
+        syncIdsModal.addEventListener('hidden.bs.modal', function () {
+            const progress = document.getElementById('syncPlaytomicUserIdsProgress');
+            const result = document.getElementById('syncPlaytomicUserIdsResult');
+            if (progress) progress.classList.add('d-none');
+            if (result) result.innerHTML = '';
+        });
+    }
 });

@@ -8,14 +8,34 @@
             <i class="bi bi-clock"></i> Current
             Time: @KSADateTimeExtensions.GetKSANow().ToString("yyyy-MM-dd HH:mm:ss") KSA
         </div>
-        <a href="@Url.Action("PauseHistory")" class="btn btn-outline-info">
-            <i class="bi bi-clock-history"></i> View All Pause History
-        </a>
-        <button type="button" class="btn btn-primary ms-2" data-bs-toggle="modal" data-bs-target="#createModal">
+        <!-- Keep primary action -->
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
             <i class="bi bi-plus-circle"></i> Add New End User
         </button>
-        <button type="button" class="btn btn-warning ms-2" data-bs-toggle="modal" data-bs-target="#syncPlaytomicModal">
-            <i class="bi bi-cloud-upload"></i> Sync Users to Playtomic
-        </button>
+
+        <!-- Grouped actions dropdown -->
+        <div class="btn-group ms-2">
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-list"></i> More Actions
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" href="@Url.Action("PauseHistory")">
+                        <i class="bi bi-clock-history"></i> View All Pause History
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#syncPlaytomicModal">
+                        <i class="bi bi-cloud-upload"></i> Sync Users to Playtomic
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#syncPlaytomicUserIdsModal">
+                        <i class="bi bi-cloud-download"></i> sync Playtomic Users Id to CheckIn
+                    </button>
+                </li>
+            </ul>
+        </div>
     </div>
 </div>

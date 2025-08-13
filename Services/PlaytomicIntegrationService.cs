@@ -4,6 +4,7 @@ using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PadelPassCheckInSystem.Services
 {
@@ -13,6 +14,7 @@ namespace PadelPassCheckInSystem.Services
         Task<PlaytomicIntegration> SaveIntegrationAsync(PlaytomicIntegrationViewModel model);
         Task<PlaytomicIntegration> RefreshAccessTokenAsync(PlaytomicIntegration integration);
         Task<string> GetValidAccessTokenAsync();
+        Task<int> SyncCategoryMembersPlaytomicUserIdsAsync(CancellationToken cancellationToken = default);
     }
 
     public class PlaytomicIntegrationService : IPlaytomicIntegrationService
@@ -21,6 +23,7 @@ namespace PadelPassCheckInSystem.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<PlaytomicIntegrationService> _logger;
         private const string PLAYTOMIC_BASE_URL = "https://api.playtomic.io";
+        private const string CATEGORY_ID = "d401a97e-cad8-4211-94dd-bf4f536f7892";
 
         public PlaytomicIntegrationService(
             ApplicationDbContext context,
@@ -158,6 +161,140 @@ namespace PadelPassCheckInSystem.Services
             }
 
             return integration.AccessToken;
+        }
+
+        public async Task<int> SyncCategoryMembersPlaytomicUserIdsAsync(CancellationToken cancellationToken = default)
+        {
+            // Load users without PlaytomicUserId
+            var usersWithoutId = await _context.EndUsers
+                .Where(u => u.PlaytomicUserId == null)
+                .ToListAsync(cancellationToken);
+
+            if (usersWithoutId.Count == 0)
+            {
+                return 0;
+            }
+
+            // Build lookup dictionaries for matching
+            string NormalizeEmail(string? email) => string.IsNullOrWhiteSpace(email) ? string.Empty : email.Trim().ToLowerInvariant();
+            string NormalizePhone(string? phone)
+            {
+                if (string.IsNullOrWhiteSpace(phone)) return string.Empty;
+                var sb = new System.Text.StringBuilder(phone.Length);
+                foreach (var ch in phone)
+                {
+                    if (char.IsDigit(ch)) sb.Append(ch);
+                }
+                return sb.ToString();
+            }
+
+            var byEmail = usersWithoutId
+                .Where(u => !string.IsNullOrWhiteSpace(u.Email))
+                .GroupBy(u => NormalizeEmail(u.Email))
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var httpClient = _httpClientFactory.CreateClient();
+            var accessToken = await GetValidAccessTokenAsync();
+
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+            httpClient.DefaultRequestHeaders.Accept.Clear();
+            httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+
+            var updatedCount = 0;
+            var page = 0;
+            var size = 100;
+
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var url = $"{PLAYTOMIC_BASE_URL}/v2/users/suggestions/category_members?category_id={CATEGORY_ID}&filter=&page={page}&size={size}";
+                HttpResponseMessage response;
+                try
+                {
+                    response = await httpClient.GetAsync(url, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error calling Playtomic category members endpoint");
+                    throw;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogError("Failed to fetch category members. Status: {StatusCode}, Content: {Content}", response.StatusCode, errorContent);
+                    throw new HttpRequestException($"Failed to fetch category members: {response.StatusCode}");
+                }
+
+                var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                List<CategoryMemberDto>? members;
+                try
+                {
+                    members = JsonSerializer.Deserialize<List<CategoryMemberDto>>(json, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to deserialize category members response");
+                    throw;
+                }
+
+                if (members == null || members.Count == 0)
+                {
+                    break; // No more data
+                }
+
+                foreach (var m in members)
+                {
+                    if (string.IsNullOrWhiteSpace(m.UserId)) continue;
+
+                    long parsedId;
+                    if (!long.TryParse(m.UserId, out parsedId)) continue;
+
+                    // Try email first
+                    if (!string.IsNullOrWhiteSpace(m.Email))
+                    {
+                        var key = NormalizeEmail(m.Email);
+                        if (byEmail.TryGetValue(key, out var candidates))
+                        {
+                            foreach (var user in candidates)
+                            {
+                                if (user.PlaytomicUserId == null)
+                                {
+                                    user.PlaytomicUserId = parsedId;
+                                    updatedCount++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // If less than page size, we've reached the end
+                if (members.Count < size)
+                {
+                    break;
+                }
+
+                page++;
+            }
+
+            if (updatedCount > 0)
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            return updatedCount;
+        }
+
+        private class CategoryMemberDto
+        {
+            [JsonPropertyName("user_id")]
+            public string UserId { get; set; }
+            [JsonPropertyName("email")]
+            public string Email { get; set; }
         }
     }
 }

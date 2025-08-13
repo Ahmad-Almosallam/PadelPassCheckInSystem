@@ -135,6 +135,35 @@
     </div>
 </div>
 
+<!-- Sync Playtomic User IDs Modal -->
+<div class="modal fade" id="syncPlaytomicUserIdsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-arrow-repeat"></i> Sync Playtomic Users Id to CheckIn
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    This will fetch Playtomic category members and update missing PlaytomicUserId for local users. Existing IDs will not be overwritten.
+                </div>
+                <div id="syncPlaytomicUserIdsProgress" class="text-center d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Syncing...</span>
+                    </div>
+                    <p class="mt-2 mb-0">Syncing Playtomic User IDs...</p>
+                </div>
+                <div id="syncPlaytomicUserIdsResult" class="mt-2"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Create Modal -->
 <div class="modal fade" id="createModal" tabindex="-1">
     <div class="modal-dialog modal-lg">

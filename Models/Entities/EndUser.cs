@@ -38,6 +38,7 @@ namespace PadelPassCheckInSystem.Models.Entities
         public DateTime? StoppedDate { get; set; }
         public string StopReason { get; set; }
         
+        public long? PlaytomicUserId { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
         public virtual ICollection<CheckIn> CheckIns { get; set; }
