@@ -21,6 +21,7 @@ namespace PadelPassCheckInSystem.Models.ViewModels
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
         public int? BranchId { get; set; }
+        public string PhoneNumber { get; set; }
         public List<Branch> Branches { get; set; } = new List<Branch>();
     }
 

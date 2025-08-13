@@ -475,6 +475,7 @@ namespace PadelPassCheckInSystem.Controllers
             DateTime? fromDate,
             DateTime? toDate,
             int? branchId,
+            string? phoneNumber,
             int page = 1,
             int pageSize = 10)
         {
@@ -510,6 +511,12 @@ namespace PadelPassCheckInSystem.Controllers
                 query = query.Where(c => c.BranchId == branchId.Value);
             }
 
+            // Add phone number filter
+            if (!string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                query = query.Where(c => c.EndUser.PhoneNumber.Contains(phoneNumber));
+            }
+
             // Order the query before pagination
             query = query.OrderByDescending(c => c.CheckInDateTime);
 
@@ -536,6 +543,7 @@ namespace PadelPassCheckInSystem.Controllers
                 FromDate = fromDate,
                 ToDate = toDate,
                 BranchId = branchId,
+                PhoneNumber = phoneNumber,
                 Branches = await _context.Branches.ToListAsync()
             };
 
@@ -547,7 +555,8 @@ namespace PadelPassCheckInSystem.Controllers
         public async Task<IActionResult> ExportCheckIns(
             DateTime? fromDate,
             DateTime? toDate,
-            int? branchId)
+            int? branchId,
+            string? phoneNumber)
         {
             // check if user is BranchUser and filter by branch
             if (User.IsInRole("BranchUser"))
@@ -578,6 +587,12 @@ namespace PadelPassCheckInSystem.Controllers
             if (branchId.HasValue)
             {
                 query = query.Where(c => c.BranchId == branchId.Value);
+            }
+
+            // Add phone number filter
+            if (!string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                query = query.Where(c => c.EndUser.PhoneNumber.Contains(phoneNumber));
             }
 
             var checkIns = await query

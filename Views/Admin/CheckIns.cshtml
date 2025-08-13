@@ -31,6 +31,11 @@
                 <label class="form-label">To Date <small class="text-muted">(KSA)</small></label>
                 <input type="date" name="toDate" class="form-control" value="@Model.ToDate?.ToString("yyyy-MM-dd")">
             </div>
+            <div class="col-md-3">
+                <label class="form-label">Phone Number</label>
+                <input type="text" name="phoneNumber" class="form-control" 
+                       value="@Model.PhoneNumber" placeholder="Enter phone number">
+            </div>
             @if (User.IsInRole("Admin"))
             {
                 <div class="col-md-3">
@@ -48,7 +53,7 @@
             
             <input type="hidden" name="pageSize" id="pageSize" />
             <input type="hidden" name="page" id="page" />
-            <div class="col-md-3">
+            <div class="col-12">
                 <label class="form-label">&nbsp;</label>
                 <div>
                     <button type="submit" class="btn btn-primary">
@@ -539,6 +544,9 @@
         
         if (Model.BranchId.HasValue)
             routeValues["branchId"] = Model.BranchId.Value;
+
+        if (!string.IsNullOrWhiteSpace(Model.PhoneNumber))
+            routeValues["phoneNumber"] = Model.PhoneNumber;
 
         return Url.Action("CheckIns", routeValues);
     }
