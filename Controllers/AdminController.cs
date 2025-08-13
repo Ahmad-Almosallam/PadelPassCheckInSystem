@@ -63,7 +63,16 @@ namespace PadelPassCheckInSystem.Controllers
                     .Date;
                 var endKSA = e.SubscriptionEndDate.ToKSATime()
                     .Date;
-                return startKSA <= currentDateKSA && endKSA >= currentDateKSA && !e.IsPaused;
+                
+                var inDateRange = startKSA <= currentDateKSA && endKSA >= currentDateKSA;
+
+                var isCurrentlyPaused = e.IsPaused 
+                                         && e.CurrentPauseStartDate.HasValue 
+                                         && e.CurrentPauseEndDate.HasValue
+                                         && e.CurrentPauseStartDate.Value.ToKSATime().Date <= currentDateKSA
+                                         && e.CurrentPauseEndDate.Value.ToKSATime().Date >= currentDateKSA;
+
+                return inDateRange && !isCurrentlyPaused;
             });
 
             var viewModel = new AdminDashboardViewModel
@@ -312,7 +321,13 @@ namespace PadelPassCheckInSystem.Controllers
             var activeSubscriptions = await baseQuery
                 .CountAsync(u => u.SubscriptionStartDate <= endOfKsaDayUtc
                                  && u.SubscriptionEndDate >= startOfKsaDayUtc
-                                 && !u.IsPaused
+                                 && !(
+                                     u.IsPaused &&
+                                     u.CurrentPauseStartDate != null &&
+                                     u.CurrentPauseEndDate   != null &&
+                                     u.CurrentPauseStartDate <= endOfKsaDayUtc &&
+                                     u.CurrentPauseEndDate   >= startOfKsaDayUtc
+                                 )
                                  && !u.IsStopped);
 
             var currentlyPaused = await baseQuery
