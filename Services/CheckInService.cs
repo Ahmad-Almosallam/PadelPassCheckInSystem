@@ -282,7 +282,7 @@ namespace PadelPassCheckInSystem.Services
             }
 
             // Check if subscription is paused (using KSA dates)
-            if (endUser.IsPaused)
+            if (endUser.IsPaused && endUser.CurrentPauseStartDate!.Value.ToKSATime().Date <= todayKSA.Date)
             {
                 var pauseEndDateKSA = endUser.CurrentPauseEndDate?.ToKSATime().Date;
                 if (pauseEndDateKSA.HasValue && todayKSA <= pauseEndDateKSA.Value)
