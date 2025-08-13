@@ -295,24 +295,48 @@ namespace PadelPassCheckInSystem.Controllers
             int page = 1,
             int pageSize = 10)
         {
-            var query = _context.EndUsers.AsQueryable();
+            // Build base filtered query (without pagination)
+            var baseQuery = _context.EndUsers.AsQueryable();
 
-            // Apply phone number search filter
             if (!string.IsNullOrWhiteSpace(searchPhoneNumber))
             {
                 searchPhoneNumber = searchPhoneNumber.Trim();
-                query = query.Where(e => e.PhoneNumber.Contains(searchPhoneNumber));
+                baseQuery = baseQuery.Where(e => e.PhoneNumber.Contains(searchPhoneNumber));
             }
 
-            // Order the query before pagination
-            query = query.OrderByDescending(e => e.CreatedAt);
+            // Compute statistics via SQL (before pagination)
+            var todayKsaDate = KSADateTimeExtensions.GetKSANow().Date;
+            var startOfKsaDayUtc = todayKsaDate.GetStartOfKSADayInUTC();
+            var endOfKsaDayUtc = todayKsaDate.GetEndOfKSADayInUTC();
 
-            // Get total count for pagination
-            var totalItems = await query.CountAsync();
+            var activeSubscriptions = await baseQuery
+                .CountAsync(u => u.SubscriptionStartDate <= endOfKsaDayUtc
+                                 && u.SubscriptionEndDate >= startOfKsaDayUtc
+                                 && !u.IsPaused
+                                 && !u.IsStopped);
+
+            var currentlyPaused = await baseQuery
+                .CountAsync(u => u.IsPaused
+                                 && !u.IsStopped
+                                 && u.CurrentPauseStartDate != null
+                                 && u.CurrentPauseEndDate != null
+                                 && u.CurrentPauseStartDate <= endOfKsaDayUtc
+                                 && u.CurrentPauseEndDate >= startOfKsaDayUtc);
+
+            var stoppedCount = await baseQuery.CountAsync(u => u.IsStopped);
+
+            var expiredCount = await baseQuery
+                .CountAsync(u => !u.IsStopped && u.SubscriptionEndDate < startOfKsaDayUtc);
+
+            var notSetPlaytomicUserIdsCount = await baseQuery.CountAsync(u => u.PlaytomicUserId == null);
+
+            // Pagination remains in DB
+            var orderedQuery = baseQuery.OrderByDescending(e => e.CreatedAt);
+
+            var totalItems = await orderedQuery.CountAsync();
             var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
 
-            // Apply pagination
-            var endUsers = await query
+            var endUsers = await orderedQuery
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -327,7 +351,12 @@ namespace PadelPassCheckInSystem.Controllers
                     TotalItems = totalItems,
                     PageSize = pageSize
                 },
-                SearchPhoneNumber = searchPhoneNumber
+                SearchPhoneNumber = searchPhoneNumber,
+                ActiveSubscriptions = activeSubscriptions,
+                CurrentlyPaused = currentlyPaused,
+                StoppedCount = stoppedCount,
+                ExpiredCount = expiredCount,
+                NotSetPlaytomicUserIdsCount = notSetPlaytomicUserIdsCount
             };
 
             return View(viewModel);

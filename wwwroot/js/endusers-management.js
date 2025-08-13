@@ -240,4 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('stopSubscriptionForm').reset();
         });
     }
+    
+    
+    document.getElementById("page-select").value = pageSize;
 });
