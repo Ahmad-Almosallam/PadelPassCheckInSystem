@@ -268,7 +268,7 @@ public class PlaytomicSyncService : IPlaytomicSyncService
             else
             {
                 var categoryExpires = user.IsPaused
-                    ? user.CurrentPauseStartDate!.Value.ToString("yyyy-MM-dd")
+                    ? user.CurrentPauseStartDate!.Value.AddDays(-1).ToString("yyyy-MM-dd")
                     : user.SubscriptionEndDate
                         .ToString("yyyy-MM-dd");
 
