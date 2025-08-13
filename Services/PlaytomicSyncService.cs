@@ -244,7 +244,7 @@ public class PlaytomicSyncService : IPlaytomicSyncService
                                    user.CurrentPauseEndDate?.ToKSATime()
                                        .Date < todayKSA);
 
-                return isSubscriptionActive && isNotPaused && !user.IsStopped;
+                return isSubscriptionActive && isNotPaused;
             })
             .ToList();
     }
@@ -260,11 +260,21 @@ public class PlaytomicSyncService : IPlaytomicSyncService
         // Add user data
         foreach (var user in users)
         {
-            var categoryExpires = user.SubscriptionEndDate.ToKSATime()
-                .ToString("yyyy-MM-dd");
+            if (user.IsStopped)
+            {
+                csv.AppendLine(
+                    $"\"{user.Name}\",\"{user.Email ?? ""}\",\"{user.PhoneNumber}\",\"\",\"\",\"\",\"\"");
+            }
+            else
+            {
+                var categoryExpires = user.IsPaused
+                    ? user.CurrentPauseStartDate!.Value.ToString("yyyy-MM-dd")
+                    : user.SubscriptionEndDate
+                        .ToString("yyyy-MM-dd");
 
-            csv.AppendLine(
-                $"\"{user.Name}\",\"{user.Email ?? ""}\",\"{user.PhoneNumber}\",\"\",\"\",\"Padel Pass\",\"{categoryExpires}\"");
+                csv.AppendLine(
+                    $"\"{user.Name}\",\"{user.Email ?? ""}\",\"{user.PhoneNumber}\",\"\",\"\",\"Padel Pass\",\"{categoryExpires}\"");
+            }
         }
 
         return csv.ToString();
