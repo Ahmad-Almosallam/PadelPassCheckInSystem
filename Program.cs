@@ -53,6 +53,7 @@ builder.Services.AddScoped<ISubscriptionPauseService, SubscriptionPauseService>(
 builder.Services.AddScoped<IBranchTimeSlotService, BranchTimeSlotService>();
 builder.Services.AddScoped<IPlaytomicSyncService, PlaytomicSyncService>();
 builder.Services.AddScoped<IPlaytomicIntegrationService, PlaytomicIntegrationService>();
+builder.Services.AddScoped<IDashboardAnalyticsService, DashboardAnalyticsService>();
 
 builder.Services.AddHttpClient();
 

@@ -22,6 +22,7 @@ namespace PadelPassCheckInSystem.Controllers
         private readonly IPlaytomicSyncService _playtomicSyncService;
         private readonly IPlaytomicIntegrationService _playtomicIntegrationService;
         private readonly ILogger<AdminController> _logger;
+        private readonly IDashboardAnalyticsService _dashboardAnalyticsService;
 
         public AdminController(
             ApplicationDbContext context,
@@ -31,7 +32,7 @@ namespace PadelPassCheckInSystem.Controllers
             ICheckInService checkInService,
             IPlaytomicSyncService playtomicSyncService,
             IPlaytomicIntegrationService playtomicIntegrationService,
-            ILogger<AdminController> logger)
+            ILogger<AdminController> logger, IDashboardAnalyticsService dashboardAnalyticsService)
         {
             _context = context;
             _userManager = userManager;
@@ -41,50 +42,75 @@ namespace PadelPassCheckInSystem.Controllers
             _playtomicSyncService = playtomicSyncService;
             _playtomicIntegrationService = playtomicIntegrationService;
             _logger = logger;
+            _dashboardAnalyticsService = dashboardAnalyticsService;
         }
+
+        #region Dashboard
 
         [Authorize(Roles = "Admin")]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            // Use KSA time for dashboard statistics
-            var currentDateKSA = KSADateTimeExtensions.GetKSANow()
-                .Date;
-
-            // Get all check-ins and filter by KSA date
-            var allCheckIns = _context.CheckIns.ToList();
-            var todayCheckInsKSA = allCheckIns.Count(c => c.CheckInDateTime.ToKSATime()
-                .Date == currentDateKSA);
-
-            // Get active subscriptions using KSA date
-            var allEndUsers = _context.EndUsers.ToList();
-            var activeSubscriptions = allEndUsers.Count(e =>
-            {
-                var startKSA = e.SubscriptionStartDate.ToKSATime()
-                    .Date;
-                var endKSA = e.SubscriptionEndDate.ToKSATime()
-                    .Date;
-
-                var inDateRange = startKSA <= currentDateKSA && endKSA >= currentDateKSA;
-
-                var isCurrentlyPaused = e.IsPaused
-                                        && e.CurrentPauseStartDate.HasValue
-                                        && e.CurrentPauseEndDate.HasValue
-                                        && e.CurrentPauseStartDate.Value.ToKSATime().Date <= currentDateKSA
-                                        && e.CurrentPauseEndDate.Value.ToKSATime().Date >= currentDateKSA;
-
-                return inDateRange && !isCurrentlyPaused;
-            });
-
-            var viewModel = new AdminDashboardViewModel
-            {
-                TotalBranches = _context.Branches.Count(),
-                TotalEndUsers = _context.EndUsers.Count(),
-                TotalCheckInsToday = todayCheckInsKSA,
-                ActiveSubscriptions = activeSubscriptions
-            };
-
-            return View(viewModel);
+            var analytics = await _dashboardAnalyticsService.GetDashboardAnalyticsAsync();
+            return View(analytics);
         }
+        
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetUserLoyaltySegments()
+        {
+            var data = await _dashboardAnalyticsService.GetUserLoyaltySegmentsAsync();
+            return Json(new { success = true, data });
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetDropoffAnalysis()
+        {
+            var data = await _dashboardAnalyticsService.GetDropoffAnalysisAsync();
+            return Json(new { success = true, data });
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetSubscriptionUtilization()
+        {
+            var data = await _dashboardAnalyticsService.GetSubscriptionUtilizationAsync();
+            return Json(new { success = true, data });
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetBranchPerformance()
+        {
+            var data = await _dashboardAnalyticsService.GetBranchPerformanceAsync();
+            return Json(new { success = true, data });
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetMultiBranchUsage()
+        {
+            var data = await _dashboardAnalyticsService.GetMultiBranchUsageAsync();
+            return Json(new { success = true, data });
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetCheckInTrends()
+        {
+            var data = await _dashboardAnalyticsService.GetCheckInTrendsAsync();
+            return Json(new { success = true, data });
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetBranchComparison()
+        {
+            var data = await _dashboardAnalyticsService.GetBranchComparisonAsync();
+            return Json(new { success = true, data });
+        }
+
+        #endregion
 
         // Branches Management
         [Authorize(Roles = "Admin")]

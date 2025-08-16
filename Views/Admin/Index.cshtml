@@ -1,22 +1,29 @@
-@model AdminDashboardViewModel
+@model PadelPassCheckInSystem.Models.ViewModels.Dashboard.DashboardAnalyticsViewModel
 @{
-    ViewData["Title"] = "Admin Dashboard";
+    ViewData["Title"] = "Dashboard Analytics";
 }
 
-<h1 class="mb-4">Admin Dashboard</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-speedometer2"></i> Dashboard Analytics</h1>
+    <div class="text-muted">
+        <i class="bi bi-clock"></i> Last updated: @DateTime.UtcNow.ToKSATime().ToString("MMM dd, yyyy HH:mm") KSA
+        <button class="btn btn-sm btn-outline-primary ms-2" onclick="refreshAllAnalytics()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+</div>
 
-<div class="row">
-    <div class="col-md-3 mb-4">
-        <div class="card bg-primary text-white">
+<!-- Key Metrics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-uppercase mb-1">Total Branches</h6>
                         <h2 class="mb-0">@Model.TotalBranches</h2>
                     </div>
-                    <div>
-                        <i class="bi bi-building fs-1"></i>
-                    </div>
+                    <div><i class="bi bi-building fs-1"></i></div>
                 </div>
             </div>
             <div class="card-footer">
@@ -27,17 +34,15 @@
         </div>
     </div>
 
-    <div class="col-md-3 mb-4">
-        <div class="card bg-success text-white">
+    <div class="col-md-3">
+        <div class="card bg-success text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-uppercase mb-1">End Users</h6>
                         <h2 class="mb-0">@Model.TotalEndUsers</h2>
                     </div>
-                    <div>
-                        <i class="bi bi-people fs-1"></i>
-                    </div>
+                    <div><i class="bi bi-people fs-1"></i></div>
                 </div>
             </div>
             <div class="card-footer">
@@ -48,17 +53,15 @@
         </div>
     </div>
 
-    <div class="col-md-3 mb-4">
-        <div class="card bg-info text-white">
+    <div class="col-md-3">
+        <div class="card bg-info text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-uppercase mb-1">Today's Check-Ins</h6>
                         <h2 class="mb-0">@Model.TotalCheckInsToday</h2>
                     </div>
-                    <div>
-                        <i class="bi bi-check-circle fs-1"></i>
-                    </div>
+                    <div><i class="bi bi-check-circle fs-1"></i></div>
                 </div>
             </div>
             <div class="card-footer">
@@ -69,17 +72,15 @@
         </div>
     </div>
 
-    <div class="col-md-3 mb-4">
-        <div class="card bg-warning text-white">
+    <div class="col-md-3">
+        <div class="card bg-warning text-white h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-uppercase mb-1">Active Subscriptions</h6>
                         <h2 class="mb-0">@Model.ActiveSubscriptions</h2>
                     </div>
-                    <div>
-                        <i class="bi bi-calendar-check fs-1"></i>
-                    </div>
+                    <div><i class="bi bi-calendar-check fs-1"></i></div>
                 </div>
             </div>
             <div class="card-footer">
@@ -91,25 +92,713 @@
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Quick Actions</h5>
+<!-- Analytics Tabs -->
+<div class="card">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="analyticsTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="loyalty-tab" data-bs-toggle="tab" data-bs-target="#loyalty" type="button" role="tab">
+                    <i class="bi bi-heart"></i> User Loyalty
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="utilization-tab" data-bs-toggle="tab" data-bs-target="#utilization" type="button" role="tab">
+                    <i class="bi bi-bar-chart"></i> Utilization
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="trends-tab" data-bs-toggle="tab" data-bs-target="#trends" type="button" role="tab">
+                    <i class="bi bi-graph-up"></i> Trends
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="branches-tab" data-bs-toggle="tab" data-bs-target="#branches" type="button" role="tab">
+                    <i class="bi bi-building"></i> Branch Analytics
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights" type="button" role="tab">
+                    <i class="bi bi-lightbulb"></i> Insights
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="analyticsTabContent">
+            <!-- User Loyalty Tab -->
+            <div class="tab-pane fade show active" id="loyalty" role="tabpanel">
+                <div class="row">
+                    <!-- User Loyalty Segments -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-people-fill"></i> User Loyalty Segments</h5>
+                                <small class="text-muted">@Model.UserLoyaltySegments.AnalysisPeriod</small>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="loyaltyChart" width="400" height="200"></canvas>
+                                <div class="row mt-3">
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <span class="badge bg-success fs-6">@Model.UserLoyaltySegments.VipUsers</span>
+                                            <div class="small text-muted">VIP Users (15+ visits)</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <span class="badge bg-primary fs-6">@Model.UserLoyaltySegments.RegularUsers</span>
+                                            <div class="small text-muted">Regular (5-14 visits)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <span class="badge bg-warning fs-6">@Model.UserLoyaltySegments.OccasionalUsers</span>
+                                            <div class="small text-muted">Occasional (1-4 visits)</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-center">
+                                            <span class="badge bg-secondary fs-6">@Model.UserLoyaltySegments.InactiveUsers</span>
+                                            <div class="small text-muted">Inactive (0 visits)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Drop-off Analysis -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-graph-down-arrow"></i> User Drop-off Analysis</h5>
+                                <small class="text-muted">Users who haven't checked in recently</small>
+                            </div>
+                            <div class="card-body">
+                                <div id="dropoffAnalysis">
+                                    @foreach (var period in Model.DropoffAnalysis.DropoffPeriods)
+                                    {
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div>
+                                                <strong>@period.Period</strong>
+                                                <small class="text-muted d-block">@period.DroppedOffUsers users</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="badge bg-danger">@period.DropoffPercentage.ToString("F1")%</span>
+                                            </div>
+                                        </div>
+                                        <div class="progress mb-3" style="height: 8px;">
+                                            <div class="progress-bar bg-danger" style="width: @period.DropoffPercentage%"></div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="@Url.Action("EndUsers")" class="btn btn-outline-primary">
-                        <i class="bi bi-person-plus"></i> Add New End User
-                    </a>
-                    <a href="@Url.Action("BranchUsers")" class="btn btn-outline-success">
-                        <i class="bi bi-person-badge"></i> Add Branch User
-                    </a>
-                    <a href="@Url.Action("CheckIns")" class="btn btn-outline-info">
-                        <i class="bi bi-file-earmark-excel"></i> Export Check-Ins
-                    </a>
+
+            <!-- Utilization Tab -->
+            <div class="tab-pane fade" id="utilization" role="tabpanel">
+                <div class="row">
+                    <!-- Subscription Utilization -->
+                    <div class="col-md-8">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-speedometer"></i> Subscription Utilization</h5>
+                                <small class="text-muted">How much users utilize their subscription period</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-4">
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h3 class="text-primary">@Model.SubscriptionUtilization.AverageUtilization.ToString("F1")%</h3>
+                                            <small class="text-muted">Average Utilization</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h3 class="text-success">@Model.SubscriptionUtilization.HighUtilizers</h3>
+                                            <small class="text-muted">High Utilizers (80%+)</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h3 class="text-warning">@Model.SubscriptionUtilization.LowUtilizers</h3>
+                                            <small class="text-muted">Low Utilizers (<20%)</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <h3 class="text-info">@Model.SubscriptionUtilization.TotalUsers</h3>
+                                            <small class="text-muted">Total Users</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Top Utilizers -->
+                                <h6>Top Utilizers</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Used Days</th>
+                                                <th>Total Days</th>
+                                                <th>Utilization</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var user in Model.SubscriptionUtilization.UserUtilizations.Take(5))
+                                            {
+                                                <tr>
+                                                    <td>@user.UserName</td>
+                                                    <td>@user.UsedDays</td>
+                                                    <td>@user.TotalDays</td>
+                                                    <td>
+                                                        <span class="badge bg-@(user.UtilizationPercentage >= 80 ? "success" : user.UtilizationPercentage >= 50 ? "warning" : "danger")">
+                                                            @user.UtilizationPercentage.ToString("F1")%
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Multi-Branch Usage -->
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Multi-Branch Usage</h5>
+                                <small class="text-muted">Users visiting multiple branches</small>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="multiBranchChart" width="300" height="200"></canvas>
+                                <div class="mt-3">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Single Branch Users:</span>
+                                        <strong>@Model.MultiBranchUsage.SingleBranchUsers</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Multi-Branch Users:</span>
+                                        <strong>@Model.MultiBranchUsage.MultiBranchUsers</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Max Branches Used:</span>
+                                        <strong>@Model.MultiBranchUsage.MaxBranchesUsed</strong>
+                                    </div>
+                                </div>
+                                
+                                @if (Model.MultiBranchUsage.TopMultiBranchUsers.Any())
+                                {
+                                    <hr>
+                                    <h6>Top Multi-Branch Users</h6>
+                                    @foreach (var user in Model.MultiBranchUsage.TopMultiBranchUsers.Take(3))
+                                    {
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span>@user.UserName</span>
+                                            <span class="badge bg-info">@user.BranchCount branches</span>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trends Tab -->
+            <div class="tab-pane fade" id="trends" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-graph-up"></i> Check-in Trends</h5>
+                            <div class="btn-group" role="group">
+                                <input type="radio" class="btn-check" name="trendPeriod" id="trend7days" autocomplete="off" checked>
+                                <label class="btn btn-outline-primary btn-sm" for="trend7days">7 Days</label>
+
+                                <input type="radio" class="btn-check" name="trendPeriod" id="trend30days" autocomplete="off">
+                                <label class="btn btn-outline-primary btn-sm" for="trend30days">30 Days</label>
+
+                                <input type="radio" class="btn-check" name="trendPeriod" id="trend90days" autocomplete="off">
+                                <label class="btn btn-outline-primary btn-sm" for="trend90days">90 Days</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="trendsChart" width="800" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branch Analytics Tab -->
+            <div class="tab-pane fade" id="branches" role="tabpanel">
+                <div class="row">
+                    <!-- Branch Performance -->
+                    <div class="col-md-7">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-building"></i> Branch Performance</h5>
+                                <small class="text-muted">@Model.BranchPerformance.AnalysisPeriod</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Branch</th>
+                                                <th>Today</th>
+                                                <th>Last 30 Days</th>
+                                                <th>Unique Users</th>
+                                                <th>Avg/Day</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var branch in Model.BranchPerformance.BranchPerformances.OrderByDescending(b => b.CheckInsLast30Days))
+                                            {
+                                                <tr>
+                                                    <td><strong>@branch.BranchName</strong></td>
+                                                    <td>
+                                                        <span class="badge bg-info">@branch.TodayCheckIns</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary">@branch.CheckInsLast30Days</span>
+                                                    </td>
+                                                    <td>@branch.UniqueUsersLast30Days</td>
+                                                    <td>@branch.AvgCheckInsPerDay.ToString("F1")</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Branch Comparison Chart -->
+                    <div class="col-md-5">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-bar-chart-line"></i> Branch Comparison</h5>
+                                <small class="text-muted">Performance scores</small>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="branchComparisonChart" width="400" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Branch Comparison -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-list-check"></i> Detailed Branch Metrics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Branch</th>
+                                        <th>Check-in Score</th>
+                                        <th>User Engagement</th>
+                                        <th>Court Assignment Rate</th>
+                                        <th>Peak Day</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var branch in Model.BranchComparison.BranchComparisons)
+                                    {
+                                        <tr>
+                                            <td><strong>@branch.BranchName</strong></td>
+                                            <td>
+                                                <div class="progress" style="height: 20px; width: 100px;">
+                                                    <div class="progress-bar bg-primary" style="width: @branch.CheckInScore%">
+                                                        @branch.CheckInScore.ToString("F0")%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="progress" style="height: 20px; width: 100px;">
+                                                    <div class="progress-bar bg-success" style="width: @branch.UserEngagementScore%">
+                                                        @branch.UserEngagementScore.ToString("F0")%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-@(branch.CourtAssignmentRate >= 90 ? "success" : branch.CourtAssignmentRate >= 70 ? "warning" : "danger")">
+                                                    @branch.CourtAssignmentRate.ToString("F1")%
+                                                </span>
+                                            </td>
+                                            <td>@branch.PeakDayOfWeek</td>
+                                            <td>
+                                                @if (branch.Last30DaysCheckIns > 0)
+                                                {
+                                                    <span class="badge bg-success">Active</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning">Low Activity</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights Tab -->
+            <div class="tab-pane fade" id="insights" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Key Insights</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="keyInsights">
+                                    <!-- Insights will be generated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Recommendations</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="recommendations">
+                                    <!-- Recommendations will be generated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Growth Opportunities</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="growthOpportunities">
+                            <!-- Growth opportunities will be generated by JavaScript -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Store analytics data
+        const analyticsData = @Html.Raw(Json.Serialize(Model));
+        
+        // Initialize charts when document is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeLoyaltyChart();
+            initializeMultiBranchChart();
+            initializeTrendsChart();
+            initializeBranchComparisonChart();
+            generateInsights();
+            
+            // Set up trend period change handlers
+            document.querySelectorAll('input[name="trendPeriod"]').forEach(radio => {
+                radio.addEventListener('change', updateTrendsChart);
+            });
+        });
+
+        function initializeLoyaltyChart() {
+            const ctx = document.getElementById('loyaltyChart').getContext('2d');
+            const data = analyticsData.userLoyaltySegments;
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['VIP Users', 'Regular Users', 'Occasional Users', 'Inactive Users'],
+                    datasets: [{
+                        data: [data.vipUsers, data.regularUsers, data.occasionalUsers, data.inactiveUsers],
+                        backgroundColor: ['#198754', '#0d6efd', '#ffc107', '#6c757d'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeMultiBranchChart() {
+            const ctx = document.getElementById('multiBranchChart').getContext('2d');
+            const data = analyticsData.multiBranchUsage;
+            
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Single Branch', 'Multi-Branch'],
+                    datasets: [{
+                        data: [data.singleBranchUsers, data.multiBranchUsers],
+                        backgroundColor: ['#0d6efd', '#fd7e14'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        let trendsChart;
+        function initializeTrendsChart() {
+            const ctx = document.getElementById('trendsChart').getContext('2d');
+            const data = analyticsData.checkInTrends.last7Days;
+            
+            trendsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.label),
+                    datasets: [{
+                        label: 'Check-ins',
+                        data: data.map(d => d.checkIns),
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Unique Users',
+                        data: data.map(d => d.uniqueUsers),
+                        borderColor: '#198754',
+                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTrendsChart() {
+            const selectedPeriod = document.querySelector('input[name="trendPeriod"]:checked').id;
+            let data;
+            
+            switch(selectedPeriod) {
+                case 'trend7days':
+                    data = analyticsData.checkInTrends.last7Days;
+                    break;
+                case 'trend30days':
+                    data = analyticsData.checkInTrends.last30Days;
+                    break;
+                case 'trend90days':
+                    data = analyticsData.checkInTrends.last90Days;
+                    break;
+                default:
+                    data = analyticsData.checkInTrends.last7Days;
+            }
+            
+            trendsChart.data.labels = data.map(d => d.label);
+            trendsChart.data.datasets[0].data = data.map(d => d.checkIns);
+            trendsChart.data.datasets[1].data = data.map(d => d.uniqueUsers);
+            trendsChart.update();
+        }
+
+        function initializeBranchComparisonChart() {
+            const ctx = document.getElementById('branchComparisonChart').getContext('2d');
+            const data = analyticsData.branchComparison.branchComparisons;
+            
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Check-in Score', 'User Engagement', 'Court Assignment Rate'],
+                    datasets: data.slice(0, 4).map((branch, index) => ({
+                        label: branch.branchName,
+                        data: [branch.checkInScore, branch.userEngagementScore, branch.courtAssignmentRate],
+                        borderColor: getChartColor(index),
+                        backgroundColor: getChartColor(index, 0.2),
+                        pointBackgroundColor: getChartColor(index),
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: getChartColor(index)
+                    }))
+                },
+                options: {
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function getChartColor(index, alpha = 1) {
+            const colors = [
+                `rgba(13, 110, 253, ${alpha})`,    // blue
+                `rgba(25, 135, 84, ${alpha})`,     // green
+                `rgba(255, 193, 7, ${alpha})`,     // yellow
+                `rgba(220, 53, 69, ${alpha})`,     // red
+                `rgba(13, 202, 240, ${alpha})`,    // cyan
+                `rgba(111, 66, 193, ${alpha})`     // purple
+            ];
+            return colors[index % colors.length];
+        }
+
+        function generateInsights() {
+            const data = analyticsData;
+            const insights = [];
+            const recommendations = [];
+            const growthOpportunities = [];
+
+            // Generate insights based on data
+            const totalUsers = data.userLoyaltySegments.totalUsers;
+            const vipPercentage = (data.userLoyaltySegments.vipUsers / totalUsers * 100).toFixed(1);
+            const inactivePercentage = (data.userLoyaltySegments.inactiveUsers / totalUsers * 100).toFixed(1);
+            
+            insights.push(`<div class="alert alert-success"><i class="bi bi-star"></i> <strong>${vipPercentage}%</strong> of users are VIP customers with 15+ visits in the last 30 days.</div>`);
+            
+            if (data.userLoyaltySegments.inactiveUsers > 0) {
+                insights.push(`<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> <strong>${inactivePercentage}%</strong> of users haven't checked in during the last 30 days.</div>`);
+                recommendations.push(`<div class="alert alert-info"><i class="bi bi-lightbulb"></i> Consider a re-engagement campaign for ${data.userLoyaltySegments.inactiveUsers} inactive users.</div>`);
+            }
+
+            const avgUtilization = data.subscriptionUtilization.averageUtilization.toFixed(1);
+            insights.push(`<div class="alert alert-info"><i class="bi bi-speedometer"></i> Average subscription utilization is <strong>${avgUtilization}%</strong>.</div>`);
+            
+            if (data.subscriptionUtilization.averageUtilization < 50) {
+                recommendations.push(`<div class="alert alert-warning"><i class="bi bi-arrow-up"></i> Low utilization suggests opportunities to increase user engagement.</div>`);
+            }
+
+            // Multi-branch insights
+            const multiBranchPercentage = (data.multiBranchUsage.multiBranchUsers / data.multiBranchUsage.totalUsersWithCheckIns * 100).toFixed(1);
+            insights.push(`<div class="alert alert-primary"><i class="bi bi-diagram-3"></i> <strong>${multiBranchPercentage}%</strong> of users visit multiple branches.</div>`);
+
+            // Branch performance insights
+            const topBranch = data.branchPerformance.branchPerformances.reduce((prev, current) => 
+                (prev.checkInsLast30Days > current.checkInsLast30Days) ? prev : current
+            );
+            insights.push(`<div class="alert alert-success"><i class="bi bi-trophy"></i> <strong>${topBranch.branchName}</strong> is the top performing branch with ${topBranch.checkInsLast30Days} check-ins.</div>`);
+
+            // Growth opportunities
+            if (data.subscriptionUtilization.lowUtilizers > 0) {
+                growthOpportunities.push(`<div class="alert alert-light border-info"><i class="bi bi-graph-up"></i> <strong>Engagement Programs:</strong> ${data.subscriptionUtilization.lowUtilizers} users have low utilization - target them with special programs.</div>`);
+            }
+
+            if (data.multiBranchUsage.multiBranchUsers > 0) {
+                growthOpportunities.push(`<div class="alert alert-light border-success"><i class="bi bi-buildings"></i> <strong>Cross-Branch Promotions:</strong> ${data.multiBranchUsage.multiBranchUsers} users already visit multiple branches - expand this segment.</div>`);
+            }
+
+            // Find branches with court assignment issues
+            const branchesWithIssues = data.branchComparison.branchComparisons.filter(b => b.courtAssignmentRate < 90);
+            if (branchesWithIssues.length > 0) {
+                recommendations.push(`<div class="alert alert-danger"><i class="bi bi-exclamation-circle"></i> <strong>Operational Issues:</strong> ${branchesWithIssues.length} branch(es) have court assignment rates below 90%.</div>`);
+            }
+
+            growthOpportunities.push(`<div class="alert alert-light border-warning"><i class="bi bi-people"></i> <strong>User Retention:</strong> Focus on converting occasional users (${data.userLoyaltySegments.occasionalUsers}) to regular users.</div>`);
+
+            // Populate the sections
+            document.getElementById('keyInsights').innerHTML = insights.join('');
+            document.getElementById('recommendations').innerHTML = recommendations.join('');
+            document.getElementById('growthOpportunities').innerHTML = growthOpportunities.join('');
+        }
+
+        function refreshAllAnalytics() {
+            // Show loading spinner
+            const refreshBtn = document.querySelector('button[onclick="refreshAllAnalytics()"]');
+            const originalText = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Refreshing...';
+            refreshBtn.disabled = true;
+
+            // Reload the page to get fresh data
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
+
+        // Add CSS for spinner animation
+        const style = document.createElement('style');
+        style.textContent = `
+            .spin {
+                animation: spin 1s linear infinite;
+            }
+            @@keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            .alert {
+                border-radius: 8px;
+                margin-bottom: 1rem;
+            }
+            .progress {
+                border-radius: 10px;
+            }
+            .card {
+                box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+                border-radius: 10px;
+            }
+            .nav-tabs .nav-link {
+                border-radius: 8px 8px 0 0;
+            }
+            .nav-tabs .nav-link.active {
+                font-weight: 600;
+            }
+            .badge {
+                font-size: 0.8em;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+}
