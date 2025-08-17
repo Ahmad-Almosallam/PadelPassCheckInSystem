@@ -102,22 +102,22 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="utilization-tab" data-bs-toggle="tab" data-bs-target="#utilization" type="button" role="tab">
+                <button class="nav-link" id="utilization-tab" data-bs-toggle="tab" data-bs-target="#utilization" type="button" role="tab" onclick="loadUtilizationData()">
                     <i class="bi bi-bar-chart"></i> Utilization
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="trends-tab" data-bs-toggle="tab" data-bs-target="#trends" type="button" role="tab">
+                <button class="nav-link" id="trends-tab" data-bs-toggle="tab" data-bs-target="#trends" type="button" role="tab" onclick="loadTrendsData()">
                     <i class="bi bi-graph-up"></i> Trends
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="branches-tab" data-bs-toggle="tab" data-bs-target="#branches" type="button" role="tab">
+                <button class="nav-link" id="branches-tab" data-bs-toggle="tab" data-bs-target="#branches" type="button" role="tab" onclick="loadBranchData()">
                     <i class="bi bi-building"></i> Branch Analytics
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights" type="button" role="tab">
+                <button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights" type="button" role="tab" onclick="loadInsightsData()">
                     <i class="bi bi-lightbulb"></i> Insights
                 </button>
             </li>
@@ -125,7 +125,7 @@
     </div>
     <div class="card-body">
         <div class="tab-content" id="analyticsTabContent">
-            <!-- User Loyalty Tab -->
+            <!-- User Loyalty Tab - Loaded initially -->
             <div class="tab-pane fade show active" id="loyalty" role="tabpanel">
                 <div class="row">
                     <!-- User Loyalty Segments -->
@@ -200,8 +200,157 @@
                 </div>
             </div>
 
-            <!-- Utilization Tab -->
+            <!-- Utilization Tab - Lazy loaded -->
             <div class="tab-pane fade" id="utilization" role="tabpanel">
+                <div id="utilizationContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading utilization data...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trends Tab - Lazy loaded -->
+            <div class="tab-pane fade" id="trends" role="tabpanel">
+                <div id="trendsContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading trends data...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branch Analytics Tab - Lazy loaded -->
+            <div class="tab-pane fade" id="branches" role="tabpanel">
+                <div id="branchContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading branch analytics...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights Tab - Lazy loaded -->
+            <div class="tab-pane fade" id="insights" role="tabpanel">
+                <div id="insightsContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading insights...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Store analytics data (only initially loaded data)
+        const analyticsData = @Html.Raw(Json.Serialize(Model));
+        
+        // Lazy loading flags
+        let utilizationLoaded = false;
+        let trendsLoaded = false;
+        let branchLoaded = false;
+        let insightsLoaded = false;
+        
+        // Store lazy-loaded data
+        let utilizationData = null;
+        let trendsData = null;
+        let branchData = null;
+        let multiBranchData = null;
+        
+        // Initialize charts when document is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeLoyaltyChart();
+        });
+
+        // Lazy loading functions
+        function loadUtilizationData() {
+            if (utilizationLoaded) return;
+            
+            Promise.all([
+                fetch('@Url.Action("GetSubscriptionUtilization")').then(r => r.json()),
+                fetch('@Url.Action("GetMultiBranchUsage")').then(r => r.json())
+            ]).then(([utilResponse, multiBranchResponse]) => {
+                if (utilResponse.success && multiBranchResponse.success) {
+                    utilizationData = utilResponse.data;
+                    multiBranchData = multiBranchResponse.data;
+                    renderUtilizationTab();
+                    utilizationLoaded = true;
+                } else {
+                    showError('utilizationContent', 'Failed to load utilization data');
+                }
+            }).catch(error => {
+                console.error('Error loading utilization data:', error);
+                showError('utilizationContent', 'Error loading utilization data');
+            });
+        }
+
+        function loadTrendsData() {
+            if (trendsLoaded) return;
+            
+            fetch('@Url.Action("GetCheckInTrends")')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        trendsData = data.data;
+                        renderTrendsTab();
+                        trendsLoaded = true;
+                    } else {
+                        showError('trendsContent', 'Failed to load trends data');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading trends data:', error);
+                    showError('trendsContent', 'Error loading trends data');
+                });
+        }
+
+        function loadBranchData() {
+            if (branchLoaded) return;
+            
+            Promise.all([
+                fetch('@Url.Action("GetBranchPerformance")').then(r => r.json()),
+                fetch('@Url.Action("GetBranchComparison")').then(r => r.json())
+            ]).then(([perfResponse, compResponse]) => {
+                if (perfResponse.success && compResponse.success) {
+                    branchData = {
+                        performance: perfResponse.data,
+                        comparison: compResponse.data
+                    };
+                    renderBranchTab();
+                    branchLoaded = true;
+                } else {
+                    showError('branchContent', 'Failed to load branch analytics');
+                }
+            }).catch(error => {
+                console.error('Error loading branch data:', error);
+                showError('branchContent', 'Error loading branch analytics');
+            });
+        }
+
+        function loadInsightsData() {
+            if (insightsLoaded) return;
+            
+            // Generate insights based on already loaded data
+            renderInsightsTab();
+            insightsLoaded = true;
+        }
+
+        // Rendering functions
+        function renderUtilizationTab() {
+            const content = document.getElementById('utilizationContent');
+            content.innerHTML = `
                 <div class="row">
                     <!-- Subscription Utilization -->
                     <div class="col-md-8">
@@ -214,31 +363,30 @@
                                 <div class="row mb-4">
                                     <div class="col-md-3">
                                         <div class="text-center">
-                                            <h3 class="text-primary">@Model.SubscriptionUtilization.AverageUtilization.ToString("F1")%</h3>
+                                            <h3 class="text-primary">${utilizationData.averageUtilization.toFixed(1)}%</h3>
                                             <small class="text-muted">Average Utilization</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="text-center">
-                                            <h3 class="text-success">@Model.SubscriptionUtilization.HighUtilizers</h3>
+                                            <h3 class="text-success">${utilizationData.highUtilizers}</h3>
                                             <small class="text-muted">High Utilizers (80%+)</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="text-center">
-                                            <h3 class="text-warning">@Model.SubscriptionUtilization.LowUtilizers</h3>
+                                            <h3 class="text-warning">${utilizationData.lowUtilizers}</h3>
                                             <small class="text-muted">Low Utilizers (<20%)</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="text-center">
-                                            <h3 class="text-info">@Model.SubscriptionUtilization.TotalUsers</h3>
+                                            <h3 class="text-info">${utilizationData.totalUsers}</h3>
                                             <small class="text-muted">Total Users</small>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <!-- Top Utilizers -->
                                 <h6>Top Utilizers</h6>
                                 <div class="table-responsive">
                                     <table class="table table-sm">
@@ -251,19 +399,18 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var user in Model.SubscriptionUtilization.UserUtilizations.Take(5))
-                                            {
+                                            ${utilizationData.userUtilizations.slice(0, 5).map(user => `
                                                 <tr>
-                                                    <td>@user.UserName</td>
-                                                    <td>@user.UsedDays</td>
-                                                    <td>@user.TotalDays</td>
+                                                    <td>${user.userName}</td>
+                                                    <td>${user.usedDays}</td>
+                                                    <td>${user.totalDays}</td>
                                                     <td>
-                                                        <span class="badge bg-@(user.UtilizationPercentage >= 80 ? "success" : user.UtilizationPercentage >= 50 ? "warning" : "danger")">
-                                                            @user.UtilizationPercentage.ToString("F1")%
+                                                        <span class="badge bg-${user.utilizationPercentage >= 80 ? 'success' : user.utilizationPercentage >= 50 ? 'warning' : 'danger'}">
+                                                            ${user.utilizationPercentage.toFixed(1)}%
                                                         </span>
                                                     </td>
                                                 </tr>
-                                            }
+                                            `).join('')}
                                         </tbody>
                                     </table>
                                 </div>
@@ -283,38 +430,41 @@
                                 <div class="mt-3">
                                     <div class="d-flex justify-content-between mb-2">
                                         <span>Single Branch Users:</span>
-                                        <strong>@Model.MultiBranchUsage.SingleBranchUsers</strong>
+                                        <strong>${multiBranchData.singleBranchUsers}</strong>
                                     </div>
                                     <div class="d-flex justify-content-between mb-2">
                                         <span>Multi-Branch Users:</span>
-                                        <strong>@Model.MultiBranchUsage.MultiBranchUsers</strong>
+                                        <strong>${multiBranchData.multiBranchUsers}</strong>
                                     </div>
                                     <div class="d-flex justify-content-between mb-2">
                                         <span>Max Branches Used:</span>
-                                        <strong>@Model.MultiBranchUsage.MaxBranchesUsed</strong>
+                                        <strong>${multiBranchData.maxBranchesUsed}</strong>
                                     </div>
                                 </div>
                                 
-                                @if (Model.MultiBranchUsage.TopMultiBranchUsers.Any())
-                                {
+                                ${multiBranchData.topMultiBranchUsers.length > 0 ? `
                                     <hr>
                                     <h6>Top Multi-Branch Users</h6>
-                                    @foreach (var user in Model.MultiBranchUsage.TopMultiBranchUsers.Take(3))
-                                    {
+                                    ${multiBranchData.topMultiBranchUsers.slice(0, 3).map(user => `
                                         <div class="d-flex justify-content-between mb-1">
-                                            <span>@user.UserName</span>
-                                            <span class="badge bg-info">@user.BranchCount branches</span>
+                                            <span>${user.userName}</span>
+                                            <span class="badge bg-info">${user.branchCount} branches</span>
                                         </div>
-                                    }
-                                }
+                                    `).join('')}
+                                ` : ''}
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            `;
+            
+            // Initialize multi-branch chart
+            initializeMultiBranchChart();
+        }
 
-            <!-- Trends Tab -->
-            <div class="tab-pane fade" id="trends" role="tabpanel">
+        function renderTrendsTab() {
+            const content = document.getElementById('trendsContent');
+            content.innerHTML = `
                 <div class="card">
                     <div class="card-header">
                         <div class="d-flex justify-content-between align-items-center">
@@ -335,17 +485,22 @@
                         <canvas id="trendsChart" width="800" height="300"></canvas>
                     </div>
                 </div>
-            </div>
+            `;
+            
+            // Initialize trends chart
+            initializeTrendsChart();
+        }
 
-            <!-- Branch Analytics Tab -->
-            <div class="tab-pane fade" id="branches" role="tabpanel">
+        function renderBranchTab() {
+            const content = document.getElementById('branchContent');
+            content.innerHTML = `
                 <div class="row">
                     <!-- Branch Performance -->
                     <div class="col-md-7">
                         <div class="card h-100">
                             <div class="card-header">
                                 <h5 class="mb-0"><i class="bi bi-building"></i> Branch Performance</h5>
-                                <small class="text-muted">@Model.BranchPerformance.AnalysisPeriod</small>
+                                <small class="text-muted">${branchData.performance.analysisPeriod || 'Last 30 days'}</small>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
@@ -360,20 +515,19 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach (var branch in Model.BranchPerformance.BranchPerformances.OrderByDescending(b => b.CheckInsLast30Days))
-                                            {
+                                            ${branchData.performance.branchPerformances.sort((a, b) => b.checkInsLast30Days - a.checkInsLast30Days).map(branch => `
                                                 <tr>
-                                                    <td><strong>@branch.BranchName</strong></td>
+                                                    <td><strong>${branch.branchName}</strong></td>
                                                     <td>
-                                                        <span class="badge bg-info">@branch.TodayCheckIns</span>
+                                                        <span class="badge bg-info">${branch.todayCheckIns}</span>
                                                     </td>
                                                     <td>
-                                                        <span class="badge bg-primary">@branch.CheckInsLast30Days</span>
+                                                        <span class="badge bg-primary">${branch.checkInsLast30Days}</span>
                                                     </td>
-                                                    <td>@branch.UniqueUsersLast30Days</td>
-                                                    <td>@branch.AvgCheckInsPerDay.ToString("F1")</td>
+                                                    <td>${branch.uniqueUsersLast30Days}</td>
+                                                    <td>${branch.avgCheckInsPerDay.toFixed(1)}</td>
                                                 </tr>
-                                            }
+                                            `).join('')}
                                         </tbody>
                                     </table>
                                 </div>
@@ -414,51 +568,53 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var branch in Model.BranchComparison.BranchComparisons)
-                                    {
+                                    ${branchData.comparison.branchComparisons.map(branch => `
                                         <tr>
-                                            <td><strong>@branch.BranchName</strong></td>
+                                            <td><strong>${branch.branchName}</strong></td>
                                             <td>
                                                 <div class="progress" style="height: 20px; width: 100px;">
-                                                    <div class="progress-bar bg-primary" style="width: @branch.CheckInScore%">
-                                                        @branch.CheckInScore.ToString("F0")%
+                                                    <div class="progress-bar bg-primary" style="width: ${branch.checkInScore}%">
+                                                        ${branch.checkInScore.toFixed(0)}%
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
                                                 <div class="progress" style="height: 20px; width: 100px;">
-                                                    <div class="progress-bar bg-success" style="width: @branch.UserEngagementScore%">
-                                                        @branch.UserEngagementScore.ToString("F0")%
+                                                    <div class="progress-bar bg-success" style="width: ${branch.userEngagementScore}%">
+                                                        ${branch.userEngagementScore.toFixed(0)}%
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
-                                                <span class="badge bg-@(branch.CourtAssignmentRate >= 90 ? "success" : branch.CourtAssignmentRate >= 70 ? "warning" : "danger")">
-                                                    @branch.CourtAssignmentRate.ToString("F1")%
+                                                <span class="badge bg-${branch.courtAssignmentRate >= 90 ? 'success' : branch.courtAssignmentRate >= 70 ? 'warning' : 'danger'}">
+                                                    ${branch.courtAssignmentRate.toFixed(1)}%
                                                 </span>
                                             </td>
-                                            <td>@branch.PeakDayOfWeek</td>
+                                            <td>${branch.peakDayOfWeek}</td>
                                             <td>
-                                                @if (branch.Last30DaysCheckIns > 0)
-                                                {
-                                                    <span class="badge bg-success">Active</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="badge bg-warning">Low Activity</span>
+                                                ${branch.last30DaysCheckIns > 0 
+                                                    ? '<span class="badge bg-success">Active</span>' 
+                                                    : '<span class="badge bg-warning">Low Activity</span>'
                                                 }
                                             </td>
                                         </tr>
-                                    }
+                                    `).join('')}
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-            </div>
+            `;
+            
+            // Initialize branch comparison chart
+            initializeBranchComparisonChart();
+        }
 
-            <!-- Insights Tab -->
-            <div class="tab-pane fade" id="insights" role="tabpanel">
+        function renderInsightsTab() {
+            const content = document.getElementById('insightsContent');
+            const insights = generateInsights();
+            
+            content.innerHTML = `
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card">
@@ -466,9 +622,7 @@
                                 <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Key Insights</h5>
                             </div>
                             <div class="card-body">
-                                <div id="keyInsights">
-                                    <!-- Insights will be generated by JavaScript -->
-                                </div>
+                                ${insights.keyInsights.join('')}
                             </div>
                         </div>
                     </div>
@@ -479,9 +633,7 @@
                                 <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Recommendations</h5>
                             </div>
                             <div class="card-body">
-                                <div id="recommendations">
-                                    <!-- Recommendations will be generated by JavaScript -->
-                                </div>
+                                ${insights.recommendations.join('')}
                             </div>
                         </div>
                     </div>
@@ -492,36 +644,27 @@
                         <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Growth Opportunities</h5>
                     </div>
                     <div class="card-body">
-                        <div id="growthOpportunities">
-                            <!-- Growth opportunities will be generated by JavaScript -->
-                        </div>
+                        ${insights.growthOpportunities.join('')}
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
+            `;
+        }
 
-@section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // Store analytics data
-        const analyticsData = @Html.Raw(Json.Serialize(Model));
-        
-        // Initialize charts when document is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeLoyaltyChart();
-            initializeMultiBranchChart();
-            initializeTrendsChart();
-            initializeBranchComparisonChart();
-            generateInsights();
-            
-            // Set up trend period change handlers
-            document.querySelectorAll('input[name="trendPeriod"]').forEach(radio => {
-                radio.addEventListener('change', updateTrendsChart);
-            });
-        });
+        function showError(contentId, message) {
+            const content = document.getElementById(contentId);
+            content.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="bi bi-exclamation-triangle text-danger fs-1"></i>
+                    <h5 class="mt-3">Error Loading Data</h5>
+                    <p class="text-muted">${message}</p>
+                    <button class="btn btn-outline-primary" onclick="location.reload()">
+                        <i class="bi bi-arrow-clockwise"></i> Retry
+                    </button>
+                </div>
+            `;
+        }
 
+        // Chart initialization functions
         function initializeLoyaltyChart() {
             const ctx = document.getElementById('loyaltyChart').getContext('2d');
             const data = analyticsData.userLoyaltySegments;
@@ -555,14 +698,13 @@
 
         function initializeMultiBranchChart() {
             const ctx = document.getElementById('multiBranchChart').getContext('2d');
-            const data = analyticsData.multiBranchUsage;
             
             new Chart(ctx, {
                 type: 'pie',
                 data: {
                     labels: ['Single Branch', 'Multi-Branch'],
                     datasets: [{
-                        data: [data.singleBranchUsers, data.multiBranchUsers],
+                        data: [multiBranchData.singleBranchUsers, multiBranchData.multiBranchUsers],
                         backgroundColor: ['#0d6efd', '#fd7e14'],
                         borderWidth: 2,
                         borderColor: '#fff'
@@ -583,7 +725,7 @@
         let trendsChart;
         function initializeTrendsChart() {
             const ctx = document.getElementById('trendsChart').getContext('2d');
-            const data = analyticsData.checkInTrends.last7Days;
+            const data = trendsData.last7Days;
             
             trendsChart = new Chart(ctx, {
                 type: 'line',
@@ -619,6 +761,11 @@
                     }
                 }
             });
+            
+            // Set up trend period change handlers
+            document.querySelectorAll('input[name="trendPeriod"]').forEach(radio => {
+                radio.addEventListener('change', updateTrendsChart);
+            });
         }
 
         function updateTrendsChart() {
@@ -627,16 +774,16 @@
             
             switch(selectedPeriod) {
                 case 'trend7days':
-                    data = analyticsData.checkInTrends.last7Days;
+                    data = trendsData.last7Days;
                     break;
                 case 'trend30days':
-                    data = analyticsData.checkInTrends.last30Days;
+                    data = trendsData.last30Days;
                     break;
                 case 'trend90days':
-                    data = analyticsData.checkInTrends.last90Days;
+                    data = trendsData.last90Days;
                     break;
                 default:
-                    data = analyticsData.checkInTrends.last7Days;
+                    data = trendsData.last7Days;
             }
             
             trendsChart.data.labels = data.map(d => d.label);
@@ -647,7 +794,7 @@
 
         function initializeBranchComparisonChart() {
             const ctx = document.getElementById('branchComparisonChart').getContext('2d');
-            const data = analyticsData.branchComparison.branchComparisons;
+            const data = branchData.comparison.branchComparisons;
             
             new Chart(ctx, {
                 type: 'radar',
@@ -703,7 +850,7 @@
             const recommendations = [];
             const growthOpportunities = [];
 
-            // Generate insights based on data
+            // Generate insights based on loaded data
             const totalUsers = data.userLoyaltySegments.totalUsers;
             const vipPercentage = (data.userLoyaltySegments.vipUsers / totalUsers * 100).toFixed(1);
             const inactivePercentage = (data.userLoyaltySegments.inactiveUsers / totalUsers * 100).toFixed(1);
@@ -715,44 +862,48 @@
                 recommendations.push(`<div class="alert alert-info"><i class="bi bi-lightbulb"></i> Consider a re-engagement campaign for ${data.userLoyaltySegments.inactiveUsers} inactive users.</div>`);
             }
 
-            const avgUtilization = data.subscriptionUtilization.averageUtilization.toFixed(1);
-            insights.push(`<div class="alert alert-info"><i class="bi bi-speedometer"></i> Average subscription utilization is <strong>${avgUtilization}%</strong>.</div>`);
-            
-            if (data.subscriptionUtilization.averageUtilization < 50) {
-                recommendations.push(`<div class="alert alert-warning"><i class="bi bi-arrow-up"></i> Low utilization suggests opportunities to increase user engagement.</div>`);
+            // Add utilization insights if loaded
+            if (utilizationData) {
+                const avgUtilization = utilizationData.averageUtilization.toFixed(1);
+                insights.push(`<div class="alert alert-info"><i class="bi bi-speedometer"></i> Average subscription utilization is <strong>${avgUtilization}%</strong>.</div>`);
+                
+                if (utilizationData.averageUtilization < 50) {
+                    recommendations.push(`<div class="alert alert-warning"><i class="bi bi-arrow-up"></i> Low utilization suggests opportunities to increase user engagement.</div>`);
+                }
             }
 
-            // Multi-branch insights
-            const multiBranchPercentage = (data.multiBranchUsage.multiBranchUsers / data.multiBranchUsage.totalUsersWithCheckIns * 100).toFixed(1);
-            insights.push(`<div class="alert alert-primary"><i class="bi bi-diagram-3"></i> <strong>${multiBranchPercentage}%</strong> of users visit multiple branches.</div>`);
+            // Add multi-branch insights if loaded
+            if (multiBranchData) {
+                const multiBranchPercentage = (multiBranchData.multiBranchUsers / multiBranchData.totalUsersWithCheckIns * 100).toFixed(1);
+                insights.push(`<div class="alert alert-primary"><i class="bi bi-diagram-3"></i> <strong>${multiBranchPercentage}%</strong> of users visit multiple branches.</div>`);
+            }
 
-            // Branch performance insights
-            const topBranch = data.branchPerformance.branchPerformances.reduce((prev, current) => 
-                (prev.checkInsLast30Days > current.checkInsLast30Days) ? prev : current
-            );
-            insights.push(`<div class="alert alert-success"><i class="bi bi-trophy"></i> <strong>${topBranch.branchName}</strong> is the top performing branch with ${topBranch.checkInsLast30Days} check-ins.</div>`);
+            // Add branch performance insights if loaded
+            if (branchData) {
+                const topBranch = branchData.performance.branchPerformances.reduce((prev, current) => 
+                    (prev.checkInsLast30Days > current.checkInsLast30Days) ? prev : current
+                );
+                insights.push(`<div class="alert alert-success"><i class="bi bi-trophy"></i> <strong>${topBranch.branchName}</strong> is the top performing branch with ${topBranch.checkInsLast30Days} check-ins.</div>`);
+                
+                // Find branches with court assignment issues
+                const branchesWithIssues = branchData.comparison.branchComparisons.filter(b => b.courtAssignmentRate < 90);
+                if (branchesWithIssues.length > 0) {
+                    recommendations.push(`<div class="alert alert-danger"><i class="bi bi-exclamation-circle"></i> <strong>Operational Issues:</strong> ${branchesWithIssues.length} branch(es) have court assignment rates below 90%.</div>`);
+                }
+            }
 
             // Growth opportunities
-            if (data.subscriptionUtilization.lowUtilizers > 0) {
-                growthOpportunities.push(`<div class="alert alert-light border-info"><i class="bi bi-graph-up"></i> <strong>Engagement Programs:</strong> ${data.subscriptionUtilization.lowUtilizers} users have low utilization - target them with special programs.</div>`);
+            if (utilizationData && utilizationData.lowUtilizers > 0) {
+                growthOpportunities.push(`<div class="alert alert-light border-info"><i class="bi bi-graph-up"></i> <strong>Engagement Programs:</strong> ${utilizationData.lowUtilizers} users have low utilization - target them with special programs.</div>`);
             }
 
-            if (data.multiBranchUsage.multiBranchUsers > 0) {
-                growthOpportunities.push(`<div class="alert alert-light border-success"><i class="bi bi-buildings"></i> <strong>Cross-Branch Promotions:</strong> ${data.multiBranchUsage.multiBranchUsers} users already visit multiple branches - expand this segment.</div>`);
-            }
-
-            // Find branches with court assignment issues
-            const branchesWithIssues = data.branchComparison.branchComparisons.filter(b => b.courtAssignmentRate < 90);
-            if (branchesWithIssues.length > 0) {
-                recommendations.push(`<div class="alert alert-danger"><i class="bi bi-exclamation-circle"></i> <strong>Operational Issues:</strong> ${branchesWithIssues.length} branch(es) have court assignment rates below 90%.</div>`);
+            if (multiBranchData && multiBranchData.multiBranchUsers > 0) {
+                growthOpportunities.push(`<div class="alert alert-light border-success"><i class="bi bi-buildings"></i> <strong>Cross-Branch Promotions:</strong> ${multiBranchData.multiBranchUsers} users already visit multiple branches - expand this segment.</div>`);
             }
 
             growthOpportunities.push(`<div class="alert alert-light border-warning"><i class="bi bi-people"></i> <strong>User Retention:</strong> Focus on converting occasional users (${data.userLoyaltySegments.occasionalUsers}) to regular users.</div>`);
 
-            // Populate the sections
-            document.getElementById('keyInsights').innerHTML = insights.join('');
-            document.getElementById('recommendations').innerHTML = recommendations.join('');
-            document.getElementById('growthOpportunities').innerHTML = growthOpportunities.join('');
+            return { keyInsights: insights, recommendations, growthOpportunities };
         }
 
         function refreshAllAnalytics() {
@@ -761,6 +912,12 @@
             const originalText = refreshBtn.innerHTML;
             refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Refreshing...';
             refreshBtn.disabled = true;
+
+            // Reset lazy loading flags
+            utilizationLoaded = false;
+            trendsLoaded = false;
+            branchLoaded = false;
+            insightsLoaded = false;
 
             // Reload the page to get fresh data
             setTimeout(() => {
