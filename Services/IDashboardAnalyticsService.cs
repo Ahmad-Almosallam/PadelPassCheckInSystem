@@ -74,11 +74,6 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
             // Advanced analytics
             UserLoyaltySegments = await GetUserLoyaltySegmentsAsync(allUsers.AsQueryable()),
             DropoffAnalysis = await GetDropoffAnalysisAsync(allUsers.AsQueryable()),
-            SubscriptionUtilization = await GetSubscriptionUtilizationAsync(),
-            BranchPerformance = await GetBranchPerformanceAsync(),
-            MultiBranchUsage = await GetMultiBranchUsageAsync(),
-            CheckInTrends = await GetCheckInTrendsAsync(),
-            BranchComparison = await GetBranchComparisonAsync()
         };
     }
 
@@ -186,78 +181,135 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
     }
 
 
+    // public async Task<SubscriptionUtilizationViewModel> GetSubscriptionUtilizationAsync()
+    // {
+    //     var utilizationData = new List<UserUtilizationData>();
+    //     var todayKsa = KSADateTimeExtensions.GetKSANow()
+    //         .Date;
+    //     
+    //     var allUsers = await _context.EndUsers
+    //         .Where(SubscriptionPredicates.IsActiveOnDate(todayKsa))
+    //         .ToListAsync();
+    //
+    //
+    //     foreach (var user in allUsers)
+    //     {
+    //         var subscriptionStart = user.SubscriptionStartDate;
+    //         var subscriptionEnd = user.SubscriptionEndDate;
+    //
+    //         var totalDays = (subscriptionEnd - subscriptionStart).Days + 1;
+    //
+    //         
+    //         var checkInDaysInPeriod = await _context.CheckIns
+    //             .Where(c => c.EndUserId == user.Id)
+    //             .Where(c => c.CheckInDateTime >= subscriptionStart &&
+    //                         c.CheckInDateTime <= subscriptionEnd)
+    //             .Select(c => c.CheckInDateTime)
+    //             .Distinct()
+    //             .CountAsync();
+    //
+    //         var utilizationPercentage = totalDays > 0 ? (double)checkInDaysInPeriod / totalDays * 100 : 0;
+    //
+    //         utilizationData.Add(new UserUtilizationData
+    //         {
+    //             UserId = user.Id,
+    //             UserName = user.Name,
+    //             TotalDays = totalDays,
+    //             UsedDays = checkInDaysInPeriod,
+    //             UtilizationPercentage = utilizationPercentage
+    //         });
+    //     }
+    //
+    //     var averageUtilization = utilizationData.Any() ? utilizationData.Average(u => u.UtilizationPercentage) : 0;
+    //     var highUtilizers = utilizationData.Count(u => u.UtilizationPercentage >= 80);
+    //     var lowUtilizers = utilizationData.Count(u => u.UtilizationPercentage < 20);
+    //
+    //     return new SubscriptionUtilizationViewModel
+    //     {
+    //         AverageUtilization = averageUtilization,
+    //         HighUtilizers = highUtilizers,
+    //         LowUtilizers = lowUtilizers,
+    //         TotalUsers = utilizationData.Count,
+    //         UserUtilizations = utilizationData.OrderByDescending(u => u.UtilizationPercentage)
+    //             .Take(10)
+    //             .ToList()
+    //     };
+    // }
+
     public async Task<SubscriptionUtilizationViewModel> GetSubscriptionUtilizationAsync()
     {
-        return new SubscriptionUtilizationViewModel();
-        var allUsers = await _context.EndUsers
-            .Where(u => !u.IsStopped)
-            .ToListAsync();
-
-        var utilizationData = new List<UserUtilizationData>();
-        var todayKSA = KSADateTimeExtensions.GetKSANow()
+        var todayKsa = KSADateTimeExtensions.GetKSANow()
             .Date;
 
-        foreach (var user in allUsers)
-        {
-            var subscriptionStartKSA = user.SubscriptionStartDate.ToKSATime()
-                .Date;
-            var subscriptionEndKSA = user.SubscriptionEndDate.ToKSATime()
-                .Date;
+        var activeUsersQuery =
+            _context.EndUsers
+                .Where(SubscriptionPredicates.IsActiveOnDate(todayKsa))
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Name,
+                    u.SubscriptionStartDate,
+                    u.SubscriptionEndDate
+                })
+                .AsNoTracking();
 
-            // Calculate actual subscription period
-            var effectiveStartDate = subscriptionStartKSA > todayKSA ? todayKSA : subscriptionStartKSA;
-            var effectiveEndDate = subscriptionEndKSA > todayKSA ? todayKSA : subscriptionEndKSA;
-
-            if (effectiveEndDate < effectiveStartDate) continue;
-
-            var totalDays = (effectiveEndDate - effectiveStartDate).Days + 1;
-
-            // Get check-ins within subscription period
-            var checkInDays = await _context.CheckIns
-                .Where(c => c.EndUserId == user.Id)
-                .ToListAsync();
-
-            var checkInDaysInPeriod = checkInDays
-                .Where(c => c.CheckInDateTime.ToKSATime()
-                                .Date >= effectiveStartDate &&
-                            c.CheckInDateTime.ToKSATime()
-                                .Date <= effectiveEndDate)
-                .Select(c => c.CheckInDateTime.ToKSATime()
-                    .Date)
-                .Distinct()
-                .Count();
-
-            var utilizationPercentage = totalDays > 0 ? (double)checkInDaysInPeriod / totalDays * 100 : 0;
-
-            utilizationData.Add(new UserUtilizationData
+        // 1) Project to (UserId, DayKey) for all check-ins inside each user's sub period.
+        // DayKey is an int = number of days since a fixed epoch, fully translatable.
+        var userDayKeysQuery =
+            from u in activeUsersQuery
+            join ci in _context.CheckIns.AsNoTracking() on u.Id equals ci.EndUserId
+            // where ci.CheckInDateTime >= u.SubscriptionStartDate
+            //       && ci.CheckInDateTime <= u.SubscriptionEndDate
+            select new
             {
-                UserId = user.Id,
-                UserName = user.Name,
-                TotalDays = totalDays,
-                UsedDays = checkInDaysInPeriod,
-                UtilizationPercentage = utilizationPercentage
-            });
-        }
+                u.Id,
+            };
 
-        var averageUtilization = utilizationData.Any() ? utilizationData.Average(u => u.UtilizationPercentage) : 0;
-        var highUtilizers = utilizationData.Count(u => u.UtilizationPercentage >= 80);
-        var lowUtilizers = utilizationData.Count(u => u.UtilizationPercentage < 20);
+        // 2) Distinct days per user, then count per user (no nested GroupBy over groups).
+        var usedDaysPerUserDict = await userDayKeysQuery
+            .GroupBy(x => x.Id)
+            .Select(g => new { UserId = g.Key, UsedDays = g.Count() })
+            .ToDictionaryAsync(x => x.UserId, x => x.UsedDays);
+
+        var users = await activeUsersQuery.ToListAsync();
+
+        var utilizationData = users.Select(u =>
+            {
+                var start = u.SubscriptionStartDate;
+                var end = u.SubscriptionEndDate;
+                var totalDays = end >= start ? ((DateTime.UtcNow - start)).Days : 0;
+
+                usedDaysPerUserDict.TryGetValue(u.Id, out var usedDays);
+
+                var pct = totalDays > 0 ? (double)usedDays / totalDays * 100.0 : 0.0;
+
+                return new UserUtilizationData
+                {
+                    UserId = u.Id,
+                    UserName = u.Name,
+                    TotalDays = totalDays,
+                    UsedDays = usedDays,
+                    UtilizationPercentage = pct
+                };
+            })
+            .ToList();
 
         return new SubscriptionUtilizationViewModel
         {
-            AverageUtilization = averageUtilization,
-            HighUtilizers = highUtilizers,
-            LowUtilizers = lowUtilizers,
+            AverageUtilization = utilizationData.Any() ? utilizationData.Average(u => u.UtilizationPercentage) : 0.0,
+            HighUtilizers = utilizationData.Count(u => u.UtilizationPercentage >= 80.0),
+            LowUtilizers = utilizationData.Count(u => u.UtilizationPercentage < 20.0),
             TotalUsers = utilizationData.Count,
-            UserUtilizations = utilizationData.OrderByDescending(u => u.UtilizationPercentage)
+            UserUtilizations = utilizationData
+                .OrderByDescending(u => u.UtilizationPercentage)
                 .Take(10)
                 .ToList()
         };
     }
 
+
     public async Task<BranchPerformanceViewModel> GetBranchPerformanceAsync()
     {
-        return new BranchPerformanceViewModel();
         var last30DaysKSA = KSADateTimeExtensions.GetKSANow()
             .Date.AddDays(-30);
         var last30DaysUtcStart = last30DaysKSA.GetStartOfKSADayInUTC();
@@ -303,14 +355,9 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
 
     public async Task<MultiBranchUsageViewModel> GetMultiBranchUsageAsync()
     {
-        return new MultiBranchUsageViewModel();
         // First, get all check-ins with user and branch data
-        var checkInsData = await _context.CheckIns
+        var userBranchUsage = await _context.CheckIns
             .Select(c => new { c.EndUserId, c.BranchId })
-            .ToListAsync();
-
-        // Group by user and count distinct branches (in-memory)
-        var userBranchUsage = checkInsData
             .GroupBy(c => c.EndUserId)
             .Select(g => new
             {
@@ -322,7 +369,22 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
                     .Distinct()
                     .ToList()
             })
-            .ToList();
+            .ToListAsync();
+
+        // Group by user and count distinct branches (in-memory)
+        // var userBranchUsage = checkInsData
+        //     .GroupBy(c => c.EndUserId)
+        //     .Select(g => new
+        //     {
+        //         UserId = g.Key,
+        //         BranchCount = g.Select(c => c.BranchId)
+        //             .Distinct()
+        //             .Count(),
+        //         Branches = g.Select(c => c.BranchId)
+        //             .Distinct()
+        //             .ToList()
+        //     })
+        //     .ToList();
 
         var singleBranchUsers = userBranchUsage.Count(u => u.BranchCount == 1);
         var multiBranchUsers = userBranchUsage.Count(u => u.BranchCount > 1);
@@ -344,11 +406,7 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
                 .Where(u => multiBranchUserIds.Contains(u.Id))
                 .Select(u => new { u.Id, u.Name })
                 .ToListAsync();
-
-            var userCheckInCounts = checkInsData
-                .Where(c => multiBranchUserIds.Contains(c.EndUserId))
-                .GroupBy(c => c.EndUserId)
-                .ToDictionary(g => g.Key, g => g.Count());
+            
 
             // Combine the data
             topMultiBranchUsers = userDetails
@@ -358,10 +416,8 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
                     UserName = u.Name,
                     BranchCount = userBranchUsage.First(ub => ub.UserId == u.Id)
                         .BranchCount,
-                    TotalCheckIns = userCheckInCounts.GetValueOrDefault(u.Id, 0)
                 })
                 .OrderByDescending(u => u.BranchCount)
-                .ThenByDescending(u => u.TotalCheckIns)
                 .Take(10)
                 .ToList();
         }
@@ -378,7 +434,6 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
 
     public async Task<CheckInTrendsViewModel> GetCheckInTrendsAsync()
     {
-        return new CheckInTrendsViewModel();
         var todayKSA = KSADateTimeExtensions.GetKSANow()
             .Date;
 
