@@ -32,7 +32,8 @@ namespace PadelPassCheckInSystem.Controllers
             ICheckInService checkInService,
             IPlaytomicSyncService playtomicSyncService,
             IPlaytomicIntegrationService playtomicIntegrationService,
-            ILogger<AdminController> logger, IDashboardAnalyticsService dashboardAnalyticsService)
+            ILogger<AdminController> logger,
+            IDashboardAnalyticsService dashboardAnalyticsService)
         {
             _context = context;
             _userManager = userManager;
@@ -53,7 +54,7 @@ namespace PadelPassCheckInSystem.Controllers
             var analytics = await _dashboardAnalyticsService.GetDashboardAnalyticsAsync();
             return View(analytics);
         }
-        
+
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetUserLoyaltySegments()
@@ -99,14 +100,6 @@ namespace PadelPassCheckInSystem.Controllers
         public async Task<IActionResult> GetCheckInTrends()
         {
             var data = await _dashboardAnalyticsService.GetCheckInTrendsAsync();
-            return Json(new { success = true, data });
-        }
-
-        [HttpGet]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetBranchComparison()
-        {
-            var data = await _dashboardAnalyticsService.GetBranchComparisonAsync();
             return Json(new { success = true, data });
         }
 
@@ -340,7 +333,8 @@ namespace PadelPassCheckInSystem.Controllers
             }
 
             // Compute statistics via SQL (before pagination)
-            var todayKsaDate = KSADateTimeExtensions.GetKSANow().Date;
+            var todayKsaDate = KSADateTimeExtensions.GetKSANow()
+                .Date;
             var startOfKsaDayUtc = todayKsaDate.GetStartOfKSADayInUTC();
             var endOfKsaDayUtc = todayKsaDate.GetEndOfKSADayInUTC();
 
@@ -1287,7 +1281,8 @@ namespace PadelPassCheckInSystem.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> SavePlaytomicIntegration([FromBody] PlaytomicIntegrationViewModel model)
+        public async Task<IActionResult> SavePlaytomicIntegration(
+            [FromBody] PlaytomicIntegrationViewModel model)
         {
             if (!ModelState.IsValid)
             {

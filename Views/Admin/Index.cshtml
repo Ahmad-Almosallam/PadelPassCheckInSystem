@@ -319,14 +319,12 @@
         function loadBranchData() {
             if (branchLoaded) return;
             
-            Promise.all([
-                fetch('@Url.Action("GetBranchPerformance")').then(r => r.json()),
-                fetch('@Url.Action("GetBranchComparison")').then(r => r.json())
-            ]).then(([perfResponse, compResponse]) => {
-                if (perfResponse.success && compResponse.success) {
+            
+                fetch('@Url.Action("GetBranchPerformance")').then(r => r.json())
+            .then((perfResponse) => {
+                if (perfResponse.success ) {
                     branchData = {
-                        performance: perfResponse.data,
-                        comparison: compResponse.data
+                        performance: perfResponse.data
                     };
                     renderBranchTab();
                     branchLoaded = true;
@@ -496,7 +494,7 @@
             content.innerHTML = `
                 <div class="row">
                     <!-- Branch Performance -->
-                    <div class="col-md-7">
+                    <div class="col-md-12">
                         <div class="card h-100">
                             <div class="card-header">
                                 <h5 class="mb-0"><i class="bi bi-building"></i> Branch Performance</h5>
@@ -534,80 +532,8 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Branch Comparison Chart -->
-                    <div class="col-md-5">
-                        <div class="card h-100">
-                            <div class="card-header">
-                                <h5 class="mb-0"><i class="bi bi-bar-chart-line"></i> Branch Comparison</h5>
-                                <small class="text-muted">Performance scores</small>
-                            </div>
-                            <div class="card-body">
-                                <canvas id="branchComparisonChart" width="400" height="300"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Detailed Branch Comparison -->
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-list-check"></i> Detailed Branch Metrics</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Branch</th>
-                                        <th>Check-in Score</th>
-                                        <th>User Engagement</th>
-                                        <th>Court Assignment Rate</th>
-                                        <th>Peak Day</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${branchData.comparison.branchComparisons.map(branch => `
-                                        <tr>
-                                            <td><strong>${branch.branchName}</strong></td>
-                                            <td>
-                                                <div class="progress" style="height: 20px; width: 100px;">
-                                                    <div class="progress-bar bg-primary" style="width: ${branch.checkInScore}%">
-                                                        ${branch.checkInScore.toFixed(0)}%
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="progress" style="height: 20px; width: 100px;">
-                                                    <div class="progress-bar bg-success" style="width: ${branch.userEngagementScore}%">
-                                                        ${branch.userEngagementScore.toFixed(0)}%
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-${branch.courtAssignmentRate >= 90 ? 'success' : branch.courtAssignmentRate >= 70 ? 'warning' : 'danger'}">
-                                                    ${branch.courtAssignmentRate.toFixed(1)}%
-                                                </span>
-                                            </td>
-                                            <td>${branch.peakDayOfWeek}</td>
-                                            <td>
-                                                ${branch.last30DaysCheckIns > 0 
-                                                    ? '<span class="badge bg-success">Active</span>' 
-                                                    : '<span class="badge bg-warning">Low Activity</span>'
-                                                }
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
                 </div>
             `;
-            
-            // Initialize branch comparison chart
-            initializeBranchComparisonChart();
         }
 
         function renderInsightsTab() {
@@ -783,46 +709,6 @@
             trendsChart.data.labels = data.map(d => d.label);
             trendsChart.data.datasets[0].data = data.map(d => d.checkIns);
             trendsChart.update();
-        }
-
-        function initializeBranchComparisonChart() {
-            const ctx = document.getElementById('branchComparisonChart').getContext('2d');
-            const data = branchData.comparison.branchComparisons;
-            
-            new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: ['Check-in Score', 'User Engagement', 'Court Assignment Rate'],
-                    datasets: data.slice(0, 4).map((branch, index) => ({
-                        label: branch.branchName,
-                        data: [branch.checkInScore, branch.userEngagementScore, branch.courtAssignmentRate],
-                        borderColor: getChartColor(index),
-                        backgroundColor: getChartColor(index, 0.2),
-                        pointBackgroundColor: getChartColor(index),
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: getChartColor(index)
-                    }))
-                },
-                options: {
-                    responsive: false,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            beginAtZero: true,
-                            max: 100,
-                            ticks: {
-                                stepSize: 20
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
         }
 
         function getChartColor(index, alpha = 1) {

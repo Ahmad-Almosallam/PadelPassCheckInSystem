@@ -20,7 +20,6 @@ public interface IDashboardAnalyticsService
     Task<BranchPerformanceViewModel> GetBranchPerformanceAsync();
     Task<MultiBranchUsageViewModel> GetMultiBranchUsageAsync();
     Task<CheckInTrendsViewModel> GetCheckInTrendsAsync();
-    Task<BranchComparisonViewModel> GetBranchComparisonAsync();
 }
 
 public class DashboardAnalyticsService : IDashboardAnalyticsService
@@ -76,6 +75,8 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
             DropoffAnalysis = await GetDropoffAnalysisAsync(allUsers.AsQueryable()),
         };
     }
+
+    #region User Loyalty
 
     public async Task<UserLoyaltySegmentsViewModel> GetUserLoyaltySegmentsAsync(
         IQueryable<EndUser> allUsers)
@@ -180,61 +181,9 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         };
     }
 
+    #endregion
 
-    // public async Task<SubscriptionUtilizationViewModel> GetSubscriptionUtilizationAsync()
-    // {
-    //     var utilizationData = new List<UserUtilizationData>();
-    //     var todayKsa = KSADateTimeExtensions.GetKSANow()
-    //         .Date;
-    //     
-    //     var allUsers = await _context.EndUsers
-    //         .Where(SubscriptionPredicates.IsActiveOnDate(todayKsa))
-    //         .ToListAsync();
-    //
-    //
-    //     foreach (var user in allUsers)
-    //     {
-    //         var subscriptionStart = user.SubscriptionStartDate;
-    //         var subscriptionEnd = user.SubscriptionEndDate;
-    //
-    //         var totalDays = (subscriptionEnd - subscriptionStart).Days + 1;
-    //
-    //         
-    //         var checkInDaysInPeriod = await _context.CheckIns
-    //             .Where(c => c.EndUserId == user.Id)
-    //             .Where(c => c.CheckInDateTime >= subscriptionStart &&
-    //                         c.CheckInDateTime <= subscriptionEnd)
-    //             .Select(c => c.CheckInDateTime)
-    //             .Distinct()
-    //             .CountAsync();
-    //
-    //         var utilizationPercentage = totalDays > 0 ? (double)checkInDaysInPeriod / totalDays * 100 : 0;
-    //
-    //         utilizationData.Add(new UserUtilizationData
-    //         {
-    //             UserId = user.Id,
-    //             UserName = user.Name,
-    //             TotalDays = totalDays,
-    //             UsedDays = checkInDaysInPeriod,
-    //             UtilizationPercentage = utilizationPercentage
-    //         });
-    //     }
-    //
-    //     var averageUtilization = utilizationData.Any() ? utilizationData.Average(u => u.UtilizationPercentage) : 0;
-    //     var highUtilizers = utilizationData.Count(u => u.UtilizationPercentage >= 80);
-    //     var lowUtilizers = utilizationData.Count(u => u.UtilizationPercentage < 20);
-    //
-    //     return new SubscriptionUtilizationViewModel
-    //     {
-    //         AverageUtilization = averageUtilization,
-    //         HighUtilizers = highUtilizers,
-    //         LowUtilizers = lowUtilizers,
-    //         TotalUsers = utilizationData.Count,
-    //         UserUtilizations = utilizationData.OrderByDescending(u => u.UtilizationPercentage)
-    //             .Take(10)
-    //             .ToList()
-    //     };
-    // }
+    #region Utilization
 
     public async Task<SubscriptionUtilizationViewModel> GetSubscriptionUtilizationAsync()
     {
@@ -307,52 +256,6 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         };
     }
 
-
-    public async Task<BranchPerformanceViewModel> GetBranchPerformanceAsync()
-    {
-        var last30DaysKSA = KSADateTimeExtensions.GetKSANow()
-            .Date.AddDays(-30);
-        var last30DaysUtcStart = last30DaysKSA.GetStartOfKSADayInUTC();
-        var todayUtcEnd = KSADateTimeExtensions.GetKSANow()
-            .Date.GetEndOfKSADayInUTC();
-
-        var branchStats = await _context.Branches
-            .Where(b => b.IsActive)
-            .Select(b => new BranchPerformanceData
-            {
-                BranchId = b.Id,
-                BranchName = b.Name,
-                TotalCheckIns = _context.CheckIns.Count(c => c.BranchId == b.Id),
-                CheckInsLast30Days = _context.CheckIns.Count(c => c.BranchId == b.Id &&
-                                                                  c.CheckInDateTime >= last30DaysUtcStart &&
-                                                                  c.CheckInDateTime <= todayUtcEnd),
-                TodayCheckIns = _context.CheckIns.Count(c => c.BranchId == b.Id &&
-                                                             c.CheckInDateTime >= KSADateTimeExtensions.GetKSANow()
-                                                                 .Date
-                                                                 .GetStartOfKSADayInUTC() &&
-                                                             c.CheckInDateTime <= KSADateTimeExtensions.GetKSANow()
-                                                                 .Date
-                                                                 .GetEndOfKSADayInUTC()),
-                UniqueUsersLast30Days = _context.CheckIns
-                    .Where(c => c.BranchId == b.Id && c.CheckInDateTime >= last30DaysUtcStart &&
-                                c.CheckInDateTime <= todayUtcEnd)
-                    .Select(c => c.EndUserId)
-                    .Distinct()
-                    .Count(),
-                AvgCheckInsPerDay = _context.CheckIns
-                    .Where(c => c.BranchId == b.Id && c.CheckInDateTime >= last30DaysUtcStart &&
-                                c.CheckInDateTime <= todayUtcEnd)
-                    .Count() / 30.0
-            })
-            .ToListAsync();
-
-        return new BranchPerformanceViewModel
-        {
-            BranchPerformances = branchStats,
-            AnalysisPeriod = "Last 30 days"
-        };
-    }
-
     public async Task<MultiBranchUsageViewModel> GetMultiBranchUsageAsync()
     {
         // First, get all check-ins with user and branch data
@@ -371,20 +274,6 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
             })
             .ToListAsync();
 
-        // Group by user and count distinct branches (in-memory)
-        // var userBranchUsage = checkInsData
-        //     .GroupBy(c => c.EndUserId)
-        //     .Select(g => new
-        //     {
-        //         UserId = g.Key,
-        //         BranchCount = g.Select(c => c.BranchId)
-        //             .Distinct()
-        //             .Count(),
-        //         Branches = g.Select(c => c.BranchId)
-        //             .Distinct()
-        //             .ToList()
-        //     })
-        //     .ToList();
 
         var singleBranchUsers = userBranchUsage.Count(u => u.BranchCount == 1);
         var multiBranchUsers = userBranchUsage.Count(u => u.BranchCount > 1);
@@ -432,6 +321,10 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         };
     }
 
+    #endregion
+
+    #region Trends
+
     public async Task<CheckInTrendsViewModel> GetCheckInTrendsAsync()
     {
         var last7 = await GetCheckInTrendDataDaily(7);
@@ -451,20 +344,24 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         int days)
     {
         var ksaToday = KSADateTimeExtensions.GetKSANow();
-        var startUTC = ksaToday.AddDays(-days).GetStartOfKSADayInUTC();
-        var endUTC = ksaToday.AddDays(1).GetEndOfKSADayInUTC();
+        var startUTC = ksaToday.AddDays(-days)
+            .GetStartOfKSADayInUTC();
+        var endUTC = ksaToday.AddDays(1)
+            .GetEndOfKSADayInUTC();
         var result = new List<CheckInTrendData>();
 
         var checkInsGrouped = await _context.CheckIns
             .AsNoTracking()
             .Where(ci => ci.CheckInDateTime >= startUTC && ci.CheckInDateTime < endUTC)
             .Select(x => x.CheckInDateTime)
-            .GroupBy(x => x.AddHours(3).Date)
+            .GroupBy(x => x.AddHours(3)
+                .Date)
             .Select(x => new
             {
                 x.Key,
                 Count = x.Count()
-            }).ToListAsync();
+            })
+            .ToListAsync();
 
         foreach (var checkIn in checkInsGrouped)
         {
@@ -475,16 +372,19 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
                 Label = checkIn.Key.ToString("MMM dd")
             });
         }
-        
+
         return result;
     }
 
 // ---------- WEEKLY (KSA week starting Sunday) ----------
-    private async Task<List<CheckInTrendData>> GetCheckInTrendDataWeekly(int days)
+    private async Task<List<CheckInTrendData>> GetCheckInTrendDataWeekly(
+        int days)
     {
         var ksaToday = KSADateTimeExtensions.GetKSANow();
-        var startUTC = ksaToday.AddDays(-days).GetStartOfKSADayInUTC();
-        var endUTC   = ksaToday.AddDays(1).GetEndOfKSADayInUTC();
+        var startUTC = ksaToday.AddDays(-days)
+            .GetStartOfKSADayInUTC();
+        var endUTC = ksaToday.AddDays(1)
+            .GetEndOfKSADayInUTC();
 
         var baseKsaMonday = new DateTime(2000, 1, 2); // Sunday
 
@@ -495,142 +395,88 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
             .GroupBy(local => EF.Functions.DateDiffWeek(baseKsaMonday, local))
             .Select(g => new
             {
-                WeekIndex    = g.Key,
+                WeekIndex = g.Key,
                 WeekStartKSA = baseKsaMonday.AddDays(g.Key * 7),
-                Count        = g.Count()
+                Count = g.Count()
             })
             .OrderBy(x => x.WeekStartKSA)
             .ToListAsync();
 
         return weekly.Select(w => new CheckInTrendData
-        {
-            Date   = w.WeekStartKSA,
-            CheckIns = w.Count,
-            Label = $"{w.WeekStartKSA:MMM dd} - {w.WeekStartKSA.AddDays(6):MMM dd}"
-        }).ToList();
+            {
+                Date = w.WeekStartKSA,
+                CheckIns = w.Count,
+                Label = $"{w.WeekStartKSA:MMM dd} - {w.WeekStartKSA.AddDays(6):MMM dd}"
+            })
+            .ToList();
     }
 
+    #endregion
 
+    #region Branch Analytics
 
-    public async Task<BranchComparisonViewModel> GetBranchComparisonAsync()
+    public async Task<BranchPerformanceViewModel> GetBranchPerformanceAsync()
     {
-        return new BranchComparisonViewModel();
-        var last30DaysKSA = KSADateTimeExtensions.GetKSANow()
-            .Date.AddDays(-30);
+        // Pre-calculate all date ranges once
+        var ksaNow = KSADateTimeExtensions.GetKSANow()
+            .Date;
+        var last30DaysKSA = ksaNow.AddDays(-30);
         var last30DaysUtcStart = last30DaysKSA.GetStartOfKSADayInUTC();
-        var todayUtcEnd = KSADateTimeExtensions.GetKSANow()
-            .Date.GetEndOfKSADayInUTC();
+        var todayUtcStart = ksaNow.GetStartOfKSADayInUTC();
+        var todayUtcEnd = ksaNow.GetEndOfKSADayInUTC();
 
-        // Get branch basic data first
-        var branches = await _context.Branches
+        // Single query to get all required data with proper grouping
+        var branchStats = await _context.Branches
             .Where(b => b.IsActive)
-            .Select(b => new { b.Id, b.Name })
-            .ToListAsync();
-
-        // Get all check-ins for the last 30 days
-        var checkInsLast30Days = await _context.CheckIns
-            .Where(c => c.CheckInDateTime >= last30DaysUtcStart && c.CheckInDateTime <= todayUtcEnd)
-            .Select(c => new tempo
+            .GroupJoin(
+                _context.CheckIns,
+                branch => branch.Id,
+                checkIn => checkIn.BranchId,
+                (
+                    branch,
+                    checkIns) => new { Branch = branch, CheckIns = checkIns }
+            )
+            .Select(bg => new BranchPerformanceData
             {
-                BranchId = c.BranchId,
-                EndUserId = c.EndUserId,
-                CheckInDateTime = c.CheckInDateTime,
-                CourtName = c.CourtName
+                BranchId = bg.Branch.Id,
+                BranchName = bg.Branch.Name,
+
+                // Total check-ins for this branch
+                TotalCheckIns = bg.CheckIns.Count(),
+
+                // Check-ins in the last 30 days
+                CheckInsLast30Days = bg.CheckIns
+                    .Count(c => c.CheckInDateTime >= last30DaysUtcStart &&
+                                c.CheckInDateTime <= todayUtcEnd),
+
+                // Today's check-ins
+                TodayCheckIns = bg.CheckIns
+                    .Count(c => c.CheckInDateTime >= todayUtcStart &&
+                                c.CheckInDateTime <= todayUtcEnd),
+
+                // Unique users in the last 30 days
+                UniqueUsersLast30Days = bg.CheckIns
+                    .Where(c => c.CheckInDateTime >= last30DaysUtcStart &&
+                                c.CheckInDateTime <= todayUtcEnd)
+                    .Select(c => c.EndUserId)
+                    .Distinct()
+                    .Count(),
+
+                // Average check-ins per day (last 30 days)
+                AvgCheckInsPerDay = bg.CheckIns
+                    .Count(c => c.CheckInDateTime >= last30DaysUtcStart &&
+                                c.CheckInDateTime <= todayUtcEnd) / 30.0
             })
             .ToListAsync();
 
-        // Get all check-ins for total counts
-        var allCheckIns = await _context.CheckIns
-            .Select(c => new { c.BranchId, c.EndUserId, c.CourtName })
-            .ToListAsync();
-
-        var branchComparisons = new List<BranchComparisonData>();
-
-        foreach (var branch in branches)
+        return new BranchPerformanceViewModel
         {
-            // Filter check-ins for this branch
-            var branchCheckInsLast30Days = checkInsLast30Days.Where(c => c.BranchId == branch.Id)
-                .ToList();
-            var branchAllCheckIns = allCheckIns.Where(c => c.BranchId == branch.Id)
-                .ToList();
-
-            // Calculate metrics
-            var totalCheckIns = branchAllCheckIns.Count;
-            var last30DaysCheckIns = branchCheckInsLast30Days.Count;
-            var uniqueUsers = branchAllCheckIns.Select(c => c.EndUserId)
-                .Distinct()
-                .Count();
-            var uniqueUsersLast30Days = branchCheckInsLast30Days.Select(c => c.EndUserId)
-                .Distinct()
-                .Count();
-            var courtAssignments = branchAllCheckIns.Count(c => !string.IsNullOrEmpty(c.CourtName));
-            var pendingAssignments = branchAllCheckIns.Count(c => string.IsNullOrEmpty(c.CourtName));
-            var avgDailyCheckIns = last30DaysCheckIns / 30.0;
-
-            // Calculate peak day of week
-            var peakDayOfWeek = GetPeakDayOfWeekForBranch(branchCheckInsLast30Days);
-
-            branchComparisons.Add(new BranchComparisonData
-            {
-                BranchId = branch.Id,
-                BranchName = branch.Name,
-                TotalCheckIns = totalCheckIns,
-                Last30DaysCheckIns = last30DaysCheckIns,
-                UniqueUsers = uniqueUsers,
-                UniqueUsersLast30Days = uniqueUsersLast30Days,
-                CourtAssignments = courtAssignments,
-                PendingAssignments = pendingAssignments,
-                AvgDailyCheckIns = avgDailyCheckIns,
-                PeakDayOfWeek = peakDayOfWeek
-            });
-        }
-
-        // Calculate relative performance scores
-        if (branchComparisons.Any())
-        {
-            var maxCheckIns = branchComparisons.Max(b => b.Last30DaysCheckIns);
-            var maxUsers = branchComparisons.Max(b => b.UniqueUsersLast30Days);
-
-            foreach (var branch in branchComparisons)
-            {
-                branch.CheckInScore = maxCheckIns > 0 ? (branch.Last30DaysCheckIns / (double)maxCheckIns) * 100 : 0;
-                branch.UserEngagementScore = maxUsers > 0 ? (branch.UniqueUsersLast30Days / (double)maxUsers) * 100 : 0;
-                branch.CourtAssignmentRate = branch.TotalCheckIns > 0
-                    ? (branch.CourtAssignments / (double)branch.TotalCheckIns) * 100
-                    : 0;
-            }
-        }
-
-        return new BranchComparisonViewModel
-        {
-            BranchComparisons = branchComparisons.OrderByDescending(b => b.Last30DaysCheckIns)
-                .ToList(),
-            ComparisonPeriod = "Last 30 days"
+            BranchPerformances = branchStats,
+            AnalysisPeriod = "Last 30 days"
         };
     }
 
-// Make this method static to avoid the memory leak warning
-    private static string GetPeakDayOfWeekForBranch(
-        List<tempo> branchCheckIns)
-    {
-        try
-        {
-            if (!branchCheckIns.Any()) return "N/A";
-
-            var dayGroups = branchCheckIns
-                .GroupBy(c => ((DateTime)c.CheckInDateTime).ToKSATime()
-                    .DayOfWeek)
-                .Select(g => new { DayOfWeek = g.Key, Count = g.Count() })
-                .OrderByDescending(g => g.Count)
-                .FirstOrDefault();
-
-            return dayGroups?.DayOfWeek.ToString() ?? "N/A";
-        }
-        catch
-        {
-            return "N/A";
-        }
-    }
+    #endregion
 }
 
 public class tempo
