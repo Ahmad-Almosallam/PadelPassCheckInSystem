@@ -108,7 +108,6 @@ public class CheckInTrendData
 {
     public DateTime Date { get; set; }
     public int CheckIns { get; set; }
-    public int UniqueUsers { get; set; }
     public string Label { get; set; }
 }
 

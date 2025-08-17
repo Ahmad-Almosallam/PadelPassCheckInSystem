@@ -738,12 +738,6 @@
                         backgroundColor: 'rgba(13, 110, 253, 0.1)',
                         tension: 0.4,
                         fill: true
-                    }, {
-                        label: 'Unique Users',
-                        data: data.map(d => d.uniqueUsers),
-                        borderColor: '#198754',
-                        backgroundColor: 'rgba(25, 135, 84, 0.1)',
-                        tension: 0.4
                     }]
                 },
                 options: {
@@ -788,7 +782,6 @@
             
             trendsChart.data.labels = data.map(d => d.label);
             trendsChart.data.datasets[0].data = data.map(d => d.checkIns);
-            trendsChart.data.datasets[1].data = data.map(d => d.uniqueUsers);
             trendsChart.update();
         }
 

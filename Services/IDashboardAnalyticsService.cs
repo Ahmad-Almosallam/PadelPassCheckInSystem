@@ -406,7 +406,7 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
                 .Where(u => multiBranchUserIds.Contains(u.Id))
                 .Select(u => new { u.Id, u.Name })
                 .ToListAsync();
-            
+
 
             // Combine the data
             topMultiBranchUsers = userDetails
@@ -434,103 +434,83 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
 
     public async Task<CheckInTrendsViewModel> GetCheckInTrendsAsync()
     {
-        var todayKSA = KSADateTimeExtensions.GetKSANow()
-            .Date;
-
-        // 7-day trend
-        var last7Days = await GetCheckInTrendData(7);
-
-        // 30-day trend
-        var last30Days = await GetCheckInTrendData(30);
-
-        // 90-day trend (weekly aggregation)
-        var last90Days = await GetCheckInTrendDataWeekly(90);
+        var last7 = await GetCheckInTrendDataDaily(7);
+        var last30 = await GetCheckInTrendDataDaily(30);
+        var last90W = await GetCheckInTrendDataWeekly(90);
 
         return new CheckInTrendsViewModel
         {
-            Last7Days = last7Days,
-            Last30Days = last30Days,
-            Last90Days = last90Days
+            Last7Days = last7,
+            Last30Days = last30,
+            Last90Days = last90W
         };
     }
 
-    private async Task<List<CheckInTrendData>> GetCheckInTrendData(
+// ---------- DAILY ----------
+    private async Task<List<CheckInTrendData>> GetCheckInTrendDataDaily(
         int days)
     {
-        var endDate = KSADateTimeExtensions.GetKSANow()
-            .Date;
-        var startDate = endDate.AddDays(-days);
+        var ksaToday = KSADateTimeExtensions.GetKSANow();
+        var startUTC = ksaToday.AddDays(-days).GetStartOfKSADayInUTC();
+        var endUTC = ksaToday.AddDays(1).GetEndOfKSADayInUTC();
+        var result = new List<CheckInTrendData>();
 
-        var trendData = new List<CheckInTrendData>();
-
-        for (var date = startDate; date <= endDate; date = date.AddDays(1))
-        {
-            var dayStartUtc = date.GetStartOfKSADayInUTC();
-            var dayEndUtc = date.GetEndOfKSADayInUTC();
-
-            var checkIns = await _context.CheckIns
-                .CountAsync(c => c.CheckInDateTime >= dayStartUtc && c.CheckInDateTime <= dayEndUtc);
-
-            var uniqueUsers = await _context.CheckIns
-                .Where(c => c.CheckInDateTime >= dayStartUtc && c.CheckInDateTime <= dayEndUtc)
-                .Select(c => c.EndUserId)
-                .Distinct()
-                .CountAsync();
-
-            trendData.Add(new CheckInTrendData
+        var checkInsGrouped = await _context.CheckIns
+            .AsNoTracking()
+            .Where(ci => ci.CheckInDateTime >= startUTC && ci.CheckInDateTime < endUTC)
+            .Select(x => x.CheckInDateTime)
+            .GroupBy(x => x.AddHours(3).Date)
+            .Select(x => new
             {
-                Date = date,
-                CheckIns = checkIns,
-                UniqueUsers = uniqueUsers,
-                Label = date.ToString("MMM dd")
+                x.Key,
+                Count = x.Count()
+            }).ToListAsync();
+
+        foreach (var checkIn in checkInsGrouped)
+        {
+            result.Add(new CheckInTrendData
+            {
+                Date = checkIn.Key,
+                CheckIns = checkIn.Count,
+                Label = checkIn.Key.ToString("MMM dd")
             });
         }
-
-        return trendData;
+        
+        return result;
     }
 
-    private async Task<List<CheckInTrendData>> GetCheckInTrendDataWeekly(
-        int days)
+// ---------- WEEKLY (KSA week starting Sunday) ----------
+    private async Task<List<CheckInTrendData>> GetCheckInTrendDataWeekly(int days)
     {
-        var endDate = KSADateTimeExtensions.GetKSANow()
-            .Date;
-        var startDate = endDate.AddDays(-days);
+        var ksaToday = KSADateTimeExtensions.GetKSANow();
+        var startUTC = ksaToday.AddDays(-days).GetStartOfKSADayInUTC();
+        var endUTC   = ksaToday.AddDays(1).GetEndOfKSADayInUTC();
 
-        var trendData = new List<CheckInTrendData>();
+        var baseKsaMonday = new DateTime(2000, 1, 2); // Sunday
 
-        // Group by weeks
-        var currentWeekStart = startDate.AddDays(-(int)startDate.DayOfWeek);
-
-        while (currentWeekStart <= endDate)
-        {
-            var weekEnd = currentWeekStart.AddDays(6);
-            if (weekEnd > endDate) weekEnd = endDate;
-
-            var weekStartUtc = currentWeekStart.GetStartOfKSADayInUTC();
-            var weekEndUtc = weekEnd.GetEndOfKSADayInUTC();
-
-            var checkIns = await _context.CheckIns
-                .CountAsync(c => c.CheckInDateTime >= weekStartUtc && c.CheckInDateTime <= weekEndUtc);
-
-            var uniqueUsers = await _context.CheckIns
-                .Where(c => c.CheckInDateTime >= weekStartUtc && c.CheckInDateTime <= weekEndUtc)
-                .Select(c => c.EndUserId)
-                .Distinct()
-                .CountAsync();
-
-            trendData.Add(new CheckInTrendData
+        var weekly = await _context.CheckIns
+            .AsNoTracking()
+            .Where(ci => ci.CheckInDateTime >= startUTC && ci.CheckInDateTime < endUTC)
+            .Select(ci => ci.CheckInDateTime.AddHours(3)) // KSA local time (UTC+3, no DST)
+            .GroupBy(local => EF.Functions.DateDiffWeek(baseKsaMonday, local))
+            .Select(g => new
             {
-                Date = currentWeekStart,
-                CheckIns = checkIns,
-                UniqueUsers = uniqueUsers,
-                Label = $"{currentWeekStart:MMM dd} - {weekEnd:MMM dd}"
-            });
+                WeekIndex    = g.Key,
+                WeekStartKSA = baseKsaMonday.AddDays(g.Key * 7),
+                Count        = g.Count()
+            })
+            .OrderBy(x => x.WeekStartKSA)
+            .ToListAsync();
 
-            currentWeekStart = currentWeekStart.AddDays(7);
-        }
-
-        return trendData;
+        return weekly.Select(w => new CheckInTrendData
+        {
+            Date   = w.WeekStartKSA,
+            CheckIns = w.Count,
+            Label = $"{w.WeekStartKSA:MMM dd} - {w.WeekStartKSA.AddDays(6):MMM dd}"
+        }).ToList();
     }
+
+
 
     public async Task<BranchComparisonViewModel> GetBranchComparisonAsync()
     {
