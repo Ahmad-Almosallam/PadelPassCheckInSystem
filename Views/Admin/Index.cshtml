@@ -116,11 +116,6 @@
                     <i class="bi bi-building"></i> Branch Analytics
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights" type="button" role="tab" onclick="loadInsightsData()">
-                    <i class="bi bi-lightbulb"></i> Insights
-                </button>
-            </li>
         </ul>
     </div>
     <div class="card-body">
@@ -235,18 +230,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Insights Tab - Lazy loaded -->
-            <div class="tab-pane fade" id="insights" role="tabpanel">
-                <div id="insightsContent">
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p class="mt-2">Loading insights...</p>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -261,7 +244,6 @@
         let utilizationLoaded = false;
         let trendsLoaded = false;
         let branchLoaded = false;
-        let insightsLoaded = false;
         
         // Store lazy-loaded data
         let utilizationData = null;
@@ -335,14 +317,6 @@
                 console.error('Error loading branch data:', error);
                 showError('branchContent', 'Error loading branch analytics');
             });
-        }
-
-        function loadInsightsData() {
-            if (insightsLoaded) return;
-            
-            // Generate insights based on already loaded data
-            renderInsightsTab();
-            insightsLoaded = true;
         }
 
         // Rendering functions
@@ -536,46 +510,6 @@
             `;
         }
 
-        function renderInsightsTab() {
-            const content = document.getElementById('insightsContent');
-            const insights = generateInsights();
-            
-            content.innerHTML = `
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-success text-white">
-                                <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Key Insights</h5>
-                            </div>
-                            <div class="card-body">
-                                ${insights.keyInsights.join('')}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="card">
-                            <div class="card-header bg-warning text-dark">
-                                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Recommendations</h5>
-                            </div>
-                            <div class="card-body">
-                                ${insights.recommendations.join('')}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mt-4">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="bi bi-graph-up-arrow"></i> Growth Opportunities</h5>
-                    </div>
-                    <div class="card-body">
-                        ${insights.growthOpportunities.join('')}
-                    </div>
-                </div>
-            `;
-        }
-
         function showError(contentId, message) {
             const content = document.getElementById(contentId);
             content.innerHTML = `
@@ -723,68 +657,6 @@
             return colors[index % colors.length];
         }
 
-        function generateInsights() {
-            const data = analyticsData;
-            const insights = [];
-            const recommendations = [];
-            const growthOpportunities = [];
-
-            // Generate insights based on loaded data
-            const totalUsers = data.userLoyaltySegments.totalUsers;
-            const vipPercentage = (data.userLoyaltySegments.vipUsers / totalUsers * 100).toFixed(1);
-            const inactivePercentage = (data.userLoyaltySegments.inactiveUsers / totalUsers * 100).toFixed(1);
-            
-            insights.push(`<div class="alert alert-success"><i class="bi bi-star"></i> <strong>${vipPercentage}%</strong> of users are VIP customers with 15+ visits in the last 30 days.</div>`);
-            
-            if (data.userLoyaltySegments.inactiveUsers > 0) {
-                insights.push(`<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> <strong>${inactivePercentage}%</strong> of users haven't checked in during the last 30 days.</div>`);
-                recommendations.push(`<div class="alert alert-info"><i class="bi bi-lightbulb"></i> Consider a re-engagement campaign for ${data.userLoyaltySegments.inactiveUsers} inactive users.</div>`);
-            }
-
-            // Add utilization insights if loaded
-            if (utilizationData) {
-                const avgUtilization = utilizationData.averageUtilization.toFixed(1);
-                insights.push(`<div class="alert alert-info"><i class="bi bi-speedometer"></i> Average subscription utilization is <strong>${avgUtilization}%</strong>.</div>`);
-                
-                if (utilizationData.averageUtilization < 50) {
-                    recommendations.push(`<div class="alert alert-warning"><i class="bi bi-arrow-up"></i> Low utilization suggests opportunities to increase user engagement.</div>`);
-                }
-            }
-
-            // Add multi-branch insights if loaded
-            if (multiBranchData) {
-                const multiBranchPercentage = (multiBranchData.multiBranchUsers / multiBranchData.totalUsersWithCheckIns * 100).toFixed(1);
-                insights.push(`<div class="alert alert-primary"><i class="bi bi-diagram-3"></i> <strong>${multiBranchPercentage}%</strong> of users visit multiple branches.</div>`);
-            }
-
-            // Add branch performance insights if loaded
-            if (branchData) {
-                const topBranch = branchData.performance.branchPerformances.reduce((prev, current) => 
-                    (prev.checkInsLast30Days > current.checkInsLast30Days) ? prev : current
-                );
-                insights.push(`<div class="alert alert-success"><i class="bi bi-trophy"></i> <strong>${topBranch.branchName}</strong> is the top performing branch with ${topBranch.checkInsLast30Days} check-ins.</div>`);
-                
-                // Find branches with court assignment issues
-                const branchesWithIssues = branchData.comparison.branchComparisons.filter(b => b.courtAssignmentRate < 90);
-                if (branchesWithIssues.length > 0) {
-                    recommendations.push(`<div class="alert alert-danger"><i class="bi bi-exclamation-circle"></i> <strong>Operational Issues:</strong> ${branchesWithIssues.length} branch(es) have court assignment rates below 90%.</div>`);
-                }
-            }
-
-            // Growth opportunities
-            if (utilizationData && utilizationData.lowUtilizers > 0) {
-                growthOpportunities.push(`<div class="alert alert-light border-info"><i class="bi bi-graph-up"></i> <strong>Engagement Programs:</strong> ${utilizationData.lowUtilizers} users have low utilization - target them with special programs.</div>`);
-            }
-
-            if (multiBranchData && multiBranchData.multiBranchUsers > 0) {
-                growthOpportunities.push(`<div class="alert alert-light border-success"><i class="bi bi-buildings"></i> <strong>Cross-Branch Promotions:</strong> ${multiBranchData.multiBranchUsers} users already visit multiple branches - expand this segment.</div>`);
-            }
-
-            growthOpportunities.push(`<div class="alert alert-light border-warning"><i class="bi bi-people"></i> <strong>User Retention:</strong> Focus on converting occasional users (${data.userLoyaltySegments.occasionalUsers}) to regular users.</div>`);
-
-            return { keyInsights: insights, recommendations, growthOpportunities };
-        }
-
         function refreshAllAnalytics() {
             // Show loading spinner
             const refreshBtn = document.querySelector('button[onclick="refreshAllAnalytics()"]');
@@ -796,7 +668,6 @@
             utilizationLoaded = false;
             trendsLoaded = false;
             branchLoaded = false;
-            insightsLoaded = false;
 
             // Reload the page to get fresh data
             setTimeout(() => {
