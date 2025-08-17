@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Extensions;
+using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels.Dashboard;
 
 namespace PadelPassCheckInSystem.Services;
@@ -8,8 +9,13 @@ namespace PadelPassCheckInSystem.Services;
 public interface IDashboardAnalyticsService
 {
     Task<DashboardAnalyticsViewModel> GetDashboardAnalyticsAsync();
-    Task<UserLoyaltySegmentsViewModel> GetUserLoyaltySegmentsAsync();
-    Task<DropoffAnalysisViewModel> GetDropoffAnalysisAsync();
+
+    Task<UserLoyaltySegmentsViewModel> GetUserLoyaltySegmentsAsync(
+        IQueryable<EndUser> allUsers);
+
+    Task<DropoffAnalysisViewModel> GetDropoffAnalysisAsync(
+        IQueryable<EndUser> allUsers);
+
     Task<SubscriptionUtilizationViewModel> GetSubscriptionUtilizationAsync();
     Task<BranchPerformanceViewModel> GetBranchPerformanceAsync();
     Task<MultiBranchUsageViewModel> GetMultiBranchUsageAsync();
@@ -21,14 +27,16 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
 {
     private readonly ApplicationDbContext _context;
 
-    public DashboardAnalyticsService(ApplicationDbContext context)
+    public DashboardAnalyticsService(
+        ApplicationDbContext context)
     {
         _context = context;
     }
 
     public async Task<DashboardAnalyticsViewModel> GetDashboardAnalyticsAsync()
     {
-        var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
+        var todayKSA = KSADateTimeExtensions.GetKSANow()
+            .Date;
         var startOfKSADayUtc = todayKSA.GetStartOfKSADayInUTC();
         var endOfKSADayUtc = todayKSA.GetEndOfKSADayInUTC();
 
@@ -42,12 +50,16 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         var allUsers = await _context.EndUsers.ToListAsync();
         var activeSubscriptions = allUsers.Count(u =>
         {
-            var startKSA = u.SubscriptionStartDate.ToKSATime().Date;
-            var endKSA = u.SubscriptionEndDate.ToKSATime().Date;
+            var startKSA = u.SubscriptionStartDate.ToKSATime()
+                .Date;
+            var endKSA = u.SubscriptionEndDate.ToKSATime()
+                .Date;
             var isSubscriptionActive = startKSA <= todayKSA && endKSA >= todayKSA;
             var isNotPaused = !u.IsPaused ||
-                              (u.CurrentPauseStartDate?.ToKSATime().Date > todayKSA ||
-                               u.CurrentPauseEndDate?.ToKSATime().Date < todayKSA);
+                              (u.CurrentPauseStartDate?.ToKSATime()
+                                   .Date > todayKSA ||
+                               u.CurrentPauseEndDate?.ToKSATime()
+                                   .Date < todayKSA);
             return isSubscriptionActive && isNotPaused && !u.IsStopped;
         });
 
@@ -60,8 +72,8 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
             ActiveSubscriptions = activeSubscriptions,
 
             // Advanced analytics
-            UserLoyaltySegments = await GetUserLoyaltySegmentsAsync(),
-            DropoffAnalysis = await GetDropoffAnalysisAsync(),
+            UserLoyaltySegments = await GetUserLoyaltySegmentsAsync(allUsers.AsQueryable()),
+            DropoffAnalysis = await GetDropoffAnalysisAsync(allUsers.AsQueryable()),
             SubscriptionUtilization = await GetSubscriptionUtilizationAsync(),
             BranchPerformance = await GetBranchPerformanceAsync(),
             MultiBranchUsage = await GetMultiBranchUsageAsync(),
@@ -70,11 +82,16 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         };
     }
 
-    public async Task<UserLoyaltySegmentsViewModel> GetUserLoyaltySegmentsAsync()
+    public async Task<UserLoyaltySegmentsViewModel> GetUserLoyaltySegmentsAsync(
+        IQueryable<EndUser> allUsers)
     {
-        var last30DaysKSA = KSADateTimeExtensions.GetKSANow().Date.AddDays(-30);
+        var last30DaysKSA = KSADateTimeExtensions.GetKSANow()
+            .Date.AddDays(-30);
         var last30DaysUtcStart = last30DaysKSA.GetStartOfKSADayInUTC();
-        var todayUtcEnd = KSADateTimeExtensions.GetKSANow().Date.GetEndOfKSADayInUTC();
+        var todayUtcEnd = KSADateTimeExtensions.GetKSANow()
+            .Date.GetEndOfKSADayInUTC();
+        var todayKSA = KSADateTimeExtensions.GetKSANow()
+            .Date;
 
         var userCheckInCounts = await _context.CheckIns
             .Where(c => c.CheckInDateTime >= last30DaysUtcStart && c.CheckInDateTime <= todayUtcEnd)
@@ -82,9 +99,9 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
             .Select(g => new { UserId = g.Key, CheckInCount = g.Count() })
             .ToListAsync();
 
-        var totalActiveUsers = await _context.EndUsers
-            .Where(u => !u.IsStopped)
-            .CountAsync();
+        var totalActiveUsers = allUsers
+            .Where(SubscriptionPredicates.IsActiveOnDate(todayKSA))
+            .Count();
 
         // Categorize users based on check-in frequency in last 30 days
         var vipUsers = userCheckInCounts.Count(u => u.CheckInCount >= 15); // 15+ check-ins
@@ -103,47 +120,63 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         };
     }
 
-    public async Task<DropoffAnalysisViewModel> GetDropoffAnalysisAsync()
+    public async Task<DropoffAnalysisViewModel> GetDropoffAnalysisAsync(
+        IQueryable<EndUser> allUsers)
     {
-        var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
-        var periods = new[]
+        var todayKSA = KSADateTimeExtensions.GetKSANow()
+            .Date;
+
+        // KSA day starts in UTC for boundary comparisons
+        var startTodayUtc = todayKSA.GetStartOfKSADayInUTC();
+        var startMinus1Utc = todayKSA.AddDays(-1)
+            .GetStartOfKSADayInUTC();
+        var startMinus3Utc = todayKSA.AddDays(-3)
+            .GetStartOfKSADayInUTC();
+        var startMinus7Utc = todayKSA.AddDays(-7)
+            .GetStartOfKSADayInUTC();
+        var startMinus10Utc = todayKSA.AddDays(-10)
+            .GetStartOfKSADayInUTC();
+
+        // Active user ids (your subscription logic)
+        var activeUserIds = allUsers
+            .Where(SubscriptionPredicates.IsActiveOnDate(todayKSA))
+            .Select(u => u.Id)
+            .ToList();
+
+        // Last check-in per active user (users with no check-ins are excluded by design)
+        var lastCheckins = await _context.CheckIns
+            .Where(ci => activeUserIds.Contains(ci.EndUserId))
+            .GroupBy(ci => ci.EndUserId)
+            .Select(g => new { EndUserId = g.Key, LastUtc = g.Max(x => x.CheckInDateTime) })
+            .ToListAsync();
+
+        // Bucket rules (exclusive, non-overlapping, based on KSA day starts)
+        // 1 day:    [startMinus1, startToday)
+        // 3 days:   [startMinus3, startMinus1)
+        // 7 days:   [startMinus7, startMinus3)
+        // 10 days:  [startMinus10, startMinus7)
+        var b1 = lastCheckins.Count(x => x.LastUtc >= startMinus1Utc && x.LastUtc < startTodayUtc);
+        var b3 = lastCheckins.Count(x => x.LastUtc >= startMinus3Utc && x.LastUtc < startMinus1Utc);
+        var b7 = lastCheckins.Count(x => x.LastUtc >= startMinus7Utc && x.LastUtc < startMinus3Utc);
+        var b10 = lastCheckins.Count(x => x.LastUtc >= startMinus10Utc && x.LastUtc < startMinus7Utc);
+
+        // If you want to include active users who NEVER checked in, add them to the 10-day bucket:
+        var neverChecked = activeUserIds.Count - lastCheckins.Count;
+        b10 += Math.Max(neverChecked, 0);
+
+        var totalWithHistory = lastCheckins.Count;
+
+        var dropoffData = new List<DropoffPeriodData>
         {
-            new { Days = 7, Label = "7 days" },
-            new { Days = 14, Label = "14 days" },
-            new { Days = 30, Label = "30 days" },
-            new { Days = 60, Label = "60 days" }
+            new DropoffPeriodData
+                { Period = "1 days", Days = 1, DroppedOffUsers = b1, TotalUsersWithHistory = totalWithHistory },
+            new DropoffPeriodData
+                { Period = "3 days", Days = 3, DroppedOffUsers = b3, TotalUsersWithHistory = totalWithHistory },
+            new DropoffPeriodData
+                { Period = "7 days", Days = 7, DroppedOffUsers = b7, TotalUsersWithHistory = totalWithHistory },
+            new DropoffPeriodData
+                { Period = "10 days", Days = 10, DroppedOffUsers = b10, TotalUsersWithHistory = totalWithHistory },
         };
-
-        var dropoffData = new List<DropoffPeriodData>();
-
-        foreach (var period in periods)
-        {
-            var cutoffDateKSA = todayKSA.AddDays(-period.Days);
-            var cutoffDateUtc = cutoffDateKSA.GetEndOfKSADayInUTC();
-
-            // Get users who have checked in before but not within the period
-            var usersWithCheckIns = await _context.CheckIns
-                .Where(c => c.CheckInDateTime < cutoffDateUtc)
-                .Select(c => c.EndUserId)
-                .Distinct()
-                .ToListAsync();
-
-            var usersWithRecentCheckIns = await _context.CheckIns
-                .Where(c => c.CheckInDateTime >= cutoffDateUtc)
-                .Select(c => c.EndUserId)
-                .Distinct()
-                .ToListAsync();
-
-            var droppedOffUsers = usersWithCheckIns.Except(usersWithRecentCheckIns).Count();
-
-            dropoffData.Add(new DropoffPeriodData
-            {
-                Period = period.Label,
-                Days = period.Days,
-                DroppedOffUsers = droppedOffUsers,
-                TotalUsersWithHistory = usersWithCheckIns.Count
-            });
-        }
 
         return new DropoffAnalysisViewModel
         {
@@ -152,19 +185,24 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         };
     }
 
+
     public async Task<SubscriptionUtilizationViewModel> GetSubscriptionUtilizationAsync()
     {
+        return new SubscriptionUtilizationViewModel();
         var allUsers = await _context.EndUsers
             .Where(u => !u.IsStopped)
             .ToListAsync();
 
         var utilizationData = new List<UserUtilizationData>();
-        var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
+        var todayKSA = KSADateTimeExtensions.GetKSANow()
+            .Date;
 
         foreach (var user in allUsers)
         {
-            var subscriptionStartKSA = user.SubscriptionStartDate.ToKSATime().Date;
-            var subscriptionEndKSA = user.SubscriptionEndDate.ToKSATime().Date;
+            var subscriptionStartKSA = user.SubscriptionStartDate.ToKSATime()
+                .Date;
+            var subscriptionEndKSA = user.SubscriptionEndDate.ToKSATime()
+                .Date;
 
             // Calculate actual subscription period
             var effectiveStartDate = subscriptionStartKSA > todayKSA ? todayKSA : subscriptionStartKSA;
@@ -180,9 +218,12 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
                 .ToListAsync();
 
             var checkInDaysInPeriod = checkInDays
-                .Where(c => c.CheckInDateTime.ToKSATime().Date >= effectiveStartDate &&
-                            c.CheckInDateTime.ToKSATime().Date <= effectiveEndDate)
-                .Select(c => c.CheckInDateTime.ToKSATime().Date)
+                .Where(c => c.CheckInDateTime.ToKSATime()
+                                .Date >= effectiveStartDate &&
+                            c.CheckInDateTime.ToKSATime()
+                                .Date <= effectiveEndDate)
+                .Select(c => c.CheckInDateTime.ToKSATime()
+                    .Date)
                 .Distinct()
                 .Count();
 
@@ -208,15 +249,20 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
             HighUtilizers = highUtilizers,
             LowUtilizers = lowUtilizers,
             TotalUsers = utilizationData.Count,
-            UserUtilizations = utilizationData.OrderByDescending(u => u.UtilizationPercentage).Take(10).ToList()
+            UserUtilizations = utilizationData.OrderByDescending(u => u.UtilizationPercentage)
+                .Take(10)
+                .ToList()
         };
     }
 
     public async Task<BranchPerformanceViewModel> GetBranchPerformanceAsync()
     {
-        var last30DaysKSA = KSADateTimeExtensions.GetKSANow().Date.AddDays(-30);
+        return new BranchPerformanceViewModel();
+        var last30DaysKSA = KSADateTimeExtensions.GetKSANow()
+            .Date.AddDays(-30);
         var last30DaysUtcStart = last30DaysKSA.GetStartOfKSADayInUTC();
-        var todayUtcEnd = KSADateTimeExtensions.GetKSANow().Date.GetEndOfKSADayInUTC();
+        var todayUtcEnd = KSADateTimeExtensions.GetKSANow()
+            .Date.GetEndOfKSADayInUTC();
 
         var branchStats = await _context.Branches
             .Where(b => b.IsActive)
@@ -229,9 +275,11 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
                                                                   c.CheckInDateTime >= last30DaysUtcStart &&
                                                                   c.CheckInDateTime <= todayUtcEnd),
                 TodayCheckIns = _context.CheckIns.Count(c => c.BranchId == b.Id &&
-                                                             c.CheckInDateTime >= KSADateTimeExtensions.GetKSANow().Date
+                                                             c.CheckInDateTime >= KSADateTimeExtensions.GetKSANow()
+                                                                 .Date
                                                                  .GetStartOfKSADayInUTC() &&
-                                                             c.CheckInDateTime <= KSADateTimeExtensions.GetKSANow().Date
+                                                             c.CheckInDateTime <= KSADateTimeExtensions.GetKSANow()
+                                                                 .Date
                                                                  .GetEndOfKSADayInUTC()),
                 UniqueUsersLast30Days = _context.CheckIns
                     .Where(c => c.BranchId == b.Id && c.CheckInDateTime >= last30DaysUtcStart &&
@@ -255,6 +303,7 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
 
     public async Task<MultiBranchUsageViewModel> GetMultiBranchUsageAsync()
     {
+        return new MultiBranchUsageViewModel();
         // First, get all check-ins with user and branch data
         var checkInsData = await _context.CheckIns
             .Select(c => new { c.EndUserId, c.BranchId })
@@ -266,8 +315,12 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
             .Select(g => new
             {
                 UserId = g.Key,
-                BranchCount = g.Select(c => c.BranchId).Distinct().Count(),
-                Branches = g.Select(c => c.BranchId).Distinct().ToList()
+                BranchCount = g.Select(c => c.BranchId)
+                    .Distinct()
+                    .Count(),
+                Branches = g.Select(c => c.BranchId)
+                    .Distinct()
+                    .ToList()
             })
             .ToList();
 
@@ -303,7 +356,8 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
                 {
                     UserId = u.Id,
                     UserName = u.Name,
-                    BranchCount = userBranchUsage.First(ub => ub.UserId == u.Id).BranchCount,
+                    BranchCount = userBranchUsage.First(ub => ub.UserId == u.Id)
+                        .BranchCount,
                     TotalCheckIns = userCheckInCounts.GetValueOrDefault(u.Id, 0)
                 })
                 .OrderByDescending(u => u.BranchCount)
@@ -324,7 +378,9 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
 
     public async Task<CheckInTrendsViewModel> GetCheckInTrendsAsync()
     {
-        var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
+        return new CheckInTrendsViewModel();
+        var todayKSA = KSADateTimeExtensions.GetKSANow()
+            .Date;
 
         // 7-day trend
         var last7Days = await GetCheckInTrendData(7);
@@ -343,9 +399,11 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         };
     }
 
-    private async Task<List<CheckInTrendData>> GetCheckInTrendData(int days)
+    private async Task<List<CheckInTrendData>> GetCheckInTrendData(
+        int days)
     {
-        var endDate = KSADateTimeExtensions.GetKSANow().Date;
+        var endDate = KSADateTimeExtensions.GetKSANow()
+            .Date;
         var startDate = endDate.AddDays(-days);
 
         var trendData = new List<CheckInTrendData>();
@@ -376,9 +434,11 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         return trendData;
     }
 
-    private async Task<List<CheckInTrendData>> GetCheckInTrendDataWeekly(int days)
+    private async Task<List<CheckInTrendData>> GetCheckInTrendDataWeekly(
+        int days)
     {
-        var endDate = KSADateTimeExtensions.GetKSANow().Date;
+        var endDate = KSADateTimeExtensions.GetKSANow()
+            .Date;
         var startDate = endDate.AddDays(-days);
 
         var trendData = new List<CheckInTrendData>();
@@ -419,9 +479,12 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
 
     public async Task<BranchComparisonViewModel> GetBranchComparisonAsync()
     {
-        var last30DaysKSA = KSADateTimeExtensions.GetKSANow().Date.AddDays(-30);
+        return new BranchComparisonViewModel();
+        var last30DaysKSA = KSADateTimeExtensions.GetKSANow()
+            .Date.AddDays(-30);
         var last30DaysUtcStart = last30DaysKSA.GetStartOfKSADayInUTC();
-        var todayUtcEnd = KSADateTimeExtensions.GetKSANow().Date.GetEndOfKSADayInUTC();
+        var todayUtcEnd = KSADateTimeExtensions.GetKSANow()
+            .Date.GetEndOfKSADayInUTC();
 
         // Get branch basic data first
         var branches = await _context.Branches
@@ -451,14 +514,20 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         foreach (var branch in branches)
         {
             // Filter check-ins for this branch
-            var branchCheckInsLast30Days = checkInsLast30Days.Where(c => c.BranchId == branch.Id).ToList();
-            var branchAllCheckIns = allCheckIns.Where(c => c.BranchId == branch.Id).ToList();
+            var branchCheckInsLast30Days = checkInsLast30Days.Where(c => c.BranchId == branch.Id)
+                .ToList();
+            var branchAllCheckIns = allCheckIns.Where(c => c.BranchId == branch.Id)
+                .ToList();
 
             // Calculate metrics
             var totalCheckIns = branchAllCheckIns.Count;
             var last30DaysCheckIns = branchCheckInsLast30Days.Count;
-            var uniqueUsers = branchAllCheckIns.Select(c => c.EndUserId).Distinct().Count();
-            var uniqueUsersLast30Days = branchCheckInsLast30Days.Select(c => c.EndUserId).Distinct().Count();
+            var uniqueUsers = branchAllCheckIns.Select(c => c.EndUserId)
+                .Distinct()
+                .Count();
+            var uniqueUsersLast30Days = branchCheckInsLast30Days.Select(c => c.EndUserId)
+                .Distinct()
+                .Count();
             var courtAssignments = branchAllCheckIns.Count(c => !string.IsNullOrEmpty(c.CourtName));
             var pendingAssignments = branchAllCheckIns.Count(c => string.IsNullOrEmpty(c.CourtName));
             var avgDailyCheckIns = last30DaysCheckIns / 30.0;
@@ -499,20 +568,23 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
 
         return new BranchComparisonViewModel
         {
-            BranchComparisons = branchComparisons.OrderByDescending(b => b.Last30DaysCheckIns).ToList(),
+            BranchComparisons = branchComparisons.OrderByDescending(b => b.Last30DaysCheckIns)
+                .ToList(),
             ComparisonPeriod = "Last 30 days"
         };
     }
 
 // Make this method static to avoid the memory leak warning
-    private static string GetPeakDayOfWeekForBranch(List<tempo> branchCheckIns)
+    private static string GetPeakDayOfWeekForBranch(
+        List<tempo> branchCheckIns)
     {
         try
         {
             if (!branchCheckIns.Any()) return "N/A";
 
             var dayGroups = branchCheckIns
-                .GroupBy(c => ((DateTime)c.CheckInDateTime).ToKSATime().DayOfWeek)
+                .GroupBy(c => ((DateTime)c.CheckInDateTime).ToKSATime()
+                    .DayOfWeek)
                 .Select(g => new { DayOfWeek = g.Key, Count = g.Count() })
                 .OrderByDescending(g => g.Count)
                 .FirstOrDefault();

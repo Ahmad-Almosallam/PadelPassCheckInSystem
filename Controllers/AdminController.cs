@@ -58,7 +58,7 @@ namespace PadelPassCheckInSystem.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetUserLoyaltySegments()
         {
-            var data = await _dashboardAnalyticsService.GetUserLoyaltySegmentsAsync();
+            var data = await _dashboardAnalyticsService.GetUserLoyaltySegmentsAsync(_context.EndUsers.AsQueryable());
             return Json(new { success = true, data });
         }
 
@@ -66,7 +66,7 @@ namespace PadelPassCheckInSystem.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetDropoffAnalysis()
         {
-            var data = await _dashboardAnalyticsService.GetDropoffAnalysisAsync();
+            var data = await _dashboardAnalyticsService.GetDropoffAnalysisAsync(_context.EndUsers.AsQueryable());
             return Json(new { success = true, data });
         }
 
