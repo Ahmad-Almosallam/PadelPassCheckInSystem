@@ -224,7 +224,7 @@
         }
 
         <!-- Include Pagination Partial -->
-        @await Html.PartialAsync("_EndUsersPagination", Model)
+        @await Html.PartialAsync("~/Views/Admin/_EndUsersPagination.cshtml", Model)
 
         @if (Model.EndUsers.Items.Any())
         {

@@ -3,15 +3,15 @@
     ViewData["Title"] = "End Users Management";
 }
 
-@await Html.PartialAsync("_EndUsersHeader", Model)
+@await Html.PartialAsync("~/Views/Admin/_EndUsersHeader.cshtml", Model)
 
-@await Html.PartialAsync("_EndUsersStatistics", Model)
+@await Html.PartialAsync("~/Views/Admin/_EndUsersStatistics.cshtml", Model)
 
-@await Html.PartialAsync("_EndUsersSearchForm", Model)
+@await Html.PartialAsync("~/Views/Admin/_EndUsersSearchForm.cshtml", Model)
 
-@await Html.PartialAsync("_EndUsersTable", Model)
+@await Html.PartialAsync("~/Views/Admin/_EndUsersTable.cshtml", Model)
 
-@await Html.PartialAsync("_EndUsersModals")
+@await Html.PartialAsync("~/Views/Admin/_EndUsersModals.cshtml")
 
 @functions {
     public string GetPageUrl(int page)
@@ -25,7 +25,7 @@
         if (!string.IsNullOrWhiteSpace(Model.SearchPhoneNumber))
             routeValues["searchPhoneNumber"] = Model.SearchPhoneNumber;
 
-        return Url.Action("EndUsers", routeValues);
+        return Url.Action("EndUsers", "EndUser", routeValues);
     }
 }
 
@@ -37,6 +37,6 @@
     <script>
         // Configure URLs for the JavaScript files
         const pageSize = @Model.EndUsers.PageSize;
-        window.endUsersBaseUrl = '@Url.Action("EndUsers")';
+        window.endUsersBaseUrl = '@Url.Action("EndUsers", "EndUser")';
     </script>
 }
