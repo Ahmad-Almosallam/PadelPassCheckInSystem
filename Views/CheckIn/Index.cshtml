@@ -512,64 +512,6 @@
                 });
         }
 
-        // function showCheckInConfirmation(data, qrCode) {
-        //     const userInfoDiv = document.getElementById('confirmUserImage');
-        //     pendingQrCode = qrCode;
-        //
-        //     let userHtml = '';
-        //     if (data.userImage) {
-        //         userHtml = `
-        //         <img src="${data.userImage}" alt="${data.userName}" 
-        //              class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">`;
-        //     } else {
-        //         userHtml = `
-        //         <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
-        //              style="width: 150px; height: 150px;">
-        //             <i class="bi bi-person-fill text-white" style="font-size: 4rem;"></i>
-        //         </div>`;
-        //     }
-        //
-        //     userHtml += `
-        //     <h4>${data.userName}</h4>
-        //     <h5 class="text-info">Subscription End Date: ${data.subEndDate}</h5>`;
-        //
-        //     userInfoDiv.innerHTML = userHtml;
-        //     new bootstrap.Modal(document.getElementById('checkInConfirmModal')).show();
-        // }
-
-        function confirmCheckIn() {
-            if (!pendingQrCode) return;
-
-            fetch('/CheckIn/ConfirmCheckIn', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                },
-                body: JSON.stringify({identifier: pendingQrCode})
-            })
-                .then(response => response.json())
-                .then(data => {
-                    bootstrap.Modal.getInstance(document.getElementById('checkInConfirmModal')).hide();
-                    if (data.success) {
-                        currentCheckInId = data.checkInId;
-                        showSuccessAnimation(data);
-                        updateRecentCheckIns();
-                        updateTodayCount();
-                        updatePendingAssignments();
-                    } else {
-                        showMessage(data.message, 'danger');
-                        playErrorSound();
-                    }
-                    pendingQrCode = null;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showMessage('An error occurred while confirming check-in.', 'danger');
-                    pendingQrCode = null;
-                });
-        }
-
         function showCourtAssignmentModal(checkInId, customerName) {
             document.getElementById('assignCheckInId').value = checkInId;
             document.getElementById('assignCustomerName').value = customerName;
@@ -911,10 +853,6 @@
         // Initialize page
         document.addEventListener('DOMContentLoaded', function () {
             updatePendingAssignments();
-            setInterval(() => {
-                updateRecentCheckIns();
-                updatePendingAssignments();
-            }, 30000);
         });
 
         // Cleanup on page unload

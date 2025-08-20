@@ -43,7 +43,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/Account/Login";
     options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/AccessDenied";
-    options.ExpireTimeSpan = new  TimeSpan(30);
+    options.ExpireTimeSpan = new  TimeSpan(30,0, 0, 0); // 1 minute for testing
     options.SlidingExpiration = true;
 });
 
