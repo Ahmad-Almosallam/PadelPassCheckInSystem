@@ -7,4 +7,5 @@ public class EditCheckInRequest
     public int PlayDurationMinutes { get; set; }
     public DateTime? PlayStartTime { get; set; }
     public string Notes { get; set; }
+    public bool PlayerAttended { get; set; } = true;
 }

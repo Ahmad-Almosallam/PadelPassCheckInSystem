@@ -50,4 +50,5 @@ public class AdminManualCheckInRequest
     public int? PlayDurationMinutes { get; set; }
     public DateTime? PlayStartTime { get; set; }  // In KSA time
     public string Notes { get; set; }
+    public bool PlayerAttended { get; set; } = true;
 }

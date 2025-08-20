@@ -18,17 +18,20 @@ public class AdminCheckInController : CheckInBaseController
     private readonly ApplicationDbContext _context;
     private readonly ICheckInService _checkInService;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IWarningService _warningService;
 
     public AdminCheckInController(
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager,
         ICheckInService checkInService,
-        IExcelService excelService) : base(excelService, context, checkInService, userManager)
+        IExcelService excelService,
+        IWarningService warningService) : base(excelService, context, checkInService, userManager)
     {
         _context = context;
         _userManager = userManager;
         _checkInService = checkInService;
         _excelService = excelService;
+        _warningService = warningService;
     }
 
     public async Task<IActionResult> EditCheckIn(
@@ -63,11 +66,25 @@ public class AdminCheckInController : CheckInBaseController
         checkIn.PlayStartTime = playStartTimeUtc;
         checkIn.Notes = !string.IsNullOrWhiteSpace(request.Notes) ? request.Notes.Trim() : null;
 
+        // Handle player attendance and warnings
+        checkIn.PlayerAttended = request.PlayerAttended;
+        var (isAutoStopped, warningMessage) = await _warningService.ProcessPlayerAttendanceAsync(request.CheckInId, request.PlayerAttended);
+        
         try
         {
             await _context.SaveChangesAsync();
-            return Json(new
-                { success = true, message = $"Check-in details updated successfully for {checkIn.EndUser.Name}" });
+    
+            var baseMessage = $"Check-in details updated successfully for {checkIn.EndUser.Name}";
+            if (isAutoStopped)
+            {
+                return Json(new { success = true, message = $"{baseMessage}. {warningMessage}" });
+            }
+            else if (!request.PlayerAttended)
+            {
+                return Json(new { success = true, message = $"{baseMessage}. {warningMessage}" });
+            }
+    
+            return Json(new { success = true, message = baseMessage });
         }
         catch (Exception ex)
         {
@@ -136,7 +153,8 @@ public class AdminCheckInController : CheckInBaseController
             request.CourtName,
             request.PlayDurationMinutes,
             request.PlayStartTime,
-            request.Notes
+            request.Notes,
+            request.PlayerAttended
         );
 
         return Json(new

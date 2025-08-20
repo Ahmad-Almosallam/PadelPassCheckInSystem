@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Extensions;
@@ -8,13 +9,19 @@ namespace PadelPassCheckInSystem.Services
     public class CheckInService : ICheckInService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWarningService _warningService;
 
-        public CheckInService(ApplicationDbContext context)
+        public CheckInService(
+            ApplicationDbContext context,
+            IWarningService warningService)
         {
             _context = context;
+            _warningService = warningService;
         }
 
-        public async Task<(bool Success, string Message, int? CheckInId)> CheckInAsync(string identifier, int branchId)
+        public async Task<(bool Success, string Message, int? CheckInId)> CheckInAsync(
+            string identifier,
+            int branchId)
         {
             var (isValid, message, endUser) = await ValidateCheckInAsync(identifier, branchId);
 
@@ -37,8 +44,13 @@ namespace PadelPassCheckInSystem.Services
             return (true, $"Check-in successful for {endUser.Name}", checkIn.Id);
         }
 
-        public async Task<(bool Success, string Message)> AssignCourtAsync(int checkInId, string courtName,
-            int playDurationMinutes, DateTime? playStartTime, string notes)
+        public async Task<(bool Success, string Message)> AssignCourtAsync(
+            int checkInId,
+            string courtName,
+            int playDurationMinutes,
+            DateTime? playStartTime,
+            string notes,
+            bool playerAttended = true)
         {
             var checkIn = await _context.CheckIns
                 .Include(c => c.EndUser)
@@ -64,14 +76,32 @@ namespace PadelPassCheckInSystem.Services
             checkIn.CourtName = courtName;
             checkIn.PlayDuration = TimeSpan.FromMinutes(playDurationMinutes);
             checkIn.PlayStartTime = playStartTimeUtc ?? DateTime.UtcNow;
-            checkIn.Notes = notes;
+            checkIn.Notes = notes.Trim().IsNullOrEmpty() ? null : notes.Trim();
+            checkIn.PlayerAttended = playerAttended;
 
             await _context.SaveChangesAsync();
 
-            return (true, $"Court '{courtName}' assigned successfully to {checkIn.EndUser.Name}");
+            var baseMessage = $"Court '{courtName}' assigned successfully to {checkIn.EndUser.Name}";
+
+            // Process warning if player didn't attend
+            var (isAutoStopped, warningMessage) =
+                await _warningService.ProcessPlayerAttendanceAsync(checkInId, playerAttended);
+
+            if (isAutoStopped)
+            {
+                return (true, $"{baseMessage}. {warningMessage}");
+            }
+            else if (!playerAttended)
+            {
+                return (true, $"{baseMessage}. {warningMessage}");
+            }
+
+            return (true, baseMessage);
         }
 
-        public async Task<(bool Success, string Message)> DeleteCheckInAsync(int checkInId, int? branchId = null)
+        public async Task<(bool Success, string Message)> DeleteCheckInAsync(
+            int checkInId,
+            int? branchId = null)
         {
             var checkIn = await _context.CheckIns
                 .Include(c => c.EndUser)
@@ -92,8 +122,10 @@ namespace PadelPassCheckInSystem.Services
                 }
 
                 // Only non-admin users are restricted to deleting today's check-ins (KSA time)
-                var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
-                var checkInDateKSA = checkIn.CheckInDateTime.ToKSATime().Date;
+                var todayKSA = KSADateTimeExtensions.GetKSANow()
+                    .Date;
+                var checkInDateKSA = checkIn.CheckInDateTime.ToKSATime()
+                    .Date;
                 if (checkInDateKSA != todayKSA)
                 {
                     return (false, "You can only delete today's check-ins");
@@ -108,20 +140,26 @@ namespace PadelPassCheckInSystem.Services
             return (true, $"Check-in for {userName} has been deleted successfully");
         }
 
-        public async Task<bool> HasCheckedInTodayAsync(int endUserId)
+        public async Task<bool> HasCheckedInTodayAsync(
+            int endUserId)
         {
             // Use KSA date for comparison
-            var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
+            var todayKSA = KSADateTimeExtensions.GetKSANow()
+                .Date;
 
             // Get all check-ins for this user and convert to KSA time for comparison
             var userCheckIns = await _context.CheckIns
                 .Where(c => c.EndUserId == endUserId)
                 .ToListAsync();
 
-            return userCheckIns.Any(c => c.CheckInDateTime.ToKSATime().Date == todayKSA);
+            return userCheckIns.Any(c => c.CheckInDateTime.ToKSATime()
+                .Date == todayKSA);
         }
 
-        private async Task<bool> IsWithinAllowedTimeSlotAsync(int branchId, DayOfWeek dayOfWeek, TimeSpan currentTime)
+        private async Task<bool> IsWithinAllowedTimeSlotAsync(
+            int branchId,
+            DayOfWeek dayOfWeek,
+            TimeSpan currentTime)
         {
             var timeSlots = await _context.BranchTimeSlots
                 .Where(ts => ts.BranchId == branchId &&
@@ -159,7 +197,9 @@ namespace PadelPassCheckInSystem.Services
             return false;
         }
 
-        private async Task<string> GetBranchTimeSlotDisplayAsync(int branchId, DayOfWeek dayOfWeek)
+        private async Task<string> GetBranchTimeSlotDisplayAsync(
+            int branchId,
+            DayOfWeek dayOfWeek)
         {
             var timeSlots = await _context.BranchTimeSlots
                 .Where(ts => ts.BranchId == branchId &&
@@ -179,7 +219,8 @@ namespace PadelPassCheckInSystem.Services
             return string.Join(", ", timeRanges);
         }
 
-        private async Task<DateTime> GetEffectiveSubscriptionEndDateAsync(int endUserId)
+        private async Task<DateTime> GetEffectiveSubscriptionEndDateAsync(
+            int endUserId)
         {
             var endUser = await _context.EndUsers.FindAsync(endUserId);
             if (endUser == null)
@@ -196,7 +237,8 @@ namespace PadelPassCheckInSystem.Services
             return endUser.SubscriptionEndDate.AddDays(totalPauseDays);
         }
 
-        private async Task UnpauseSubscriptionAsync(int endUserId)
+        private async Task UnpauseSubscriptionAsync(
+            int endUserId)
         {
             var endUser = await _context.EndUsers.FindAsync(endUserId);
             if (endUser != null && endUser.IsPaused)
@@ -218,10 +260,12 @@ namespace PadelPassCheckInSystem.Services
             }
         }
 
-        public async Task<List<CheckIn>> GetPendingCourtAssignmentsAsync(int branchId)
+        public async Task<List<CheckIn>> GetPendingCourtAssignmentsAsync(
+            int branchId)
         {
             // Use KSA date for filtering today's check-ins
-            var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
+            var todayKSA = KSADateTimeExtensions.GetKSANow()
+                .Date;
 
             var allCheckIns = await _context.CheckIns
                 .Include(c => c.EndUser)
@@ -230,15 +274,18 @@ namespace PadelPassCheckInSystem.Services
 
             // Filter by KSA date
             return allCheckIns
-                .Where(c => c.CheckInDateTime.ToKSATime().Date == todayKSA)
+                .Where(c => c.CheckInDateTime.ToKSATime()
+                    .Date == todayKSA)
                 .OrderBy(c => c.CheckInDateTime)
                 .ToList();
         }
 
-        public async Task<List<CheckIn>> GetTodayCheckInsWithCourtInfoAsync(int branchId)
+        public async Task<List<CheckIn>> GetTodayCheckInsWithCourtInfoAsync(
+            int branchId)
         {
             // Use KSA date for filtering today's check-ins
-            var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
+            var todayKSA = KSADateTimeExtensions.GetKSANow()
+                .Date;
 
             var allCheckIns = await _context.CheckIns
                 .Include(c => c.EndUser)
@@ -247,12 +294,14 @@ namespace PadelPassCheckInSystem.Services
 
             // Filter by KSA date and order by check-in time
             return allCheckIns
-                .Where(c => c.CheckInDateTime.ToKSATime().Date == todayKSA)
+                .Where(c => c.CheckInDateTime.ToKSATime()
+                    .Date == todayKSA)
                 .OrderByDescending(c => c.CheckInDateTime)
                 .ToList();
         }
 
-        public async Task<(bool IsValid, string Message, EndUser User)> ValidateCheckInAsync(string identifier,
+        public async Task<(bool IsValid, string Message, EndUser User)> ValidateCheckInAsync(
+            string identifier,
             int branchId)
         {
             // Find user by phone or unique identifier
@@ -271,8 +320,10 @@ namespace PadelPassCheckInSystem.Services
             var currentDayOfWeekKSA = nowKSA.DayOfWeek;
 
             // Convert subscription dates to KSA for comparison
-            var subscriptionStartKSA = endUser.SubscriptionStartDate.ToKSATime().Date;
-            var subscriptionEndKSA = endUser.SubscriptionEndDate.ToKSATime().Date;
+            var subscriptionStartKSA = endUser.SubscriptionStartDate.ToKSATime()
+                .Date;
+            var subscriptionEndKSA = endUser.SubscriptionEndDate.ToKSATime()
+                .Date;
 
 
             if (endUser.IsStopped)
@@ -282,9 +333,11 @@ namespace PadelPassCheckInSystem.Services
             }
 
             // Check if subscription is paused (using KSA dates)
-            if (endUser.IsPaused && endUser.CurrentPauseStartDate!.Value.ToKSATime().Date <= todayKSA.Date)
+            if (endUser.IsPaused && endUser.CurrentPauseStartDate!.Value.ToKSATime()
+                    .Date <= todayKSA.Date)
             {
-                var pauseEndDateKSA = endUser.CurrentPauseEndDate?.ToKSATime().Date;
+                var pauseEndDateKSA = endUser.CurrentPauseEndDate?.ToKSATime()
+                    .Date;
                 if (pauseEndDateKSA.HasValue && todayKSA <= pauseEndDateKSA.Value)
                 {
                     return (false, $"Subscription is currently paused until {pauseEndDateKSA.Value:MMM dd, yyyy}",
@@ -323,8 +376,12 @@ namespace PadelPassCheckInSystem.Services
             return (true, "Validation successful", endUser);
         }
 
-        public async Task<(bool Success, string Message)> EditCheckInAsync(int checkInId, string courtName,
-            int playDurationMinutes, DateTime? playStartTime, string notes)
+        public async Task<(bool Success, string Message)> EditCheckInAsync(
+            int checkInId,
+            string courtName,
+            int playDurationMinutes,
+            DateTime? playStartTime,
+            string notes)
         {
             var checkIn = await _context.CheckIns
                 .Include(c => c.EndUser)
@@ -361,7 +418,8 @@ namespace PadelPassCheckInSystem.Services
             string courtName = null,
             int? playDurationMinutes = null,
             DateTime? playStartTime = null,
-            string notes = null)
+            string notes = null,
+            bool playerAttended = true)
         {
             try
             {
@@ -396,7 +454,8 @@ namespace PadelPassCheckInSystem.Services
                     .ToListAsync();
 
                 var hasExistingCheckIn = existingCheckIns.Any(c =>
-                    c.CheckInDateTime.ToKSATime().Date == checkInDateKSA);
+                    c.CheckInDateTime.ToKSATime()
+                        .Date == checkInDateKSA);
 
                 if (hasExistingCheckIn)
                 {
@@ -413,14 +472,24 @@ namespace PadelPassCheckInSystem.Services
                     PlayDuration =
                         playDurationMinutes.HasValue ? TimeSpan.FromMinutes(playDurationMinutes.Value) : null,
                     PlayStartTime = playStartTime,
-                    Notes = !string.IsNullOrWhiteSpace(notes) ? notes.Trim() : null
+                    Notes = !string.IsNullOrWhiteSpace(notes) ? notes.Trim() : null,
+                    PlayerAttended = playerAttended
                 };
 
                 _context.CheckIns.Add(checkIn);
                 await _context.SaveChangesAsync();
 
                 var courtInfo = !string.IsNullOrEmpty(courtName) ? $" to {courtName}" : "";
-                return (true, $"Manual check-in created successfully for {endUser.Name}{courtInfo}", checkIn.Id);
+                var baseMessage = $"Manual check-in created successfully for {endUser.Name}{courtInfo}";
+                var (isAutoStopped, warningMessage) =
+                    await _warningService.ProcessPlayerAttendanceAsync(checkIn.Id, playerAttended);
+
+                if (isAutoStopped || !playerAttended)
+                {
+                    return (true, $"{baseMessage}. {warningMessage}", checkIn.Id);
+                }
+
+                return (true, baseMessage, checkIn.Id);
             }
             catch (Exception ex)
             {
@@ -446,8 +515,10 @@ namespace PadelPassCheckInSystem.Services
 
                 // Convert dates to KSA for validation
                 var checkInDateKSA = checkInDate.Date;
-                var subscriptionStartKSA = endUser.SubscriptionStartDate.ToKSATime().Date;
-                var subscriptionEndKSA = endUser.SubscriptionEndDate.ToKSATime().Date;
+                var subscriptionStartKSA = endUser.SubscriptionStartDate.ToKSATime()
+                    .Date;
+                var subscriptionEndKSA = endUser.SubscriptionEndDate.ToKSATime()
+                    .Date;
 
                 // Check subscription validity for the selected date
                 if (checkInDateKSA < subscriptionStartKSA || checkInDateKSA > subscriptionEndKSA)
@@ -462,8 +533,10 @@ namespace PadelPassCheckInSystem.Services
                 // Check if subscription was paused on the selected date
                 if (endUser.IsPaused)
                 {
-                    var pauseStartKSA = endUser.CurrentPauseStartDate?.ToKSATime().Date;
-                    var pauseEndKSA = endUser.CurrentPauseEndDate?.ToKSATime().Date;
+                    var pauseStartKSA = endUser.CurrentPauseStartDate?.ToKSATime()
+                        .Date;
+                    var pauseEndKSA = endUser.CurrentPauseEndDate?.ToKSATime()
+                        .Date;
 
                     if (pauseStartKSA.HasValue && pauseEndKSA.HasValue &&
                         checkInDateKSA >= pauseStartKSA.Value && checkInDateKSA <= pauseEndKSA.Value)
@@ -480,7 +553,8 @@ namespace PadelPassCheckInSystem.Services
                     .ToListAsync();
 
                 var hasExistingCheckIn = existingCheckIns.Any(c =>
-                    c.CheckInDateTime.ToKSATime().Date == checkInDateKSA);
+                    c.CheckInDateTime.ToKSATime()
+                        .Date == checkInDateKSA);
 
                 if (hasExistingCheckIn)
                 {

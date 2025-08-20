@@ -267,7 +267,8 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
                 request.CourtName,
                 request.PlayDurationMinutes,
                 playStartTimeUtc, // Pass UTC time to service
-                request.Notes
+                request.Notes,
+                request.PlayerAttended
             );
 
             if (!courtResult.Success)
