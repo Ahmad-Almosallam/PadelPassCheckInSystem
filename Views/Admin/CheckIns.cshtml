@@ -106,6 +106,7 @@
                     <th>Court</th>
                     <th>Play Duration</th>
                     <th>Play Start Time <small class="text-muted">(KSA)</small></th>
+                    <th>Attended</th>
                     <th>Actions</th>
                 </tr>
                 </thead>
@@ -159,11 +160,27 @@
                             }
                         </td>
                         <td>
+                            @if (checkIn.PlayerAttended)
+                            {
+                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning"><i class="bi bi-x-circle"></i> No</span>
+                            }
+                        </td>
+                        <td>
                             @if (User.IsInRole("Admin"))
                             {
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-primary btn-sm"
-                                            onclick="showEditCheckInModal(@checkIn.Id, '@Html.Raw(checkIn.EndUser.Name)', '@Html.Raw(checkIn.CourtName)', '@(checkIn.PlayDuration?.TotalMinutes ?? 0)', '@checkIn.PlayStartTime?.ToKSATime().ToString("HH:mm")', '@Html.Raw(checkIn.Notes)')">
+                                            onclick="showEditCheckInModal(@checkIn.Id,
+                                                '@Html.Raw(checkIn.EndUser.Name)',
+                                                '@Html.Raw(checkIn.CourtName)',
+                                                '@(checkIn.PlayDuration?.TotalMinutes ?? 0)',
+                                                '@checkIn.PlayStartTime?.ToKSATime().ToString("HH:mm")'
+                                                ,'@Html.Raw(checkIn.Notes)'
+                                                ,@Json.Serialize(checkIn.PlayerAttended))">
                                         <i class="bi bi-pencil"></i> Edit
                                     </button>
                                     <button type="button" class="btn btn-danger btn-sm"
@@ -325,6 +342,15 @@
                         <label class="form-label">Play Start Time <small class="text-muted">(KSA)</small></label>
                         <input type="time" id="editPlayStartTime" class="form-control">
                         <small class="text-muted">Leave empty to remove start time</small>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editPlayerAttended" checked>
+                            <label class="form-check-label" for="editPlayerAttended">
+                                <i class="bi bi-person-check"></i> Player Attended
+                            </label>
+                        </div>
+                        <small class="text-muted">Uncheck if player did not show up (will issue warning)</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Notes</label>
@@ -495,6 +521,15 @@
                                             <small class="text-muted">Time in KSA timezone</small>
                                         </div>
                                     </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="manualPlayerAttended" checked>
+                                            <label class="form-check-label" for="manualPlayerAttended">
+                                                <i class="bi bi-person-check"></i> Player Attended
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">Uncheck if player did not show up (will issue warning)</small>
+                                    </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label class="form-label">Notes</label>
@@ -565,7 +600,7 @@
             window.location.href = '@Url.Action("CheckIns")';
         }
 
-        function showEditCheckInModal(checkInId, customerName, courtName, playDuration, playStartTime, notes) {
+        function showEditCheckInModal(checkInId, customerName, courtName, playDuration, playStartTime, notes, playerAttended) {
             document.getElementById('editCheckInId').value = checkInId;
             document.getElementById('editCustomerName').value = customerName;
             document.getElementById('editCourtName').value = courtName || '';
@@ -580,6 +615,7 @@
             // Set play start time
             document.getElementById('editPlayStartTime').value = playStartTime || '';
             document.getElementById('editNotes').value = notes || '';
+            document.getElementById('editPlayerAttended').checked = playerAttended;
 
             new bootstrap.Modal(document.getElementById('editCheckInModal')).show();
         }
@@ -590,6 +626,7 @@
             const playDuration = parseInt(document.getElementById('editPlayDuration').value);
             const playStartTime = document.getElementById('editPlayStartTime').value;
             const notes = document.getElementById('editNotes').value.trim();
+            const playerAttended = document.getElementById('editPlayerAttended').checked;
 
             let playStartDateTime = null;
             if (playStartTime) {
@@ -598,7 +635,7 @@
                 playStartDateTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hours), parseInt(minutes));
             }
 
-            fetch('@Url.Action("EditCheckIn", "Admin")', {
+            fetch('@Url.Action("EditCheckIn", "AdminCheckIn")', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -609,7 +646,8 @@
                     courtName: courtName || null,
                     playDurationMinutes: playDuration || 0,
                     playStartTime: playStartDateTime,
-                    notes: notes || null
+                    notes: notes || null,
+                    playerAttended: playerAttended
                 })
             })
                 .then(response => response.json())
@@ -838,6 +876,7 @@
             const playDuration = document.getElementById('manualPlayDuration').value;
             const playStartTime = document.getElementById('manualPlayStartTime').value;
             const notes = document.getElementById('manualNotes').value.trim();
+            const playerAttended = document.getElementById('manualPlayerAttended').checked;
 
             // Combine date and time
             const checkInDateTime = new Date(`${checkInDate}T${checkInTime}:00`);
@@ -855,10 +894,11 @@
                 courtName: courtName || null,
                 playDurationMinutes: playDuration ? parseInt(playDuration) : null,
                 playStartTime: playStartDateTime ? playStartDateTime.toISOString() : null,
-                notes: notes || null
+                notes: notes || null,
+                playerAttended: playerAttended
             };
 
-            fetch('@Url.Action("CreateManualCheckIn", "Admin")', {
+            fetch('@Url.Action("CreateManualCheckIn", "AdminCheckIn")', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

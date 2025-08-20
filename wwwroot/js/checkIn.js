@@ -43,6 +43,7 @@ function confirmCheckInWithCourt() {
     const playDuration = parseInt(document.getElementById('confirmPlayDuration').value);
     const playStartTime = document.getElementById('confirmPlayStartTime').value;
     const notes = document.getElementById('confirmNotes').value.trim();
+    const playerAttended = document.getElementById('confirmPlayerAttended').checked;
 
     let playStartDateTime = null;
     if (playStartTime) {
@@ -62,7 +63,8 @@ function confirmCheckInWithCourt() {
             courtName: courtName,
             playDurationMinutes: playDuration,
             playStartTime: playStartDateTime,
-            notes: notes
+            notes: notes,
+            playerAttended: playerAttended
         })
     })
     .then(response => response.json())
