@@ -33,6 +33,15 @@ namespace PadelPassCheckInSystem.Data
                 builder.Entity(entityType.ClrType)
                     .ToTable(entityType.GetTableName(), "access");
             }
+            
+            builder.Entity<CheckIn>()
+                .Property(x => x.PlayerAttended)
+                .HasDefaultValue(true);
+
+            builder.Entity<EndUser>()
+                .Property(x => x.IsStoppedByWarning)
+                .HasDefaultValue(false);
+            
 
             // Unique constraint on EndUser phone number
             builder.Entity<EndUser>()

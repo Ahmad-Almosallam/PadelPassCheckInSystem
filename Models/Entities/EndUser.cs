@@ -38,6 +38,10 @@ namespace PadelPassCheckInSystem.Models.Entities
         public DateTime? StoppedDate { get; set; }
         public string StopReason { get; set; }
         
+        public bool IsStoppedByWarning { get; set; }
+        public int WarningCount { get; set; }
+        
+        
         public long? PlaytomicUserId { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         

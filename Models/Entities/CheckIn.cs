@@ -19,6 +19,8 @@ namespace PadelPassCheckInSystem.Models.Entities
         
         [StringLength(200)]
         public string Notes { get; set; }
+
+        public bool PlayerAttended { get; set; }
         
         public virtual EndUser EndUser { get; set; }
         public virtual Branch Branch { get; set; }
