@@ -23,13 +23,13 @@ ViewData["Title"] = ViewBag.EndUserId != null ? $"Pause History - {ViewBag.EndUs
         </div>
         @if (ViewBag.EndUserId != null)
         {
-        <a href="@Url.Action("EndUsers")" class="btn btn-outline-primary">
+        <a href="@Url.Action("EndUsers", "EndUser")" class="btn btn-outline-primary">
             <i class="bi bi-arrow-left"></i> Back to End Users
         </a>
         }
         else
         {
-        <a href="@Url.Action("EndUsers")" class="btn btn-outline-primary">
+        <a href="@Url.Action("EndUsers", "EndUser")" class="btn btn-outline-primary">
             <i class="bi bi-people"></i> Manage End Users
         </a>
         }
