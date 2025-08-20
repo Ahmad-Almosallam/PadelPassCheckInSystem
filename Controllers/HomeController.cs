@@ -26,7 +26,7 @@ namespace PadelPassCheckInSystem.Controllers
 
             if (roles.Contains("Admin"))
             {
-                return RedirectToAction("Index", "Admin");
+                return RedirectToAction("Index", "Dashboard");
             }
             else if (roles.Contains("BranchUser"))
             {
