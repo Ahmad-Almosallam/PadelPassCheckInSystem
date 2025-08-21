@@ -461,6 +461,20 @@ namespace PadelPassCheckInSystem.Services
                 {
                     return (false, $"User already has a check-in record for {checkInDateKSA:MMM dd, yyyy}", null);
                 }
+                
+                
+                var nowKSA = KSADateTimeExtensions.GetKSANow();
+                var todayKSA = nowKSA.Date;
+                if (endUser.IsPaused && endUser.CurrentPauseStartDate!.Value.ToKSATime()
+                        .Date <= todayKSA.Date)
+                {
+                    var pauseEndDateKSA = endUser.CurrentPauseEndDate?.ToKSATime()
+                        .Date;
+                    if (pauseEndDateKSA.HasValue && todayKSA > pauseEndDateKSA.Value)
+                    {
+                        await UnpauseSubscriptionAsync(endUser.Id);
+                    }
+                }
 
                 // Create check-in record
                 var checkIn = new CheckIn
