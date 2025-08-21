@@ -26,6 +26,19 @@ public class UserLoyaltySegmentsViewModel
     public int InactiveUsers { get; set; }
     public int TotalUsers { get; set; }
     public string AnalysisPeriod { get; set; }
+    
+    public List<UserWarningData> UsersWithWarnings { get; set; } = new();
+}
+
+public class UserWarningData
+{
+    public int UserId { get; set; }
+    public string UserName { get; set; }
+    public string PhoneNumber { get; set; }
+    public int WarningCount { get; set; }
+    public bool IsStoppedByWarning { get; set; }
+    public DateTime? StoppedDate { get; set; }
+    public string Status { get; set; }
 }
 
 public class DropoffAnalysisViewModel

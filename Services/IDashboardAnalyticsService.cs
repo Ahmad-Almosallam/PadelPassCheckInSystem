@@ -104,6 +104,25 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
         var regularUsers = userCheckInCounts.Count(u => u.CheckInCount >= 5 && u.CheckInCount < 15); // 5-14 check-ins
         var occasionalUsers = userCheckInCounts.Count(u => u.CheckInCount >= 1 && u.CheckInCount < 5); // 1-4 check-ins
         var inactiveUsers = totalActiveUsers - userCheckInCounts.Count; // No check-ins
+        
+        
+        var usersWithWarnings =  allUsers
+            .Where(u => u.WarningCount > 0 || u.IsStoppedByWarning)
+            .OrderByDescending(u => u.WarningCount)
+            .ThenByDescending(u => u.StoppedDate)
+            .Take(10)
+            .Select(u => new UserWarningData
+            {
+                UserId = u.Id,
+                UserName = u.Name,
+                PhoneNumber = u.PhoneNumber,
+                WarningCount = u.WarningCount,
+                IsStoppedByWarning = u.IsStoppedByWarning,
+                StoppedDate = u.StoppedDate,
+                Status = u.IsStoppedByWarning ? "Stopped by Warnings" : 
+                    u.IsStopped ? "Stopped (Other)" : "Active"
+            })
+            .ToList();
 
         return new UserLoyaltySegmentsViewModel
         {
@@ -112,7 +131,8 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
             OccasionalUsers = occasionalUsers,
             InactiveUsers = inactiveUsers,
             TotalUsers = totalActiveUsers,
-            AnalysisPeriod = "Last 30 days"
+            AnalysisPeriod = "Last 30 days",
+            UsersWithWarnings = usersWithWarnings
         };
     }
 
