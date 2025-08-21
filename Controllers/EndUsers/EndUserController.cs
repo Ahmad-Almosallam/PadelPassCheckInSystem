@@ -300,6 +300,12 @@ public class EndUserController(
         endUser.StoppedDate = null;
         endUser.StopReason = null;
 
+        if (endUser.IsStoppedByWarning)
+        {
+            endUser.IsStoppedByWarning = false;
+            endUser.WarningCount = 0;
+        }
+
         try
         {
             await context.SaveChangesAsync();
