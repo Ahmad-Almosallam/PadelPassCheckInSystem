@@ -35,5 +35,6 @@ namespace PadelPassCheckInSystem.Models.ViewModels
         public int StoppedCount { get; set; }
         public int ExpiredCount { get; set; }
         public int NotSetPlaytomicUserIdsCount { get; set; }
+        public int StoppedByWarningsCount { get; set; }
     }
 }

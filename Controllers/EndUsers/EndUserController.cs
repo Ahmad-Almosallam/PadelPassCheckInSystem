@@ -64,6 +64,8 @@ public class EndUserController(
             .CountAsync(u => !u.IsStopped && u.SubscriptionEndDate < startOfKsaDayUtc);
 
         var notSetPlaytomicUserIdsCount = await baseQuery.CountAsync(u => u.PlaytomicUserId == null);
+        
+        var stoppedByWarningsCount = await baseQuery.CountAsync(u => u.IsStoppedByWarning);
 
         // Pagination remains in DB
         var orderedQuery = baseQuery.OrderByDescending(e => e.CreatedAt);
@@ -91,7 +93,8 @@ public class EndUserController(
             CurrentlyPaused = currentlyPaused,
             StoppedCount = stoppedCount,
             ExpiredCount = expiredCount,
-            NotSetPlaytomicUserIdsCount = notSetPlaytomicUserIdsCount
+            NotSetPlaytomicUserIdsCount = notSetPlaytomicUserIdsCount,
+            StoppedByWarningsCount = stoppedByWarningsCount
         };
 
         return View("~/Views/Admin/EndUsers.cshtml", viewModel);
