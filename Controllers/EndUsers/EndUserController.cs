@@ -64,7 +64,7 @@ public class EndUserController(
             .CountAsync(u => !u.IsStopped && u.SubscriptionEndDate < startOfKsaDayUtc);
 
         var notSetPlaytomicUserIdsCount = await baseQuery.CountAsync(u => u.PlaytomicUserId == null);
-        
+
         var stoppedByWarningsCount = await baseQuery.CountAsync(u => u.IsStoppedByWarning);
 
         // Pagination remains in DB
@@ -140,6 +140,13 @@ public class EndUserController(
             TempData["Success"] = "End user created successfully!";
             return RedirectToAction(nameof(EndUsers));
         }
+
+
+        TempData["Error"] = string.Join(" | ",
+            ModelState.Values
+                .SelectMany(v => v.Errors)
+                .Select(e => e.ErrorMessage));
+
 
         return RedirectToAction(nameof(EndUsers));
     }
@@ -350,7 +357,7 @@ public class EndUserController(
             return Json(new { success = false, message = "Error loading preview data." });
         }
     }
-    
+
     #endregion
 
     #region Playtomic Integration Management

@@ -16,6 +16,10 @@ namespace PadelPassCheckInSystem.Services
             worksheet.Cell(1, 3).Value = "Branch Name";
             worksheet.Cell(1, 4).Value = "Check-In Date";
             worksheet.Cell(1, 5).Value = "Check-In Time";
+            worksheet.Cell(1, 6).Value = "Court";
+            worksheet.Cell(1, 7).Value = "Play Duration";
+            worksheet.Cell(1, 8).Value = "Play Start Time";
+            worksheet.Cell(1, 9).Value = "Attended";
 
             // Style headers
             var headerRange = worksheet.Range(1, 1, 1, 5);
@@ -31,6 +35,10 @@ namespace PadelPassCheckInSystem.Services
                 worksheet.Cell(row, 3).Value = checkIn.Branch.Name;
                 worksheet.Cell(row, 4).Value = checkIn.CheckInDateTime.ToLocalTime().ToString("yyyy-MM-dd");
                 worksheet.Cell(row, 5).Value = checkIn.CheckInDateTime.ToLocalTime().ToString("HH:mm:ss");
+                worksheet.Cell(row, 6).Value = checkIn.CourtName;
+                worksheet.Cell(row, 7).Value = checkIn.PlayDuration;
+                worksheet.Cell(row, 8).Value = checkIn.PlayStartTime;
+                worksheet.Cell(row, 9).Value = checkIn.PlayerAttended;
                 row++;
             }
 
