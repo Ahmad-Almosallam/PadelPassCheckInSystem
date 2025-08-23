@@ -241,7 +241,7 @@ public class PlaytomicSyncService : IPlaytomicSyncService
                 var isNotPaused = !user.IsPaused ||
                                   (user.CurrentPauseStartDate?.ToKSATime()
                                        .Date > todayKSA ||
-                                   user.CurrentPauseEndDate?.ToKSATime()
+                                   user.CurrentPauseEndDate?.AddDays(-1).ToKSATime()
                                        .Date < todayKSA);
 
                 return isSubscriptionActive && isNotPaused;
