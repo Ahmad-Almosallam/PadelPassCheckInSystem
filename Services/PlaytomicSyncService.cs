@@ -231,7 +231,8 @@ public class PlaytomicSyncService : IPlaytomicSyncService
         return allUsers.Where(user =>
             {
                 // Check if subscription is active (using KSA dates)
-                var startKSA = user.SubscriptionStartDate.AddDays(-1).ToKSATime()
+                var startKSA = user.SubscriptionStartDate.AddDays(-1)
+                    .ToKSATime()
                     .Date;
                 var endKSA = user.SubscriptionEndDate.ToKSATime()
                     .Date;
@@ -241,7 +242,8 @@ public class PlaytomicSyncService : IPlaytomicSyncService
                 var isNotPaused = !user.IsPaused ||
                                   (user.CurrentPauseStartDate?.ToKSATime()
                                        .Date > todayKSA ||
-                                   user.CurrentPauseEndDate?.AddDays(-1).ToKSATime()
+                                   user.CurrentPauseEndDate?.AddDays(-1)
+                                       .ToKSATime()
                                        .Date < todayKSA);
 
                 return isSubscriptionActive && isNotPaused;
@@ -253,24 +255,36 @@ public class PlaytomicSyncService : IPlaytomicSyncService
         List<Models.Entities.EndUser> users)
     {
         var csv = new StringBuilder();
-
+        var todyayKSA = KSADateTimeExtensions.GetKSANow()
+            .Date;
         // Add header
         csv.AppendLine("name,email,phone_number,gender,birthdate,category_name,category_expires");
 
         // Add user data
         foreach (var user in users)
         {
-            if (user.IsStopped)
+            if (user.IsStopped || (user.IsPaused && (user.CurrentPauseStartDate!.Value.ToKSATime()
+                                                     .Date >= todyayKSA)
+                                                 && user.CurrentPauseEndDate!.Value.ToKSATime()
+                                                     .Date < todyayKSA))
             {
                 csv.AppendLine(
                     $"\"{user.Name}\",\"{user.Email ?? ""}\",\"{user.PhoneNumber}\",\"\",\"\",\"\",\"\"");
             }
             else
             {
-                var categoryExpires = user.IsPaused
-                    ? user.CurrentPauseStartDate!.Value.AddDays(-1).ToString("yyyy-MM-dd")
-                    : user.SubscriptionEndDate
-                        .ToString("yyyy-MM-dd");
+                var categoryExpires = user.SubscriptionEndDate
+                    .ToString("yyyy-MM-dd");
+
+                if (user.IsPaused)
+                {
+                    if (user.CurrentPauseStartDate!.Value.ToKSATime()
+                            .Date > todyayKSA)
+                    {
+                        categoryExpires = user.CurrentPauseStartDate!.Value.AddDays(-1)
+                            .ToString("yyyy-MM-dd");
+                    }
+                }
 
                 csv.AppendLine(
                     $"\"{user.Name}\",\"{user.Email ?? ""}\",\"{user.PhoneNumber}\",\"\",\"\",\"Padel Pass\",\"{categoryExpires}\"");
