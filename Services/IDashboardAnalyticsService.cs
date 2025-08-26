@@ -95,18 +95,22 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
             .Select(g => new { UserId = g.Key, CheckInCount = g.Count() })
             .ToListAsync();
 
-        var totalActiveUsers = allUsers
+        var activeUsersList = allUsers
             .Where(SubscriptionPredicates.IsActiveOnDate(todayKSA))
-            .Count();
+            .Select(u => u.Id)
+            .ToList();
+
+        var totalActiveUsers = activeUsersList .Count;
 
         // Categorize users based on check-in frequency in last 30 days
         var vipUsers = userCheckInCounts.Count(u => u.CheckInCount >= 15); // 15+ check-ins
         var regularUsers = userCheckInCounts.Count(u => u.CheckInCount >= 5 && u.CheckInCount < 15); // 5-14 check-ins
         var occasionalUsers = userCheckInCounts.Count(u => u.CheckInCount >= 1 && u.CheckInCount < 5); // 1-4 check-ins
-        var inactiveUsers = totalActiveUsers - userCheckInCounts.Count; // No check-ins
-        
-        
-        var usersWithWarnings =  allUsers
+        var inactiveUsers =
+            activeUsersList.Count(userId => !userCheckInCounts.Select(x => x.UserId).Contains(userId)); // No check-ins
+
+
+        var usersWithWarnings = allUsers
             .Where(u => u.WarningCount > 0 || u.IsStoppedByWarning)
             .OrderByDescending(u => u.WarningCount)
             .ThenByDescending(u => u.StoppedDate)
@@ -119,7 +123,7 @@ public class DashboardAnalyticsService : IDashboardAnalyticsService
                 WarningCount = u.WarningCount,
                 IsStoppedByWarning = u.IsStoppedByWarning,
                 StoppedDate = u.StoppedDate,
-                Status = u.IsStoppedByWarning ? "Stopped by Warnings" : 
+                Status = u.IsStoppedByWarning ? "Stopped by Warnings" :
                     u.IsStopped ? "Stopped (Other)" : "Active"
             })
             .ToList();
