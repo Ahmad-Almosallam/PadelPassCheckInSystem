@@ -66,19 +66,21 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
             }
 
             // Get the end user details for the confirmation message
-            var (isValid, message, endUser) =
-                await _checkInService.ValidateCheckInAsync(request.Identifier, user.BranchId.Value);
-
-            if (!isValid)
-            {
-                return Json(new { success = false, message = message });
-            }
+            // var (isValid, message, endUser) =
+            //     await _checkInService.ValidateCheckInAsync(request.Identifier, user.BranchId.Value);
+            //
+            // if (!isValid)
+            // {
+            //     return Json(new { success = false, message = message });
+            // }
+            
+            var endUser = await _context.EndUsers
+                .FirstOrDefaultAsync(u => u.PhoneNumber == request.Identifier || u.UniqueIdentifier == request.Identifier);
 
             // Return user details with default court assignment values
             return Json(new
             {
-                success = isValid,
-                message = message,
+                success = true,
                 userName = endUser.Name,
                 userImage = endUser.ImageUrl,
                 subEndDate = endUser.SubscriptionEndDate.ToString("d"),
@@ -206,19 +208,21 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
             }
 
             // Get the end user details for the confirmation message
-            var (isValid, message, endUser) =
-                await _checkInService.ValidateCheckInAsync(request.PhoneNumber, user.BranchId.Value);
-
-            if (!isValid)
-            {
-                return Json(new { success = false, message = message });
-            }
+            // var (isValid, message, endUser) =
+            //     await _checkInService.ValidateCheckInAsync(request.PhoneNumber, user.BranchId.Value);
+            //
+            // if (!isValid)
+            // {
+            //     return Json(new { success = false, message = message });
+            // }
+            
+            var endUser = await _context.EndUsers
+                .FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
 
             // Return user details with default court assignment values
             return Json(new
             {
-                success = isValid,
-                message = message,
+                success = true,
                 userName = endUser.Name,
                 userImage = endUser.ImageUrl,
                 subEndDate = endUser.SubscriptionEndDate.ToString("d"),
@@ -248,7 +252,8 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
             }
 
             // First, perform the check-in
-            var checkInResult = await _checkInService.CheckInAsync(request.Identifier.Trim(), user.BranchId.Value);
+            var checkInResult = await _checkInService.CheckInAsync(request.Identifier.Trim(), user.BranchId.Value,
+                request.CheckInDate.ToKSATime());
             if (!checkInResult.Success)
             {
                 return Json(new { success = false, message = checkInResult.Message });

@@ -1,6 +1,11 @@
 @model List<PadelPassCheckInSystem.Models.Entities.CheckIn>
 @{
     ViewData["Title"] = "Check-In";
+    var identifier = string.Empty;
+
+#if DEBUG
+    identifier = "F7AFD10B";
+#endif
 }
 
 <div class="row">
@@ -204,7 +209,7 @@
                     <i class="bi bi-clock"></i> All times shown in KSA Time (UTC+3)
                 </div>
 
-              
+
             </div>
         </div>
 
@@ -259,7 +264,7 @@
                         <label class="form-label">Play Start Time <small class="text-muted">(KSA)</small></label>
                         <input type="time" id="assignPlayStartTime" class="form-control">
                     </div>
-                    
+
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="assignPlayerAttended" checked>
@@ -269,7 +274,7 @@
                         </div>
                         <small class="text-muted">Uncheck if player did not show up</small>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label">Notes</label>
                         <textarea id="assignNotes" class="form-control" rows="2"
@@ -346,6 +351,16 @@
                             <option value="90" selected>90 minutes</option>
                             <option value="120">120 minutes</option>
                         </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Check In Date</label>
+                        <input type="date"
+                               id="confirmCheckInDate"
+                               class="form-control"
+                               required="required"
+                               value=""
+                               min="@DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd")"
+                               max="@DateTime.Now.ToString("yyyy-MM-dd")"/>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Play Start Time <small class="text-muted">(KSA)</small></label>
@@ -448,6 +463,11 @@
         let pendingQrCode = null;
 
         function startScanner() {
+            const identifier = "@identifier";
+            if (identifier !== '') {
+                processCheckIn(identifier);
+                return;
+            }
             const startBtn = document.getElementById('startScanBtn');
             const stopBtn = document.getElementById('stopScanBtn');
 
@@ -461,6 +481,8 @@
                 qrbox: {width: 250, height: 250},
                 aspectRatio: 1.0
             };
+
+
 
             html5QrCode.start(
                 {facingMode: "environment"},
@@ -485,6 +507,7 @@
                 startBtn.classList.remove('d-none');
             });
         }
+        
 
         function stopScanner() {
             if (html5QrCode && html5QrCode.isScanning) {
@@ -872,7 +895,7 @@
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function () {
-            updatePendingAssignments();
+            // updatePendingAssignments();
         });
 
         // Cleanup on page unload

@@ -51,6 +51,16 @@ public class AdminCheckInController : CheckInBaseController
             return Json(new { success = false, message = "Check-in record not found." });
         }
 
+        var checkInDateUtc = request.CheckInDate;
+
+        var isThereCheckInWithSameDate =
+            await _context.CheckIns.AnyAsync(x => x.CheckInDateTime.Date == checkInDateUtc.Date && x.Id  != checkIn.Id);
+
+        if (isThereCheckInWithSameDate)
+        {
+            return Json(new { success = false, message = "There is check in in this date." });
+        }
+
         // Convert play start time from KSA to UTC for storage
         DateTime? playStartTimeUtc = null;
         if (request.PlayStartTime.HasValue)
@@ -65,15 +75,17 @@ public class AdminCheckInController : CheckInBaseController
             : null;
         checkIn.PlayStartTime = playStartTimeUtc;
         checkIn.Notes = !string.IsNullOrWhiteSpace(request.Notes) ? request.Notes.Trim() : null;
+        checkIn.CheckInDateTime = checkInDateUtc.Date.Add(DateTime.UtcNow.TimeOfDay);
 
         // Handle player attendance and warnings
         checkIn.PlayerAttended = request.PlayerAttended;
-        var (isAutoStopped, warningMessage) = await _warningService.ProcessPlayerAttendanceAsync(request.CheckInId, request.PlayerAttended);
-        
+        var (isAutoStopped, warningMessage) =
+            await _warningService.ProcessPlayerAttendanceAsync(request.CheckInId, request.PlayerAttended);
+
         try
         {
             await _context.SaveChangesAsync();
-    
+
             var baseMessage = $"Check-in details updated successfully for {checkIn.EndUser.Name}";
             if (isAutoStopped)
             {
@@ -83,7 +95,7 @@ public class AdminCheckInController : CheckInBaseController
             {
                 return Json(new { success = true, message = $"{baseMessage}. {warningMessage}" });
             }
-    
+
             return Json(new { success = true, message = baseMessage });
         }
         catch (Exception ex)

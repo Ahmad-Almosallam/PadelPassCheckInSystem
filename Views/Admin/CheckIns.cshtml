@@ -33,7 +33,7 @@
             </div>
             <div class="col-md-3">
                 <label class="form-label">Phone Number</label>
-                <input type="text" name="phoneNumber" class="form-control" 
+                <input type="text" name="phoneNumber" class="form-control"
                        value="@Model.PhoneNumber" placeholder="Enter phone number">
             </div>
             @if (User.IsInRole("Admin"))
@@ -50,9 +50,9 @@
                     </select>
                 </div>
             }
-            
-            <input type="hidden" name="pageSize" id="pageSize" />
-            <input type="hidden" name="page" id="page" />
+
+            <input type="hidden" name="pageSize" id="pageSize"/>
+            <input type="hidden" name="page" id="page"/>
             <div class="col-12">
                 <label class="form-label">&nbsp;</label>
                 <div>
@@ -84,7 +84,8 @@
                 </div>
                 <div class="d-flex align-items-center">
                     <label class="form-label me-2 mb-0">Page size:</label>
-                    <select class="form-select form-select-sm" id="page-select" style="width: auto;" onchange="changePageSize(this.value)">
+                    <select class="form-select form-select-sm" id="page-select" style="width: auto;"
+                            onchange="changePageSize(this.value)">
                         <option value="10">10</option>
                         <option value="20">20</option>
                         <option value="50">50</option>
@@ -175,12 +176,13 @@
                                 <div class="btn-group" role="group">
                                     <button type="button" class="btn btn-primary btn-sm"
                                             onclick="showEditCheckInModal(@checkIn.Id,
-                                                '@Html.Raw(checkIn.EndUser.Name)',
-                                                '@Html.Raw(checkIn.CourtName)',
-                                                '@(checkIn.PlayDuration?.TotalMinutes ?? 0)',
-                                                '@checkIn.PlayStartTime?.ToKSATime().ToString("HH:mm")'
-                                                ,'@Html.Raw(checkIn.Notes)'
-                                                ,@Json.Serialize(checkIn.PlayerAttended))">
+                                            '@Html.Raw(checkIn.EndUser.Name)',
+                                            '@Html.Raw(checkIn.CourtName)',
+                                            '@(checkIn.PlayDuration?.TotalMinutes ?? 0)',
+                                            '@checkIn.PlayStartTime?.ToKSATime().ToString("HH:mm")'
+                                            ,'@Html.Raw(checkIn.Notes)'
+                                            ,@Json.Serialize(checkIn.PlayerAttended),
+                                            '@checkIn.CheckInDateTime.ToKSATime().ToString("yyyy-MM-dd")')">
                                         <i class="bi bi-pencil"></i> Edit
                                     </button>
                                     <button type="button" class="btn btn-danger btn-sm"
@@ -266,8 +268,10 @@
                                 <span class="page-link">...</span>
                             </li>
                         }
+
                         <li class="page-item">
-                            <a class="page-link" href="@GetPageUrl(Model.CheckIns.TotalPages)">@Model.CheckIns.TotalPages</a>
+                            <a class="page-link"
+                               href="@GetPageUrl(Model.CheckIns.TotalPages)">@Model.CheckIns.TotalPages</a>
                         </li>
                     }
 
@@ -299,7 +303,8 @@
             <div class="mt-3 text-muted">
                 <small>
                     <i class="bi bi-info-circle"></i>
-                    Showing @Model.CheckIns.StartIndex - @Model.CheckIns.EndIndex of @Model.CheckIns.TotalItems check-in(s). All times displayed in KSA Time (UTC+3).
+                    Showing @Model.CheckIns.StartIndex - @Model.CheckIns.EndIndex of @Model.CheckIns.TotalItems check-in(s).
+                    All times displayed in KSA Time (UTC+3).
                 </small>
             </div>
         }
@@ -343,6 +348,17 @@
                         <input type="time" id="editPlayStartTime" class="form-control">
                         <small class="text-muted">Leave empty to remove start time</small>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Check In Date</label>
+                        <input type="date"
+                               id="editCheckInDate"
+                               class="form-control"
+                               required="required"
+                               value=""/>
+                    </div>
+
+
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="editPlayerAttended" checked>
@@ -523,12 +539,14 @@
                                     </div>
                                     <div class="mb-3">
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="manualPlayerAttended" checked>
+                                            <input class="form-check-input" type="checkbox" id="manualPlayerAttended"
+                                                   checked>
                                             <label class="form-check-label" for="manualPlayerAttended">
                                                 <i class="bi bi-person-check"></i> Player Attended
                                             </label>
                                         </div>
-                                        <small class="text-muted">Uncheck if player did not show up (will issue warning)</small>
+                                        <small class="text-muted">Uncheck if player did not show up (will issue
+                                            warning)</small>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
@@ -563,6 +581,7 @@
 }
 
 @functions {
+
     public string GetPageUrl(int page)
     {
         var routeValues = new RouteValueDictionary
@@ -573,10 +592,10 @@
 
         if (Model.FromDate.HasValue)
             routeValues["fromDate"] = Model.FromDate.Value.ToString("yyyy-MM-dd");
-        
+
         if (Model.ToDate.HasValue)
             routeValues["toDate"] = Model.ToDate.Value.ToString("yyyy-MM-dd");
-        
+
         if (Model.BranchId.HasValue)
             routeValues["branchId"] = Model.BranchId.Value;
 
@@ -585,6 +604,7 @@
 
         return Url.Action("CheckIns", routeValues);
     }
+
 }
 
 @section Scripts {
@@ -600,7 +620,7 @@
             window.location.href = '@Url.Action("CheckIns")';
         }
 
-        function showEditCheckInModal(checkInId, customerName, courtName, playDuration, playStartTime, notes, playerAttended) {
+        function showEditCheckInModal(checkInId, customerName, courtName, playDuration, playStartTime, notes, playerAttended, checkInDate) {
             document.getElementById('editCheckInId').value = checkInId;
             document.getElementById('editCustomerName').value = customerName;
             document.getElementById('editCourtName').value = courtName || '';
@@ -616,6 +636,7 @@
             document.getElementById('editPlayStartTime').value = playStartTime || '';
             document.getElementById('editNotes').value = notes || '';
             document.getElementById('editPlayerAttended').checked = playerAttended;
+            document.getElementById('editCheckInDate').value = checkInDate;
 
             new bootstrap.Modal(document.getElementById('editCheckInModal')).show();
         }
@@ -627,6 +648,10 @@
             const playStartTime = document.getElementById('editPlayStartTime').value;
             const notes = document.getElementById('editNotes').value.trim();
             const playerAttended = document.getElementById('editPlayerAttended').checked;
+            const checkInDate = document.getElementById('editCheckInDate').value;
+
+            const checkInDateTime = new Date(`${checkInDate}T${playStartTime}:00`);
+            
 
             let playStartDateTime = null;
             if (playStartTime) {
@@ -647,7 +672,8 @@
                     playDurationMinutes: playDuration || 0,
                     playStartTime: playStartDateTime,
                     notes: notes || null,
-                    playerAttended: playerAttended
+                    playerAttended: playerAttended,
+                    checkInDate: checkInDateTime
                 })
             })
                 .then(response => response.json())
@@ -890,7 +916,7 @@
             const requestData = {
                 phoneNumber: phoneNumber,
                 branchId: branchId,
-                checkInDateTime: checkInDateTime.toISOString(),
+                checkInDateTime: checkInDateTime,
                 courtName: courtName || null,
                 playDurationMinutes: playDuration ? parseInt(playDuration) : null,
                 playStartTime: playStartDateTime ? playStartDateTime.toISOString() : null,

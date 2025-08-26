@@ -8,4 +8,5 @@ public class EditCheckInRequest
     public DateTime? PlayStartTime { get; set; }
     public string Notes { get; set; }
     public bool PlayerAttended { get; set; } = true;
+    public DateTime CheckInDate { get; set; }
 }

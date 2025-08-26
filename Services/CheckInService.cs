@@ -19,11 +19,10 @@ namespace PadelPassCheckInSystem.Services
             _warningService = warningService;
         }
 
-        public async Task<(bool Success, string Message, int? CheckInId)> CheckInAsync(
-            string identifier,
-            int branchId)
+        public async Task<(bool Success, string Message, int? CheckInId)> CheckInAsync(string identifier,
+            int branchId, DateTime requestCheckInDate)
         {
-            var (isValid, message, endUser) = await ValidateCheckInAsync(identifier, branchId);
+            var (isValid, message, endUser) = await ValidateCheckInAsync(identifier, branchId, requestCheckInDate);
 
             if (!isValid)
             {
@@ -35,7 +34,7 @@ namespace PadelPassCheckInSystem.Services
             {
                 EndUserId = endUser.Id,
                 BranchId = branchId,
-                CheckInDateTime = DateTime.UtcNow
+                CheckInDateTime = requestCheckInDate
             };
 
             _context.CheckIns.Add(checkIn);
@@ -302,7 +301,8 @@ namespace PadelPassCheckInSystem.Services
 
         public async Task<(bool IsValid, string Message, EndUser User)> ValidateCheckInAsync(
             string identifier,
-            int branchId)
+            int branchId,
+            DateTime requestCheckInDate) // Use the requested check-in date
         {
             // Find user by phone or unique identifier
             var endUser = await _context.EndUsers
@@ -314,64 +314,68 @@ namespace PadelPassCheckInSystem.Services
             }
 
             // Use KSA time for all validations
-            var nowKSA = KSADateTimeExtensions.GetKSANow();
-            var todayKSA = nowKSA.Date;
-            var currentTimeKSA = nowKSA.TimeOfDay;
-            var currentDayOfWeekKSA = nowKSA.DayOfWeek;
+            var nowKsa = KSADateTimeExtensions.GetKSANow();
+            var todayKsa = nowKsa.Date;
+            var currentTimeKsa = nowKsa.TimeOfDay;
+            var currentDayOfWeekKsa = nowKsa.DayOfWeek;
+
+            // CHANGED: Use the requested check-in date for validation
+            var requestedDateKsa = requestCheckInDate.Date;
 
             // Convert subscription dates to KSA for comparison
-            var subscriptionStartKSA = endUser.SubscriptionStartDate.ToKSATime()
-                .Date;
-            var subscriptionEndKSA = endUser.SubscriptionEndDate.ToKSATime()
-                .Date;
-
+            var subscriptionStartKsa = endUser.SubscriptionStartDate.ToKSATime().Date;
+            var subscriptionEndKsa = endUser.SubscriptionEndDate.ToKSATime().Date;
 
             if (endUser.IsStopped)
             {
-                return (false, $"Subscription is currently stopped by admin",
-                    null);
+                return (false, $"Subscription is currently stopped by admin", null);
             }
 
-            // Check if subscription is paused (using KSA dates)
-            if (endUser.IsPaused && endUser.CurrentPauseStartDate!.Value.ToKSATime()
-                    .Date <= todayKSA.Date)
+            // CHANGED: Check if subscription was paused on the requested date
+            if (endUser.IsPaused && endUser.CurrentPauseStartDate!.Value.ToKSATime().Date <= requestedDateKsa)
             {
-                var pauseEndDateKSA = endUser.CurrentPauseEndDate?.ToKSATime()
-                    .Date;
-                if (pauseEndDateKSA.HasValue && todayKSA <= pauseEndDateKSA.Value)
+                var pauseEndDateKsa = endUser.CurrentPauseEndDate?.ToKSATime().Date;
+                if (pauseEndDateKsa.HasValue && requestedDateKsa <= pauseEndDateKsa.Value)
                 {
-                    return (false, $"Subscription is currently paused until {pauseEndDateKSA.Value:MMM dd, yyyy}",
-                        null);
+                    return (false, $"Subscription was paused on {requestedDateKsa:MMM dd, yyyy}", null);
                 }
-                else
+
+                if (requestedDateKsa == todayKsa)
                 {
-                    // Auto-unpause if pause period has ended
+                    // Only auto-unpause if we're checking for today and pause period has ended
                     await UnpauseSubscriptionAsync(endUser.Id);
                 }
             }
 
-            // Check subscription validity using KSA dates
-            if (todayKSA < subscriptionStartKSA || todayKSA > subscriptionEndKSA)
+            // CHANGED: Check subscription validity for the requested date
+            if (requestedDateKsa < subscriptionStartKsa || requestedDateKsa > subscriptionEndKsa)
             {
-                var startDateStr = subscriptionStartKSA.ToString("MMM dd, yyyy");
-                var endDateStr = subscriptionEndKSA.ToString("MMM dd, yyyy");
-                return (false, $"Subscription is not active. Valid period: {startDateStr} to {endDateStr}", null);
+                var startDateStr = subscriptionStartKsa.ToString("MMM dd, yyyy");
+                var endDateStr = subscriptionEndKsa.ToString("MMM dd, yyyy");
+                return (false,
+                    $"Subscription is not active for {requestedDateKsa:MMM dd, yyyy}. Valid period: {startDateStr} to {endDateStr}",
+                    null);
             }
 
-            // Check if user has already checked in today (using KSA date)
-            var hasCheckedInToday = await HasCheckedInTodayAsync(endUser.Id);
-            if (hasCheckedInToday)
+            // CHANGED: Check if user has already checked in on the requested date
+            var hasCheckedInOnDate = await HasCheckedInOnDateAsync(endUser.Id, requestedDateKsa);
+            if (hasCheckedInOnDate)
             {
-                return (false, "User has already checked in today", null);
+                var dateDisplayText =
+                    requestedDateKsa == todayKsa ? "today" : requestedDateKsa.ToString("MMM dd, yyyy");
+                return (false, $"User has already checked in on {dateDisplayText}", null);
             }
+
 
             // Check if current time is within allowed branch time slots (using KSA time)
-            var isWithinAllowedTime = await IsWithinAllowedTimeSlotAsync(branchId, currentDayOfWeekKSA, currentTimeKSA);
+            var isWithinAllowedTime =
+                await IsWithinAllowedTimeSlotAsync(branchId, currentDayOfWeekKsa, currentTimeKsa);
             if (!isWithinAllowedTime)
             {
-                var allowedTimes = await GetBranchTimeSlotDisplayAsync(branchId, currentDayOfWeekKSA);
+                var allowedTimes = await GetBranchTimeSlotDisplayAsync(branchId, currentDayOfWeekKsa);
                 return (false, $"Check-in is only allowed during: {allowedTimes}", null);
             }
+
 
             return (true, "Validation successful", endUser);
         }
@@ -461,8 +465,8 @@ namespace PadelPassCheckInSystem.Services
                 {
                     return (false, $"User already has a check-in record for {checkInDateKSA:MMM dd, yyyy}", null);
                 }
-                
-                
+
+
                 var nowKSA = KSADateTimeExtensions.GetKSANow();
                 var todayKSA = nowKSA.Date;
                 if (endUser.IsPaused && endUser.CurrentPauseStartDate!.Value.ToKSATime()
@@ -582,6 +586,19 @@ namespace PadelPassCheckInSystem.Services
                 // Log the exception here
                 return (false, "An error occurred while validating user", null);
             }
+        }
+
+        public async Task<bool> HasCheckedInOnDateAsync(int endUserId, DateTime checkInDate)
+        {
+            // Use the specific date for comparison
+            var checkInDateKSA = checkInDate.Date;
+
+            // Get all check-ins for this user and convert to KSA time for comparison
+            var userCheckIns = await _context.CheckIns
+                .Where(c => c.EndUserId == endUserId)
+                .ToListAsync();
+
+            return userCheckIns.Any(c => c.CheckInDateTime.ToKSATime().Date == checkInDateKSA);
         }
     }
 }
