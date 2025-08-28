@@ -1,11 +1,17 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
+using PadelPassCheckInSystem.Extensions;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Services;
+using PadelPassCheckInSystem.Settings;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+EncryptExtension.PublicKey = builder.Configuration["Keys:PublicId"];
+EncryptExtension.SaltKey = builder.Configuration["Keys:SecretId"];
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -21,7 +27,7 @@ builder.Host.UseSerilog();
 
 // Add services to the container.
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection").Decrypt(), options =>
     {
         options.MigrationsHistoryTable("__EFMigrationsHistory", "access");
     }));
@@ -46,6 +52,12 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = new  TimeSpan(30,0, 0, 0); // 1 minute for testing
     options.SlidingExpiration = true;
 });
+
+var rekazSettings = new RekazSettings();
+builder.Configuration.GetSection("RekazSettings").Bind(rekazSettings);
+rekazSettings.ApiKey = rekazSettings.ApiKey.Decrypt();
+rekazSettings.TenantId = rekazSettings.TenantId.Decrypt();
+builder.Services.AddSingleton(rekazSettings);
 
 // Register services
 builder.Services.AddScoped<ICheckInService, CheckInService>();
