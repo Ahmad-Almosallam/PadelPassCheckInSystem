@@ -18,6 +18,7 @@ namespace PadelPassCheckInSystem.Data
         public DbSet<SubscriptionPause> SubscriptionPauses { get; set; }
         public DbSet<BranchTimeSlot> BranchTimeSlots { get; set; }
         public DbSet<PlaytomicIntegration> PlaytomicIntegrations { get; set; }
+        public DbSet<BranchCourt> BranchCourts { get; set; }
 
         protected override void OnModelCreating(
             ModelBuilder builder)
@@ -33,7 +34,7 @@ namespace PadelPassCheckInSystem.Data
                 builder.Entity(entityType.ClrType)
                     .ToTable(entityType.GetTableName(), "access");
             }
-            
+
             builder.Entity<CheckIn>()
                 .Property(x => x.PlayerAttended)
                 .HasDefaultValue(true);
@@ -41,7 +42,7 @@ namespace PadelPassCheckInSystem.Data
             builder.Entity<EndUser>()
                 .Property(x => x.IsStoppedByWarning)
                 .HasDefaultValue(false);
-            
+
 
             // Unique constraint on EndUser phone number
             builder.Entity<EndUser>()
@@ -101,10 +102,32 @@ namespace PadelPassCheckInSystem.Data
                 .HasDatabaseName("IX_CheckIn_Branch_DateTime");
 
             // Configure decimal precision for time-related calculations
-            
+
             builder.Entity<CheckIn>()
                 .Property(c => c.PlayDuration)
                 .HasColumnType("time");
+
+
+            #region BranchCourts
+
+            builder.Entity<BranchCourt>()
+                .HasOne(bc => bc.Branch)
+                .WithMany(b => b.BranchCourts)
+                .HasForeignKey(bc => bc.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Index for court queries
+            builder.Entity<BranchCourt>()
+                .HasIndex(bc => new { bc.BranchId, bc.IsActive })
+                .HasDatabaseName("IX_BranchCourt_Branch_Active");
+            
+            builder.Entity<CheckIn>()
+                .HasOne(c => c.BranchCourt)
+                .WithMany(bc => bc.CheckIns)
+                .HasForeignKey(c => c.BranchCourtId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            #endregion
         }
     }
 }

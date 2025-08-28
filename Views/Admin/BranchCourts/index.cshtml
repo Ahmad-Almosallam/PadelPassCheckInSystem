@@ -1,0 +1,618 @@
+﻿@model PadelPassCheckInSystem.Models.ViewModels.BranchCourts.BranchCourtsPaginatedViewModel
+@{
+    ViewData["Title"] = ViewBag.BranchId != null ? $"Courts - {Model.BranchName}" : "All Branch Courts Management";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        @if (ViewBag.BranchId != null)
+        {
+            <span><i class="bi bi-geo-alt"></i> Courts - @Model.BranchName</span>
+        }
+        else
+        {
+            <span><i class="bi bi-geo-alt"></i> All Branch Courts Management</span>
+        }
+    </h1>
+    
+    <div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCourtModal">
+            <i class="bi bi-plus-circle"></i> Add New Court
+        </button>
+        @if (ViewBag.BranchId != null)
+        {
+            <a href="@Url.Action("BranchCourts", "BranchCourt")" class="btn btn-outline-primary ms-2">
+                <i class="bi bi-arrow-left"></i> Back to All Courts
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Filter Section -->
+@if (ViewBag.BranchId == null)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Filter by Branch</label>
+                    <select name="branchId" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Branches</option>
+                        @foreach (var branch in Model.Branches)
+                        {
+                            <option value="@branch.Id" selected="@(Model.FilterBranchId == branch.Id ? "selected" : null)">
+                                @branch.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Search Court Name</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" name="searchCourtName" class="form-control"
+                               placeholder="Enter court name"
+                               value="@Model.SearchCourtName">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="resetFilters()">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<!-- Main Content Card -->
+<div class="card">
+    <div class="card-body">
+        <!-- Pagination Info -->
+        @if (Model.BranchCourts.TotalItems > 0)
+        {
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="text-muted">
+                    <small>
+                        Showing @Model.BranchCourts.StartIndex - @Model.BranchCourts.EndIndex of @Model.BranchCourts.TotalItems courts
+                        @if (!string.IsNullOrWhiteSpace(Model.SearchCourtName))
+                        {
+                            <span class="badge bg-info ms-2">
+                                <i class="bi bi-funnel"></i> Filtered by: @Model.SearchCourtName
+                            </span>
+                        }
+                        @if (Model.FilterBranchId.HasValue)
+                        {
+                            <span class="badge bg-secondary ms-2">
+                                <i class="bi bi-building"></i> Branch: @Model.BranchName
+                            </span>
+                        }
+                    </small>
+                </div>
+                <div class="d-flex align-items-center">
+                    <label class="form-label me-2 mb-0">Page size:</label>
+                    <select class="form-select form-select-sm" id="page-select" style="width: auto;"
+                            onchange="changePageSize(this.value)">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+        }
+
+        <!-- Courts Table -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Court Name</th>
+                        @if (ViewBag.BranchId == null)
+                        {
+                            <th>Branch</th>
+                        }
+                        <th>Status</th>
+                        <th>Created Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var court in Model.BranchCourts.Items)
+                    {
+                        <tr class="@(court.IsActive ? "" : "table-secondary")">
+                            <td>
+                                <strong>@court.CourtName</strong>
+                                @if (!court.IsActive)
+                                {
+                                    <br><small class="text-muted"><i class="bi bi-exclamation-circle"></i> Inactive</small>
+                                }
+                            </td>
+                            @if (ViewBag.BranchId == null)
+                            {
+                                <td>
+                                    <span class="badge bg-primary">@court.BranchName</span>
+                                </td>
+                            }
+                            <td>
+                                @if (court.IsActive)
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactive</span>
+                                }
+                            </td>
+                            <td>
+                                <small>@court.CreatedAt.ToKSATime().ToString("MMM dd, yyyy HH:mm")</small>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                            data-bs-toggle="dropdown">
+                                        <i class="bi bi-gear"></i> Actions
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <button class="dropdown-item" 
+                                                    onclick="editCourt(@court.Id, '@court.CourtName', @court.IsActive.ToString().ToLower())">
+                                                <i class="bi bi-pencil"></i> Edit Court
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li>
+                                            <form asp-action="ToggleCourtStatus" method="post" style="display: inline;">
+                                                <input type="hidden" name="id" value="@court.Id" />
+                                                <button type="submit" class="dropdown-item @(court.IsActive ? "text-warning" : "text-success")">
+                                                    <i class="bi @(court.IsActive ? "bi-pause-circle" : "bi-play-circle")"></i>
+                                                    @(court.IsActive ? "Deactivate" : "Activate")
+                                                </button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li>
+                                            <button class="dropdown-item text-danger" 
+                                                    onclick="deleteCourt(@court.Id, '@court.CourtName')">
+                                                <i class="bi bi-trash"></i> Delete Court
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!Model.BranchCourts.Items.Any())
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-geo-alt fs-1 mb-3"></i>
+                @if (!string.IsNullOrWhiteSpace(Model.SearchCourtName) || Model.FilterBranchId.HasValue)
+                {
+                    <h5>No Courts Found</h5>
+                    <p>No courts found matching the current filters.</p>
+                    <button type="button" class="btn btn-primary" onclick="resetFilters()">
+                        <i class="bi bi-arrow-left"></i> Show All Courts
+                    </button>
+                }
+                else
+                {
+                    <h5>No Courts Found</h5>
+                    <p>No courts have been created yet.</p>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCourtModal">
+                        <i class="bi bi-plus-circle"></i> Add First Court
+                    </button>
+                }
+            </div>
+        }
+
+        <!-- Pagination Controls -->
+        @if (Model.BranchCourts.TotalPages > 1)
+        {
+            <nav aria-label="Courts pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- First Page -->
+                    @if (Model.BranchCourts.CurrentPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(1)">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- Previous Page -->
+                    @if (Model.BranchCourts.HasPreviousPage)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.BranchCourts.CurrentPage - 1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- Page Numbers -->
+                    @{
+                        var startPage = Math.Max(1, Model.BranchCourts.CurrentPage - 2);
+                        var endPage = Math.Min(Model.BranchCourts.TotalPages, Model.BranchCourts.CurrentPage + 2);
+                    }
+
+                    @if (startPage > 1)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(1)">1</a>
+                        </li>
+                        @if (startPage > 2)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+                    }
+
+                    @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+                    {
+                        <li class="page-item @(pageNumber == Model.BranchCourts.CurrentPage ? "active" : "")">
+                            <a class="page-link" href="@GetPageUrl(pageNumber)">
+                                @pageNumber
+                            </a>
+                        </li>
+                    }
+
+                    @if (endPage < Model.BranchCourts.TotalPages)
+                    {
+                        @if (endPage < Model.BranchCourts.TotalPages - 1)
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.BranchCourts.TotalPages)">@Model.BranchCourts.TotalPages</a>
+                        </li>
+                    }
+
+                    <!-- Next Page -->
+                    @if (Model.BranchCourts.HasNextPage)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.BranchCourts.CurrentPage + 1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- Last Page -->
+                    @if (Model.BranchCourts.CurrentPage < Model.BranchCourts.TotalPages)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@GetPageUrl(Model.BranchCourts.TotalPages)">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+
+        @if (Model.BranchCourts.Items.Any())
+        {
+            <div class="mt-3 text-muted">
+                <small>
+                    <i class="bi bi-info-circle"></i>
+                    Showing @Model.BranchCourts.StartIndex - @Model.BranchCourts.EndIndex of @Model.BranchCourts.TotalItems court(s).
+                    All dates displayed in KSA Time (UTC+3).
+                </small>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Create Court Modal -->
+<div class="modal fade" id="createCourtModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="CreateBranchCourt" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Court</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (ViewBag.BranchId == null)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Branch *</label>
+                            <select name="BranchId" class="form-select" required>
+                                <option value="">Select Branch</option>
+                                @foreach (var branch in Model.Branches)
+                                {
+                                    <option value="@branch.Id">@branch.Name</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                    else
+                    {
+                        <input type="hidden" name="BranchId" value="@ViewBag.BranchId" />
+                        <input type="hidden" name="FilterBranchId" value="@ViewBag.BranchId" />
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label">Court Name *</label>
+                        <input type="text" name="CourtName" class="form-control" 
+                               placeholder="e.g., Court 1, Court A" required maxlength="50">
+                        <small class="text-muted">Maximum 50 characters</small>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Note:</strong> Court names must be unique within each branch. 
+                        Use clear, descriptive names like "Court 1", "Court A", or "Main Court".
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Court</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Court Modal -->
+<div class="modal fade" id="editCourtModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="UpdateBranchCourt" method="post">
+                <input type="hidden" id="editCourtId" name="id">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Court</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Court Name *</label>
+                        <input type="text" id="editCourtName" name="CourtName" class="form-control" 
+                               required maxlength="50">
+                        <small class="text-muted">Maximum 50 characters</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editIsActive" name="IsActive" value="true">
+                            <label class="form-check-label" for="editIsActive">
+                                Active
+                            </label>
+                        </div>
+                        <small class="text-muted">Inactive courts will not be available for new check-ins</small>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Warning:</strong> Changes to court status will affect future check-ins. 
+                        Existing check-ins will not be affected.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Court</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteCourtModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i> Confirm Delete
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Warning:</strong> This action cannot be undone.
+                </div>
+                <p>Are you sure you want to delete the court <strong id="deleteCourtName"></strong>?</p>
+                <p class="text-muted">
+                    <small>
+                        <i class="bi bi-info-circle"></i> 
+                        Courts with existing check-ins cannot be deleted. You can deactivate them instead.
+                    </small>
+                </p>
+                <input type="hidden" id="deleteCourtId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteCourt()">
+                    <i class="bi bi-trash"></i> Delete Court
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    public string GetPageUrl(int page)
+    {
+        var routeValues = new RouteValueDictionary
+        {
+            ["page"] = page,
+            ["pageSize"] = Model.BranchCourts.PageSize
+        };
+
+        if (Model.FilterBranchId.HasValue)
+            routeValues["branchId"] = Model.FilterBranchId.Value;
+
+        if (!string.IsNullOrWhiteSpace(Model.SearchCourtName))
+            routeValues["searchCourtName"] = Model.SearchCourtName;
+
+        return Url.Action("BranchCourts", routeValues);
+    }
+}
+
+@section Scripts {
+    <script>
+        // Court management functions
+        function editCourt(id, courtName, isActive) {
+            document.getElementById('editCourtId').value = id;
+            document.getElementById('editCourtName').value = courtName;
+            document.getElementById('editIsActive').checked = isActive;
+
+            new bootstrap.Modal(document.getElementById('editCourtModal')).show();
+        }
+
+        function deleteCourt(id, courtName) {
+            // First check if court can be deleted
+            fetch(`/Admin/CheckCanDelete?id=${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.canDelete) {
+                        document.getElementById('deleteCourtId').value = id;
+                        document.getElementById('deleteCourtName').textContent = courtName;
+                        new bootstrap.Modal(document.getElementById('deleteCourtModal')).show();
+                    } else {
+                        showAlert('Cannot delete this court because it has associated check-ins. You can deactivate it instead.', 'warning');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('Error checking court deletion status.', 'danger');
+                });
+        }
+
+        function confirmDeleteCourt() {
+            const courtId = document.getElementById('deleteCourtId').value;
+
+            if (!courtId) {
+                showAlert('Invalid court ID.', 'danger');
+                return;
+            }
+
+            // Create form and submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '@Url.Action("DeleteBranchCourt")';
+
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'id';
+            idInput.value = courtId;
+            form.appendChild(idInput);
+
+            // Add anti-forgery token
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = '__RequestVerificationToken';
+            tokenInput.value = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            form.appendChild(tokenInput);
+
+            document.body.appendChild(form);
+            form.submit();
+
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('deleteCourtModal')).hide();
+        }
+
+        // Utility functions
+        function changePageSize(pageSize) {
+            const url = new URL(window.location);
+            url.searchParams.set('pageSize', pageSize);
+            url.searchParams.set('page', '1'); // Reset to first page
+            window.location.href = url.toString();
+        }
+
+        function resetFilters() {
+            window.location.href = '@Url.Action("BranchCourts")';
+        }
+
+        function showAlert(message, type) {
+            // Remove existing alerts
+            const existingAlerts = document.querySelectorAll('.dynamic-alert');
+            existingAlerts.forEach(alert => alert.remove());
+
+            // Create new alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed dynamic-alert`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'x-circle'}"></i>
+                <strong>${type === 'success' ? 'Success!' : type === 'warning' ? 'Warning!' : 'Error!'}</strong> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+
+            // Remove alert after 5 seconds
+            setTimeout(() => {
+                if (alertDiv && alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set current page size in dropdown
+            const pageSelect = document.getElementById('page-select');
+            if (pageSelect) {
+                pageSelect.value = '@Model.BranchCourts.PageSize';
+            }
+
+            // Reset forms when modals close
+            document.getElementById('createCourtModal')?.addEventListener('hidden.bs.modal', function () {
+                this.querySelector('form').reset();
+            });
+
+            document.getElementById('editCourtModal')?.addEventListener('hidden.bs.modal', function () {
+                this.querySelector('form').reset();
+            });
+
+            // Handle checkbox change for edit form
+            document.getElementById('editIsActive')?.addEventListener('change', function() {
+                this.value = this.checked ? 'true' : 'false';
+            });
+        });
+
+        // Form validation
+        document.querySelector('#createCourtModal form')?.addEventListener('submit', function(e) {
+            const courtName = this.querySelector('[name="CourtName"]').value.trim();
+            if (!courtName) {
+                e.preventDefault();
+                showAlert('Please enter a court name.', 'warning');
+                return false;
+            }
+            if (courtName.length > 50) {
+                e.preventDefault();
+                showAlert('Court name cannot exceed 50 characters.', 'warning');
+                return false;
+            }
+        });
+
+        document.querySelector('#editCourtModal form')?.addEventListener('submit', function(e) {
+            const courtName = this.querySelector('[name="CourtName"]').value.trim();
+            if (!courtName) {
+                e.preventDefault();
+                showAlert('Please enter a court name.', 'warning');
+                return false;
+            }
+            if (courtName.length > 50) {
+                e.preventDefault();
+                showAlert('Court name cannot exceed 50 characters.', 'warning');
+                return false;
+            }
+        });
+    </script>
+}

@@ -57,6 +57,7 @@ builder.Services.AddScoped<IPlaytomicSyncService, PlaytomicSyncService>();
 builder.Services.AddScoped<IPlaytomicIntegrationService, PlaytomicIntegrationService>();
 builder.Services.AddScoped<IDashboardAnalyticsService, DashboardAnalyticsService>();
 builder.Services.AddScoped<IWarningService, WarningService>();
+builder.Services.AddScoped<IBranchCourtService, BranchCourtService>();
 
 builder.Services.AddHttpClient();
 

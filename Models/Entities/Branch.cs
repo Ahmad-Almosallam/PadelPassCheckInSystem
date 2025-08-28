@@ -20,5 +20,6 @@ namespace PadelPassCheckInSystem.Models.Entities
         public virtual ICollection<ApplicationUser> BranchUsers { get; set; }
         public virtual ICollection<CheckIn> CheckIns { get; set; }
         public virtual ICollection<BranchTimeSlot> TimeSlots { get; set; }
+        public virtual ICollection<BranchCourt> BranchCourts { get; set; }
     }
 }
