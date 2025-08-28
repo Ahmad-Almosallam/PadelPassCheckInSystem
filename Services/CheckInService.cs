@@ -34,7 +34,7 @@ namespace PadelPassCheckInSystem.Services
             {
                 EndUserId = endUser.Id,
                 BranchId = branchId,
-                CheckInDateTime = requestCheckInDate
+                CheckInDateTime = requestCheckInDate.ToUTCFromKSA()
             };
 
             _context.CheckIns.Add(checkIn);

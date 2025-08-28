@@ -311,77 +311,7 @@
     </div>
 </div>
 
-<!-- Edit Check-In Modal -->
-<div class="modal fade" id="editCheckInModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Check-In Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editCheckInForm">
-                    <input type="hidden" id="editCheckInId">
-                    <div class="mb-3">
-                        <label class="form-label">Customer Name</label>
-                        <input type="text" id="editCustomerName" class="form-control" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Court Name/Number</label>
-                        <input type="number" id="editCourtName" class="form-control"
-                               placeholder="e.g.,  1, 2">
-                        <small class="text-muted">Leave empty to remove court assignment</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Play Duration (minutes)</label>
-                        <select id="editPlayDuration" class="form-select">
-                            <option value="0">Not set</option>
-                            <option value="60">60 minutes</option>
-                            <option value="90">90 minutes</option>
-                            <option value="120">120 minutes</option>
-                            <option value="150">150 minutes</option>
-                            <option value="180">180 minutes</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Play Start Time <small class="text-muted">(KSA)</small></label>
-                        <input type="time" id="editPlayStartTime" class="form-control">
-                        <small class="text-muted">Leave empty to remove start time</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Check In Date</label>
-                        <input type="date"
-                               id="editCheckInDate"
-                               class="form-control"
-                               required="required"
-                               value=""/>
-                    </div>
-
-
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="editPlayerAttended" checked>
-                            <label class="form-check-label" for="editPlayerAttended">
-                                <i class="bi bi-person-check"></i> Player Attended
-                            </label>
-                        </div>
-                        <small class="text-muted">Uncheck if player did not show up (will issue warning)</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea id="editNotes" class="form-control" rows="3"
-                                  placeholder="Additional notes (optional)"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitEditCheckIn()">Update Check-In</button>
-            </div>
-        </div>
-    </div>
-</div>
+<partial name="Components/_CheckInModal" model="@("edit", true)" />
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
@@ -621,34 +551,34 @@
         }
 
         function showEditCheckInModal(checkInId, customerName, courtName, playDuration, playStartTime, notes, playerAttended, checkInDate) {
-            document.getElementById('editCheckInId').value = checkInId;
-            document.getElementById('editCustomerName').value = customerName;
-            document.getElementById('editCourtName').value = courtName || '';
+            document.getElementById('edit-CheckInId').value = checkInId;
+            document.getElementById('edit-CustomerName').value = customerName;
+            document.getElementById('edit-CourtName').value = courtName || '';
 
             // Set play duration
             if (playDuration && playDuration !== 'NaN' && playDuration !== 'undefined' && playDuration > 0) {
-                document.getElementById('editPlayDuration').value = Math.round(parseFloat(playDuration));
+                document.getElementById('edit-PlayDuration').value = Math.round(parseFloat(playDuration));
             } else {
-                document.getElementById('editPlayDuration').value = '0';
+                document.getElementById('edit-PlayDuration').value = '0';
             }
 
             // Set play start time
-            document.getElementById('editPlayStartTime').value = playStartTime || '';
-            document.getElementById('editNotes').value = notes || '';
-            document.getElementById('editPlayerAttended').checked = playerAttended;
-            document.getElementById('editCheckInDate').value = checkInDate;
+            document.getElementById('edit-PlayStartTime').value = playStartTime || '';
+            document.getElementById('edit-Notes').value = notes || '';
+            document.getElementById('edit-PlayerAttended').checked = playerAttended;
+            document.getElementById('edit-CheckInDate').value = checkInDate;
 
-            new bootstrap.Modal(document.getElementById('editCheckInModal')).show();
+            new bootstrap.Modal(document.getElementById('edit-CheckInModal')).show();
         }
 
         function submitEditCheckIn() {
-            const checkInId = parseInt(document.getElementById('editCheckInId').value);
-            const courtName = document.getElementById('editCourtName').value.trim();
-            const playDuration = parseInt(document.getElementById('editPlayDuration').value);
-            const playStartTime = document.getElementById('editPlayStartTime').value;
-            const notes = document.getElementById('editNotes').value.trim();
-            const playerAttended = document.getElementById('editPlayerAttended').checked;
-            const checkInDate = document.getElementById('editCheckInDate').value;
+            const checkInId = parseInt(document.getElementById('edit-CheckInId').value);
+            const courtName = document.getElementById('edit-CourtName').value.trim();
+            const playDuration = parseInt(document.getElementById('edit-PlayDuration').value);
+            const playStartTime = document.getElementById('edit-PlayStartTime').value;
+            const notes = document.getElementById('edit-Notes').value.trim();
+            const playerAttended = document.getElementById('edit-PlayerAttended').checked;
+            const checkInDate = document.getElementById('edit-CheckInDate').value;
 
             const checkInDateTime = new Date(`${checkInDate}T${playStartTime}:00`);
             
@@ -679,7 +609,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        bootstrap.Modal.getInstance(document.getElementById('editCheckInModal')).hide();
+                        bootstrap.Modal.getInstance(document.getElementById('edit-CheckInModal')).hide();
                         showAlert(data.message, 'success');
                         // Refresh the page to show updated data
                         setTimeout(() => {
@@ -774,6 +704,12 @@
             document.getElementById('page-select').value = '@Model.CheckIns.PageSize';
             document.getElementById('pageSize').value = '@Model.CheckIns.PageSize';
             document.getElementById('page').value = '@Model.CheckIns.CurrentPage';
+            
+            
+            // click event on id edit-btn-confirm
+            document.getElementById('edit-btn-checkin').addEventListener('click', function () {
+                submitEditCheckIn();
+            });
         });
 
 

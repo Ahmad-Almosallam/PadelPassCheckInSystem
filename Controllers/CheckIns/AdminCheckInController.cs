@@ -75,7 +75,7 @@ public class AdminCheckInController : CheckInBaseController
             : null;
         checkIn.PlayStartTime = playStartTimeUtc;
         checkIn.Notes = !string.IsNullOrWhiteSpace(request.Notes) ? request.Notes.Trim() : null;
-        checkIn.CheckInDateTime = checkInDateUtc.Date.Add(DateTime.UtcNow.TimeOfDay);
+        checkIn.CheckInDateTime = checkInDateUtc;
 
         // Handle player attendance and warnings
         checkIn.PlayerAttended = request.PlayerAttended;

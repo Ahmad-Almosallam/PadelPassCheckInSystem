@@ -317,80 +317,7 @@
 </div>
 
 <!-- Check-in Confirmation Modal with Court Assignment -->
-<div class="modal fade" id="checkInConfirmModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Check-In</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex align-items-center mb-3">
-                    <div id="confirmUserImage" class="me-3">
-                        <!-- Will be populated by JavaScript -->
-                    </div>
-                    <div>
-                        <h5 id="confirmUserName" class="mb-1"><!-- Will be populated by JavaScript --></h5>
-                        <small class="text-muted">Subscription End Date: <span id="confirmSubEndDate"></span></small>
-                    </div>
-                </div>
-
-                <hr>
-
-                <form id="checkInConfirmForm">
-                    <input type="hidden" id="confirmIdentifier">
-                    <div class="mb-3">
-                        <label class="form-label">Court Name/Number *</label>
-                        <input type="number" id="confirmCourtName" class="form-control"
-                               placeholder="e.g., 1, 2" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Play Duration (minutes) *</label>
-                        <select id="confirmPlayDuration" class="form-select" required>
-                            <option value="60">60 minutes</option>
-                            <option value="90" selected>90 minutes</option>
-                            <option value="120">120 minutes</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Check In Date</label>
-                        <input type="date"
-                               id="confirmCheckInDate"
-                               class="form-control"
-                               required="required"
-                               value=""
-                               min="@DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd")"
-                               max="@DateTime.Now.ToString("yyyy-MM-dd")"/>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Play Start Time <small class="text-muted">(KSA)</small></label>
-                        <input type="time" id="confirmPlayStartTime" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="confirmPlayerAttended" checked>
-                            <label class="form-check-label" for="confirmPlayerAttended">
-                                <i class="bi bi-person-check"></i> Player Attended
-                            </label>
-                        </div>
-                        <small class="text-muted">Uncheck if player did not show up</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea id="confirmNotes" class="form-control" rows="2"
-                                  placeholder="Additional notes (optional)"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="confirmCheckInWithCourt()">
-                    Confirm Check-In & Assign Court
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<partial name="Components/_CheckInModal" model="@("confirm", false)" />
 
 @section Styles {
     <style>
@@ -896,6 +823,10 @@
         // Initialize page
         document.addEventListener('DOMContentLoaded', function () {
             // updatePendingAssignments();
+            // click event on btn-confirm-checkin
+            document.getElementById('confirm-btn-checkin').addEventListener('click', function () {
+                confirmCheckInWithCourt();
+            });
         });
 
         // Cleanup on page unload

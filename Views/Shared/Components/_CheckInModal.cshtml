@@ -1,0 +1,99 @@
+﻿@model (string prefix, bool isAdmin)
+
+<div class="modal fade" id="@Model.prefix-CheckInModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Check-In</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                @if (!Model.isAdmin)
+                {
+                    <div class="d-flex align-items-center mb-3">
+                        <div id="@Model.prefix-UserImage" class="me-3">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                        <div>
+                            <h5 id="@Model.prefix-UserName" class="mb-1"><!-- Will be populated by JavaScript --></h5>
+                            <small class="text-muted">Subscription End Date: <span id="@Model.prefix-SubEndDate"></span></small>
+                        </div>
+                    </div>
+
+                    <hr>
+                }
+
+                <form id="@Model.prefix-CheckInForm">
+                    <input type="hidden" id="@Model.prefix-CheckInId">
+                    <input type="hidden" id="@Model.prefix-Identifier">
+                    
+                    @if (Model.isAdmin)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Customer Name</label>
+                            <input type="text" id="@Model.prefix-CustomerName" class="form-control" readonly>
+                        </div>
+                    }
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Court Name/Number *</label>
+                        <input type="number" id="@Model.prefix-CourtName" class="form-control"
+                               placeholder="e.g., 1, 2" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Play Duration (minutes) *</label>
+                        <select id="@Model.prefix-PlayDuration" class="form-select" required>
+                            <option value="60">60 minutes</option>
+                            <option value="90" selected>90 minutes</option>
+                            <option value="120">120 minutes</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Check In Date</label>
+                        @if (Model.isAdmin)
+                        {
+                            <input type="date"
+                                   id="@Model.prefix-CheckInDate"
+                                   class="form-control"
+                                   required="required"/>
+                        }
+                        else
+                        {
+                            <input type="date"
+                                   id="@Model.prefix-CheckInDate"
+                                   class="form-control"
+                                   required="required"
+                                   value=""
+                                   min="@DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd")"
+                                   max="@DateTime.Now.ToString("yyyy-MM-dd")"/>
+                        }
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Play Start Time <small class="text-muted">(KSA)</small></label>
+                        <input type="time" id="@Model.prefix-PlayStartTime" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="@Model.prefix-PlayerAttended" checked>
+                            <label class="form-check-label" for="@Model.prefix-PlayerAttended">
+                                <i class="bi bi-person-check"></i> Player Attended
+                            </label>
+                        </div>
+                        <small class="text-muted">Uncheck if player did not show up</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea id="@Model.prefix-Notes" class="form-control" rows="2"
+                                  placeholder="Additional notes (optional)"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="@Model.prefix-btn-checkin" >
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

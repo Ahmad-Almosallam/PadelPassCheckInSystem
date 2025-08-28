@@ -1,6 +1,6 @@
 function showCheckInConfirmation(data) {
     // Set user info
-    const userImageDiv = document.getElementById('confirmUserImage');
+    const userImageDiv = document.getElementById('confirm-UserImage');
     if (data.userImage) {
         userImageDiv.innerHTML = `
             <img src="${data.userImage}" alt="${data.userName}" 
@@ -14,37 +14,37 @@ function showCheckInConfirmation(data) {
     }
 
     // Set user details
-    document.getElementById('confirmUserName').textContent = data.userName;
-    document.getElementById('confirmSubEndDate').textContent = data.subEndDate;
-    document.getElementById('confirmIdentifier').value = data.identifier;
+    document.getElementById('confirm-UserName').textContent = data.userName;
+    document.getElementById('confirm-SubEndDate').textContent = data.subEndDate;
+    document.getElementById('confirm-Identifier').value = data.identifier;
 
     // Set default values for court assignment
     if (data.defaultPlayStartTime) {
-        document.getElementById('confirmPlayStartTime').value = data.defaultPlayStartTime;
+        document.getElementById('confirm-PlayStartTime').value = data.defaultPlayStartTime;
     }
     if (data.defaultPlayDurationMinutes) {
-        document.getElementById('confirmPlayDuration').value = data.defaultPlayDurationMinutes;
+        document.getElementById('confirm-PlayDuration').value = data.defaultPlayDurationMinutes;
     }
 
     // Show the modal
-    const modal = new bootstrap.Modal(document.getElementById('checkInConfirmModal'));
+    const modal = new bootstrap.Modal(document.getElementById('confirm-CheckInModal'));
     modal.show();
 }
 
 function confirmCheckInWithCourt() {
-    const form = document.getElementById('checkInConfirmForm');
+    const form = document.getElementById('confirm-CheckInForm');
     if (!form.checkValidity()) {
         form.reportValidity();
         return;
     }
 
-    const identifier = document.getElementById('confirmIdentifier').value;
-    const courtName = document.getElementById('confirmCourtName').value.trim();
-    const playDuration = parseInt(document.getElementById('confirmPlayDuration').value);
-    const playStartTime = document.getElementById('confirmPlayStartTime').value;
-    const notes = document.getElementById('confirmNotes').value.trim();
-    const playerAttended = document.getElementById('confirmPlayerAttended').checked;
-    const checkInDate = document.getElementById('confirmCheckInDate').value.trim();
+    const identifier = document.getElementById('confirm-Identifier').value;
+    const courtName = document.getElementById('confirm-CourtName').value.trim();
+    const playDuration = parseInt(document.getElementById('confirm-PlayDuration').value);
+    const playStartTime = document.getElementById('confirm-PlayStartTime').value;
+    const notes = document.getElementById('confirm-Notes').value.trim();
+    const playerAttended = document.getElementById('confirm-PlayerAttended').checked;
+    const checkInDate = document.getElementById('confirm-CheckInDate').value.trim();
 
     const checkInDateTime = new Date(`${checkInDate}T${playStartTime}:00`);
     
@@ -74,15 +74,15 @@ function confirmCheckInWithCourt() {
     })
     .then(response => response.json())
     .then(data => {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('checkInConfirmModal'));
+        const modal = bootstrap.Modal.getInstance(document.getElementById('confirm-CheckInModal'));
         modal.hide();
 
         // Reset all form inputs
-        document.getElementById('checkInConfirmForm').reset();
-        document.getElementById('confirmIdentifier').value = '';
-        document.getElementById('confirmUserName').textContent = '';
-        document.getElementById('confirmSubEndDate').textContent = '';
-        document.getElementById('confirmUserImage').innerHTML = '';
+        document.getElementById('confirm-CheckInForm').reset();
+        document.getElementById('confirm-Identifier').value = '';
+        document.getElementById('confirm-UserName').textContent = '';
+        document.getElementById('confirm-SubEndDate').textContent = '';
+        document.getElementById('confirm-UserImage').innerHTML = '';
         document.getElementById('phoneNumberInput').value = ''; // Reset phone number input
 
         if (data.success) {
