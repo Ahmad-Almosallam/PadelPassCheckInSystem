@@ -49,6 +49,7 @@ public class CheckInBaseController : Controller
         var query = _context.CheckIns
             .Include(c => c.EndUser)
             .Include(c => c.Branch)
+            .Include(x => x.BranchCourt)
             .AsQueryable();
 
         // Convert date filters to UTC for database query
@@ -128,6 +129,7 @@ public class CheckInBaseController : Controller
         var query = _context.CheckIns
             .Include(c => c.EndUser)
             .Include(c => c.Branch)
+            .Include(x => x.BranchCourt)
             .AsQueryable();
 
         // Convert date filters to UTC for database query

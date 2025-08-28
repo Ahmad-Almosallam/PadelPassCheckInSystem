@@ -46,7 +46,7 @@ public class AdminManualCheckInRequest
     public string PhoneNumber { get; set; }
     public int BranchId { get; set; }
     public DateTime CheckInDateTime { get; set; }  // Combined date and time in KSA
-    public string CourtName { get; set; }
+    public int BranchCourtId { get; set; }
     public int? PlayDurationMinutes { get; set; }
     public DateTime? PlayStartTime { get; set; }  // In KSA time
     public string Notes { get; set; }

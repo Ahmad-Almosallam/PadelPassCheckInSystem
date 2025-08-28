@@ -69,7 +69,7 @@ public class AdminCheckInController : CheckInBaseController
         }
 
         // Update check-in details
-        checkIn.CourtName = !string.IsNullOrWhiteSpace(request.CourtName) ? request.CourtName.Trim() : null;
+        checkIn.BranchCourtId = request.BranchCourtId;
         checkIn.PlayDuration = request.PlayDurationMinutes > 0
             ? TimeSpan.FromMinutes(request.PlayDurationMinutes)
             : null;
@@ -162,7 +162,7 @@ public class AdminCheckInController : CheckInBaseController
             request.PhoneNumber.Trim(),
             request.BranchId,
             request.CheckInDateTime,
-            request.CourtName,
+            request.BranchCourtId,
             request.PlayDurationMinutes,
             request.PlayStartTime,
             request.Notes,

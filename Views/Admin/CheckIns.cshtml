@@ -131,13 +131,21 @@
                         <td>@checkIn.CheckInDateTime.ToKSATime().ToString("yyyy-MM-dd")</td>
                         <td>@checkIn.CheckInDateTime.ToKSATime().ToString("HH:mm:ss")</td>
                         <td>
-                            @if (!string.IsNullOrEmpty(checkIn.CourtName))
+                            @if (checkIn.BranchCourtId.HasValue)
                             {
-                                <span class="badge bg-success">@checkIn.CourtName</span>
+                                <span class="badge bg-success">@checkIn.BranchCourt.CourtName</span>
                             }
                             else
                             {
-                                <span class="badge bg-warning">Not Assigned</span>
+                                if (User.IsInRole("Admin"))
+                                {
+                                    <span class="badge bg-warning">Update Court Number</span>
+                                    <span class="badge bg-warning">(Old is @checkIn.CourtName)</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">@checkIn.CourtName</span>
+                                }
                             }
                         </td>
                         <td>
@@ -182,7 +190,9 @@
                                             '@checkIn.PlayStartTime?.ToKSATime().ToString("HH:mm")'
                                             ,'@Html.Raw(checkIn.Notes)'
                                             ,@Json.Serialize(checkIn.PlayerAttended),
-                                            '@checkIn.CheckInDateTime.ToKSATime().ToString("yyyy-MM-dd")')">
+                                            '@checkIn.CheckInDateTime.ToKSATime().ToString("yyyy-MM-dd")',
+                                            @checkIn.BranchId,
+                                            @checkIn.BranchCourtId)">
                                         <i class="bi bi-pencil"></i> Edit
                                     </button>
                                     <button type="button" class="btn btn-danger btn-sm"
@@ -311,7 +321,7 @@
     </div>
 </div>
 
-<partial name="Components/_CheckInModal" model="@("edit", true)" />
+<partial name="Components/_CheckInModal" model="@("edit", true)"/>
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
@@ -418,7 +428,7 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label class="form-label">Branch *</label>
-                                            <select id="manualBranchId" class="form-select" required>
+                                            <select id="manualBranchId" class="form-select" required onchange="">
                                                 <option value="">Select Branch</option>
                                                 @foreach (var branch in Model.Branches)
                                                 {
@@ -429,21 +439,13 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label class="form-label">Check-In Time *</label>
-                                            <input type="time" id="manualCheckInTime" class="form-control" required>
-                                            <small class="text-muted">Time in KSA timezone</small>
+                                            <label class="form-label">Court Name/Number</label>
+                                            <select id="manualCourtName" class="form-control" required="required"></select>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label">Court Name/Number</label>
-                                            <input type="number" id="manualCourtName" class="form-control"
-                                                   placeholder="e.g., 1, 2">
-                                        </div>
-                                    </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label class="form-label">Play Duration (minutes)</label>
@@ -457,9 +459,6 @@
                                             </select>
                                         </div>
                                     </div>
-                                </div>
-
-                                <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label class="form-label">Play Start Time</label>
@@ -467,6 +466,9 @@
                                             <small class="text-muted">Time in KSA timezone</small>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div class="row">
                                     <div class="mb-3">
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" id="manualPlayerAttended"
@@ -512,7 +514,8 @@
 
 @functions {
 
-    public string GetPageUrl(int page)
+    public string GetPageUrl(
+        int page)
     {
         var routeValues = new RouteValueDictionary
         {
@@ -550,7 +553,16 @@
             window.location.href = '@Url.Action("CheckIns")';
         }
 
-        function showEditCheckInModal(checkInId, customerName, courtName, playDuration, playStartTime, notes, playerAttended, checkInDate) {
+        function showEditCheckInModal(checkInId,
+                                      customerName,
+                                      courtName,
+                                      playDuration,
+                                      playStartTime,
+                                      notes,
+                                      playerAttended,
+                                      checkInDate,
+                                      branchId,
+                                      branchCourtId) {
             document.getElementById('edit-CheckInId').value = checkInId;
             document.getElementById('edit-CustomerName').value = customerName;
             document.getElementById('edit-CourtName').value = courtName || '';
@@ -568,6 +580,27 @@
             document.getElementById('edit-PlayerAttended').checked = playerAttended;
             document.getElementById('edit-CheckInDate').value = checkInDate;
 
+
+            getCourtsByBranchId(branchId, 'edit-CourtName', branchCourtId);
+
+            if (!branchCourtId) {
+                showAlert("Select the correct Court from the dropdown select", 'warning');
+                // add focus 
+                document.getElementById('edit-CourtName').focus();
+                // add a warning below the select input
+                const courtSelect = document.getElementById('edit-CourtName');
+                // remove existing warning if any
+                const existingWarning = document.getElementById('warningDiv');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+                const warningDiv = document.createElement('div');
+                warningDiv.id = "warningDiv";
+                warningDiv.className = 'text-danger mt-1';
+                warningDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Please select the correct court.';
+                courtSelect.parentNode.appendChild(warningDiv);
+            }
+
             new bootstrap.Modal(document.getElementById('edit-CheckInModal')).show();
         }
 
@@ -581,7 +614,7 @@
             const checkInDate = document.getElementById('edit-CheckInDate').value;
 
             const checkInDateTime = new Date(`${checkInDate}T${playStartTime}:00`);
-            
+
 
             let playStartDateTime = null;
             if (playStartTime) {
@@ -598,7 +631,7 @@
                 },
                 body: JSON.stringify({
                     checkInId: checkInId,
-                    courtName: courtName || null,
+                    branchCourtId: courtName || null,
                     playDurationMinutes: playDuration || 0,
                     playStartTime: playStartDateTime,
                     notes: notes || null,
@@ -704,18 +737,57 @@
             document.getElementById('page-select').value = '@Model.CheckIns.PageSize';
             document.getElementById('pageSize').value = '@Model.CheckIns.PageSize';
             document.getElementById('page').value = '@Model.CheckIns.CurrentPage';
-            
-            
+
+
             // click event on id edit-btn-confirm
             document.getElementById('edit-btn-checkin').addEventListener('click', function () {
                 submitEditCheckIn();
             });
         });
 
+        function getCourtsByBranchId(branchId, selectInputSelector, branchCourtId) {
+            fetch(`GetCourtsByBranch?branchId=${branchId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        showAlert(data.message, 'danger');
+                        return;
+                    }
+                    const courts = data.courts;
+                    const courtSelect = document.getElementById(selectInputSelector);
+                    // remove childs from courtSelect
+                    courtSelect.innerHTML = '';
+                    courts.forEach(court => {
+                        const option = document.createElement('option');
+                        option.value = court.value;
+                        option.textContent = court.text;
+                        if (court.value == branchCourtId) {
+                            option.selected = true;
+                        }
+                        courtSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching courts:', error);
+                    alert('Failed to load courts. Please try again later.');
+                });
+        }
+
 
         // Add these new JavaScript functions for manual check-in functionality
         let validatedUserData = null;
 
+        
+        document.getElementById('manualBranchId').addEventListener('change', function () {
+            const branchId = this.value;
+            if (branchId) {
+                getCourtsByBranchId(branchId, 'manualCourtName', null);
+            } else {
+                // Clear courts if no branch selected
+                document.getElementById('manualCourtName').innerHTML = '';
+            }
+        });
+        
         function showAdminManualCheckInModal() {
             // Reset form
             document.getElementById('adminManualCheckInForm').reset();
@@ -728,10 +800,7 @@
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('manualCheckInDate').value = today;
 
-            // Set default time to current time
-            const now = new Date();
-            const timeString = now.toTimeString().substring(0, 5);
-            document.getElementById('manualCheckInTime').value = timeString;
+          
 
             new bootstrap.Modal(document.getElementById('adminManualCheckInModal')).show();
         }
@@ -833,7 +902,6 @@
             const phoneNumber = document.getElementById('manualPhoneNumber').value.trim();
             const branchId = parseInt(document.getElementById('manualBranchId').value);
             const checkInDate = document.getElementById('manualCheckInDate').value;
-            const checkInTime = document.getElementById('manualCheckInTime').value;
             const courtName = document.getElementById('manualCourtName').value.trim();
             const playDuration = document.getElementById('manualPlayDuration').value;
             const playStartTime = document.getElementById('manualPlayStartTime').value;
@@ -841,7 +909,7 @@
             const playerAttended = document.getElementById('manualPlayerAttended').checked;
 
             // Combine date and time
-            const checkInDateTime = new Date(`${checkInDate}T${checkInTime}:00`);
+            const checkInDateTime = new Date(`${checkInDate}T${playStartTime}:00`);
 
             // Handle play start time
             let playStartDateTime = null;
@@ -853,7 +921,7 @@
                 phoneNumber: phoneNumber,
                 branchId: branchId,
                 checkInDateTime: checkInDateTime,
-                courtName: courtName || null,
+                branchCourtId: courtName,
                 playDurationMinutes: playDuration ? parseInt(playDuration) : null,
                 playStartTime: playStartDateTime ? playStartDateTime.toISOString() : null,
                 notes: notes || null,

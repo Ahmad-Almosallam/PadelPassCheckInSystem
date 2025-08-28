@@ -45,7 +45,7 @@ namespace PadelPassCheckInSystem.Services
 
         public async Task<(bool Success, string Message)> AssignCourtAsync(
             int checkInId,
-            string courtName,
+            int branchCourtId,
             int playDurationMinutes,
             DateTime? playStartTime,
             string notes,
@@ -72,7 +72,8 @@ namespace PadelPassCheckInSystem.Services
             }
 
             // Update check-in with court assignment
-            checkIn.CourtName = courtName;
+            
+            checkIn.BranchCourtId = branchCourtId;
             checkIn.PlayDuration = TimeSpan.FromMinutes(playDurationMinutes);
             checkIn.PlayStartTime = playStartTimeUtc ?? DateTime.UtcNow;
             checkIn.Notes = notes.Trim().IsNullOrEmpty() ? null : notes.Trim();
@@ -80,7 +81,7 @@ namespace PadelPassCheckInSystem.Services
 
             await _context.SaveChangesAsync();
 
-            var baseMessage = $"Court '{courtName}' assigned successfully to {checkIn.EndUser.Name}";
+            var baseMessage = $"Court '{branchCourtId}' assigned successfully to {checkIn.EndUser.Name}";
 
             // Process warning if player didn't attend
             var (isAutoStopped, warningMessage) =
@@ -288,6 +289,7 @@ namespace PadelPassCheckInSystem.Services
 
             var allCheckIns = await _context.CheckIns
                 .Include(c => c.EndUser)
+                .Include(x => x.BranchCourt)
                 .Where(c => c.BranchId == branchId)
                 .ToListAsync();
 
@@ -419,7 +421,7 @@ namespace PadelPassCheckInSystem.Services
             string phoneNumber,
             int branchId,
             DateTime checkInDateTime,
-            string courtName = null,
+            int branchCourtId ,
             int? playDurationMinutes = null,
             DateTime? playStartTime = null,
             string notes = null,
@@ -452,7 +454,7 @@ namespace PadelPassCheckInSystem.Services
                 var checkInDateTimeUtc = checkInDateTime;
 
                 // Check if user already has a check-in on this date
-                var checkInDateKSA = checkInDateTime.Date;
+                var checkInDateKSA = checkInDateTime.ToKSATime().Date;
                 var existingCheckIns = await _context.CheckIns
                     .Where(c => c.EndUserId == endUser.Id)
                     .ToListAsync();
@@ -486,7 +488,7 @@ namespace PadelPassCheckInSystem.Services
                     EndUserId = endUser.Id,
                     BranchId = branchId,
                     CheckInDateTime = checkInDateTimeUtc,
-                    CourtName = !string.IsNullOrWhiteSpace(courtName) ? courtName.Trim() : null,
+                    BranchCourtId = branchCourtId,
                     PlayDuration =
                         playDurationMinutes.HasValue ? TimeSpan.FromMinutes(playDurationMinutes.Value) : null,
                     PlayStartTime = playStartTime,
@@ -496,9 +498,8 @@ namespace PadelPassCheckInSystem.Services
 
                 _context.CheckIns.Add(checkIn);
                 await _context.SaveChangesAsync();
-
-                var courtInfo = !string.IsNullOrEmpty(courtName) ? $" to {courtName}" : "";
-                var baseMessage = $"Manual check-in created successfully for {endUser.Name}{courtInfo}";
+                
+                var baseMessage = $"Manual check-in created successfully for {endUser.Name}";
                 var (isAutoStopped, warningMessage) =
                     await _warningService.ProcessPlayerAttendanceAsync(checkIn.Id, playerAttended);
 

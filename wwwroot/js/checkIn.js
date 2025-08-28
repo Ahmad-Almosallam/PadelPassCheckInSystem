@@ -26,6 +26,32 @@ function showCheckInConfirmation(data) {
         document.getElementById('confirm-PlayDuration').value = data.defaultPlayDurationMinutes;
     }
 
+
+    // write a fetch request to GetCourtsByBranch
+    fetch(`Admin/GetCourtsByBranch`)
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert(data.message);
+                return;
+            }
+            const courts = data.courts;
+            const courtSelect = document.getElementById('confirm-CourtName');
+            // remove childs from courtSelect
+            courtSelect.innerHTML = '';
+            courts.forEach(court => {
+                const option = document.createElement('option');
+                option.value = court.value;
+                option.textContent = court.text;
+                courtSelect.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching courts:', error);
+            alert('Failed to load courts. Please try again later.');
+        });
+
+
     // Show the modal
     const modal = new bootstrap.Modal(document.getElementById('confirm-CheckInModal'));
     modal.show();
@@ -47,7 +73,7 @@ function confirmCheckInWithCourt() {
     const checkInDate = document.getElementById('confirm-CheckInDate').value.trim();
 
     const checkInDateTime = new Date(`${checkInDate}T${playStartTime}:00`);
-    
+
 
     let playStartDateTime = null;
     if (playStartTime) {
@@ -64,50 +90,50 @@ function confirmCheckInWithCourt() {
         },
         body: JSON.stringify({
             identifier: identifier,
-            courtName: courtName,
+            branchCourtId: courtName,
             playDurationMinutes: playDuration,
             playStartTime: playStartDateTime,
             notes: notes,
             playerAttended: playerAttended,
-            checkInDate:checkInDateTime
+            checkInDate: checkInDateTime
         })
     })
-    .then(response => response.json())
-    .then(data => {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('confirm-CheckInModal'));
-        modal.hide();
+        .then(response => response.json())
+        .then(data => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('confirm-CheckInModal'));
+            modal.hide();
 
-        // Reset all form inputs
-        document.getElementById('confirm-CheckInForm').reset();
-        document.getElementById('confirm-Identifier').value = '';
-        document.getElementById('confirm-UserName').textContent = '';
-        document.getElementById('confirm-SubEndDate').textContent = '';
-        document.getElementById('confirm-UserImage').innerHTML = '';
-        document.getElementById('phoneNumberInput').value = ''; // Reset phone number input
+            // Reset all form inputs
+            document.getElementById('confirm-CheckInForm').reset();
+            document.getElementById('confirm-Identifier').value = '';
+            document.getElementById('confirm-UserName').textContent = '';
+            document.getElementById('confirm-SubEndDate').textContent = '';
+            document.getElementById('confirm-UserImage').innerHTML = '';
+            document.getElementById('phoneNumberInput').value = ''; // Reset phone number input
 
-        if (data.success) {
-            if (data.courtAssignmentSuccess) {
-                showSuccessAnimation({
-                    userName: data.userName,
-                    userImage: data.userImage,
-                    subEndDate: data.subEndDate,
-                    checkInTimeKSA: data.checkInTimeKSA,
-                    courtName: data.courtName,
-                    playDurationMinutes: data.playDurationMinutes,
-                    playStartTime: data.playStartTime
-                });
+            if (data.success) {
+                if (data.courtAssignmentSuccess) {
+                    showSuccessAnimation({
+                        userName: data.userName,
+                        userImage: data.userImage,
+                        subEndDate: data.subEndDate,
+                        checkInTimeKSA: data.checkInTimeKSA,
+                        courtName: data.courtName,
+                        playDurationMinutes: data.playDurationMinutes,
+                        playStartTime: data.playStartTime
+                    });
+                } else {
+                    showMessage('Check-in successful but court assignment failed: ' + data.message, 'warning');
+                }
+                updateRecentCheckIns();
+                updateTodayCount();
             } else {
-                showMessage('Check-in successful but court assignment failed: ' + data.message, 'warning');
+                showMessage(data.message, 'danger');
+                playErrorSound();
             }
-            updateRecentCheckIns();
-            updateTodayCount();
-        } else {
-            showMessage(data.message, 'danger');
-            playErrorSound();
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showMessage('An error occurred while processing check-in and court assignment.', 'danger');
-    });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('An error occurred while processing check-in and court assignment.', 'danger');
+        });
 }

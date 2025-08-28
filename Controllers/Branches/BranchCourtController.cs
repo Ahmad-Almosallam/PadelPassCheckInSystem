@@ -1,31 +1,37 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
+using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
 using PadelPassCheckInSystem.Models.ViewModels.BranchCourts;
 using PadelPassCheckInSystem.Services;
 
 namespace PadelPassCheckInSystem.Controllers.Branches;
 
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = "Admin,BranchUser")]
 [Route("Admin/[action]")]
 public class BranchCourtController : Controller
 {
     private readonly IBranchCourtService _branchCourtService;
     private readonly ApplicationDbContext _context;
     private readonly ILogger<BranchCourtController> _logger;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public BranchCourtController(
         IBranchCourtService branchCourtService,
         ApplicationDbContext context,
-        ILogger<BranchCourtController> logger)
+        ILogger<BranchCourtController> logger,
+        UserManager<ApplicationUser> userManager)
     {
         _branchCourtService = branchCourtService;
         _context = context;
         _logger = logger;
+        _userManager = userManager;
     }
 
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> BranchCourts(
         int? branchId,
         string searchCourtName,
@@ -79,7 +85,8 @@ public class BranchCourtController : Controller
                 FilterBranchId = branchId,
                 SearchCourtName = searchCourtName,
                 BranchName = branchName,
-                Branches = await _context.Branches.AsNoTracking().Where(b => b.IsActive)
+                Branches = await _context.Branches.AsNoTracking()
+                    .Where(b => b.IsActive)
                     .OrderBy(b => b.Name)
                     .ToListAsync()
             };
@@ -95,6 +102,7 @@ public class BranchCourtController : Controller
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateBranchCourt(
         CreateBranchCourtViewModel model)
@@ -128,6 +136,7 @@ public class BranchCourtController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateBranchCourt(
         int id,
         UpdateBranchCourtViewModel model)
@@ -155,6 +164,7 @@ public class BranchCourtController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteBranchCourt(
         int id)
     {
@@ -174,6 +184,7 @@ public class BranchCourtController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> ToggleCourtStatus(
         int id)
     {
@@ -193,11 +204,22 @@ public class BranchCourtController : Controller
 
     [HttpGet]
     public async Task<IActionResult> GetCourtsByBranch(
-        int branchId)
+        int? branchId)
     {
         try
         {
-            var courts = await _branchCourtService.GetActiveCourtsByBranchAsync(branchId);
+            var user = await _userManager.GetUserAsync(User);
+            if (branchId is null or <= 0)
+            {
+                if (user is { BranchId: null })
+                {
+                    return Json(new { success = false, message = "Invalid branch." });
+                }
+
+                branchId = user!.BranchId.Value;
+            }
+
+            var courts = await _branchCourtService.GetActiveCourtsByBranchAsync(branchId.Value);
             var courtOptions = courts.Select(c => new { value = c.Id, text = c.CourtName })
                 .ToList();
 

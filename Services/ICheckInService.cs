@@ -9,7 +9,7 @@ namespace PadelPassCheckInSystem.Services
 
         Task<(bool Success, string Message)> AssignCourtAsync(
             int checkInId,
-            string courtName,
+            int branchCourtId,
             int playDurationMinutes,
             DateTime? playStartTime,
             string notes,
@@ -43,7 +43,7 @@ namespace PadelPassCheckInSystem.Services
             string phoneNumber,
             int branchId,
             DateTime checkInDateTime,
-            string courtName = null,
+            int branchCourtId ,
             int? playDurationMinutes = null,
             DateTime? playStartTime = null,
             string notes = null,

@@ -269,7 +269,7 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
             // Then, assign the court
             var courtResult = await _checkInService.AssignCourtAsync(
                 checkInResult.CheckInId.GetValueOrDefault(),
-                request.CourtName,
+                request.BranchCourtId,
                 request.PlayDurationMinutes,
                 playStartTimeUtc, // Pass UTC time to service
                 request.Notes,
@@ -306,7 +306,7 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
                     .ToString("d"), // Convert to KSA for display
                 checkInTimeKSA = KSADateTimeExtensions.GetKSANow()
                     .ToString("HH:mm:ss"),
-                courtName = request.CourtName,
+                courtName = request.BranchCourtId,
                 playDurationMinutes = request.PlayDurationMinutes,
                 playStartTime = request.PlayStartTime.ToString("HH:mm")
             });

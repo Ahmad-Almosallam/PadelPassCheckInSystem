@@ -126,12 +126,13 @@
                                                 @checkIn.CheckInDateTime.ToKSATime().ToString("HH:mm:ss")
                                                 <span class="badge badge-sm bg-info">KSA</span>
                                             </small>
-                                            @if (!string.IsNullOrEmpty(checkIn.CourtName))
-                                            {
-                                                <br>
-                                                <small class="text-success"><i class="bi bi-geo-alt"></i>
-                                                    Court: @checkIn.CourtName</small>
+                                            @{
+                                                var courtName = checkIn.BranchCourtId.HasValue ? checkIn.BranchCourt.CourtName : checkIn.CourtName;
                                             }
+                                            <br>
+                                            <small class="text-success"><i class="bi bi-geo-alt"></i>
+                                                Court: @courtName</small>
+
                                         </div>
                                     </div>
                                     <div class="text-end">
@@ -317,7 +318,7 @@
 </div>
 
 <!-- Check-in Confirmation Modal with Court Assignment -->
-<partial name="Components/_CheckInModal" model="@("confirm", false)" />
+<partial name="Components/_CheckInModal" model="@("confirm", false)"/>
 
 @section Styles {
     <style>
@@ -410,7 +411,6 @@
             };
 
 
-
             html5QrCode.start(
                 {facingMode: "environment"},
                 config,
@@ -434,7 +434,7 @@
                 startBtn.classList.remove('d-none');
             });
         }
-        
+
 
         function stopScanner() {
             if (html5QrCode && html5QrCode.isScanning) {
