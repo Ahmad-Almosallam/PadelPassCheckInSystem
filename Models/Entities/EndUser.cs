@@ -47,5 +47,6 @@ namespace PadelPassCheckInSystem.Models.Entities
         
         public virtual ICollection<CheckIn> CheckIns { get; set; }
         public virtual ICollection<SubscriptionPause> SubscriptionPauses { get; set; }
+        public virtual ICollection<EndUserSubscription> EndUserSubscriptions { get; set; }
     }
 }
