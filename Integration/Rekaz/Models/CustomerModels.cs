@@ -5,16 +5,16 @@ namespace PadelPassCheckInSystem.Integration.Rekaz.Models;
 public class CustomerResponse
 {
     [JsonPropertyName("items")]
-    public List<Customer> Items { get; set; } = new();
+    public List<RekazCustomer> Items { get; set; } = new();
     
     [JsonPropertyName("totalCount")]
     public int TotalCount { get; set; }
 }
 
-public class Customer
+public class RekazCustomer
 {
     [JsonPropertyName("id")]
-    public string Id { get; set; } = string.Empty;
+    public Guid Id { get; set; }
     
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;

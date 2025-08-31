@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Extensions;
+using PadelPassCheckInSystem.Integration.Rekaz.Models;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
 
@@ -11,13 +12,18 @@ public class EndUserService : IEndUserService
     private readonly ApplicationDbContext _context;
     private readonly ILogger<EndUserService> _logger;
 
-    public EndUserService(ApplicationDbContext context, ILogger<EndUserService> logger)
+    public EndUserService(
+        ApplicationDbContext context,
+        ILogger<EndUserService> logger)
     {
         _context = context;
         _logger = logger;
     }
 
-    public async Task<EndUsersPaginatedViewModel> GetEndUsersAsync(string searchPhoneNumber, int page = 1, int pageSize = 10)
+    public async Task<EndUsersPaginatedViewModel> GetEndUsersAsync(
+        string searchPhoneNumber,
+        int page = 1,
+        int pageSize = 10)
     {
         // Build base filtered query (without pagination)
         var baseQuery = _context.EndUsers.AsQueryable();
@@ -29,7 +35,8 @@ public class EndUserService : IEndUserService
         }
 
         // Compute statistics via SQL (before pagination)
-        var todayKsaDate = KSADateTimeExtensions.GetKSANow().Date;
+        var todayKsaDate = KSADateTimeExtensions.GetKSANow()
+            .Date;
         var startOfKsaDayUtc = todayKsaDate.GetStartOfKSADayInUTC();
         var endOfKsaDayUtc = todayKsaDate.GetEndOfKSADayInUTC();
 
@@ -61,6 +68,7 @@ public class EndUserService : IEndUserService
         var notSetPlaytomicUserIdsCount = await baseQuery.CountAsync(u => u.PlaytomicUserId == null);
 
         var stoppedByWarningsCount = await baseQuery.CountAsync(u => u.IsStoppedByWarning);
+        var syncedRekazUsersCount = await baseQuery.CountAsync(u => u.RekazId != null);
 
         // Pagination remains in DB
         var orderedQuery = baseQuery.OrderByDescending(e => e.CreatedAt);
@@ -89,11 +97,13 @@ public class EndUserService : IEndUserService
             StoppedCount = stoppedCount,
             ExpiredCount = expiredCount,
             NotSetPlaytomicUserIdsCount = notSetPlaytomicUserIdsCount,
-            StoppedByWarningsCount = stoppedByWarningsCount
+            StoppedByWarningsCount = stoppedByWarningsCount,
+            SyncedRekazUsersCount = syncedRekazUsersCount
         };
     }
 
-    public async Task<(bool Success, string Message, EndUser? EndUser)> CreateEndUserAsync(EndUserViewModel model)
+    public async Task<(bool Success, string Message, EndUser? EndUser)> CreateEndUserAsync(
+        EndUserViewModel model)
     {
         try
         {
@@ -136,7 +146,9 @@ public class EndUserService : IEndUserService
         }
     }
 
-    public async Task<(bool Success, string Message)> UpdateEndUserAsync(int id, EndUserViewModel model)
+    public async Task<(bool Success, string Message)> UpdateEndUserAsync(
+        int id,
+        EndUserViewModel model)
     {
         try
         {
@@ -176,7 +188,8 @@ public class EndUserService : IEndUserService
         }
     }
 
-    public async Task<(bool Success, string Message)> DeleteEndUserAsync(int id)
+    public async Task<(bool Success, string Message)> DeleteEndUserAsync(
+        int id)
     {
         try
         {
@@ -198,12 +211,16 @@ public class EndUserService : IEndUserService
         }
     }
 
-    public async Task<EndUser?> GetEndUserByIdAsync(int id)
+    public async Task<EndUser?> GetEndUserByIdAsync(
+        int id)
     {
         return await _context.EndUsers.FindAsync(id);
     }
 
-    public async Task<(bool Success, string Message, string? DownloadUrl)> GenerateQRCodeAsync(int endUserId, bool forceRegenerate = false, string baseUrl = "")
+    public async Task<(bool Success, string Message, string? DownloadUrl)> GenerateQRCodeAsync(
+        int endUserId,
+        bool forceRegenerate = false,
+        string baseUrl = "")
     {
         try
         {
@@ -220,7 +237,8 @@ public class EndUserService : IEndUserService
             }
 
             // Generate a new token and reset the download status
-            endUser.QRCodeDownloadToken = Guid.NewGuid().ToString("N");
+            endUser.QRCodeDownloadToken = Guid.NewGuid()
+                .ToString("N");
             endUser.HasDownloadedQR = false;
             await _context.SaveChangesAsync();
 
@@ -240,7 +258,9 @@ public class EndUserService : IEndUserService
         }
     }
 
-    public async Task<(bool Success, string Message)> StopSubscriptionAsync(int endUserId, string stopReason)
+    public async Task<(bool Success, string Message)> StopSubscriptionAsync(
+        int endUserId,
+        string stopReason)
     {
         try
         {
@@ -279,7 +299,8 @@ public class EndUserService : IEndUserService
         }
     }
 
-    public async Task<(bool Success, string Message)> ReactivateSubscriptionAsync(int endUserId)
+    public async Task<(bool Success, string Message)> ReactivateSubscriptionAsync(
+        int endUserId)
     {
         try
         {
@@ -313,5 +334,46 @@ public class EndUserService : IEndUserService
             _logger.LogError(ex, "Error reactivating subscription for EndUser ID: {EndUserId}", endUserId);
             return (false, "An error occurred while reactivating the subscription.");
         }
+    }
+
+    public async Task<(bool Success, string Message, int count)> SyncRekazAsync(
+        List<RekazCustomer> customers)
+    {
+        if (customers == null || customers.Count == 0)
+        {
+            return (false, "No customers to sync.", 0);
+        }
+
+        var syncedCount = 0;
+        foreach (var customer in customers)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(customer.MobileNumber))
+                {
+                    _logger.LogWarning("Skipping Rekaz customer with empty phone number. Customer ID: {CustomerId}",
+                        customer.Id);
+                    continue;
+                }
+
+                var existingUser = await _context.EndUsers
+                    .FirstOrDefaultAsync(e => e.PhoneNumber == customer.MobileNumber.Replace("966", "0")
+                        .Trim());
+
+                if (existingUser != null)
+                {
+                    // Update existing user details
+                    existingUser.RekazId = customer.Id;
+                    syncedCount++;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error syncing Rekaz customer with ID: {CustomerId}", customer.Id);
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        return (true, $"Successfully synced {syncedCount} Rekaz customers.", syncedCount);
     }
 }

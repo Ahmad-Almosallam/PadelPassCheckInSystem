@@ -1,3 +1,4 @@
+using PadelPassCheckInSystem.Integration.Rekaz.Models;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
 
@@ -13,4 +14,5 @@ public interface IEndUserService
     Task<(bool Success, string Message, string? DownloadUrl)> GenerateQRCodeAsync(int endUserId, bool forceRegenerate = false, string baseUrl = "");
     Task<(bool Success, string Message)> StopSubscriptionAsync(int endUserId, string stopReason);
     Task<(bool Success, string Message)> ReactivateSubscriptionAsync(int endUserId);
+    Task<(bool Success, string Message, int count)> SyncRekazAsync(List<RekazCustomer> customers);
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Extensions;
+using PadelPassCheckInSystem.Integration.Rekaz;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
 using PadelPassCheckInSystem.Services;
@@ -16,7 +17,8 @@ public class EndUserController(
     ILogger<EndUserController> logger,
     IPlaytomicIntegrationService playtomicIntegrationService,
     IPlaytomicSyncService playtomicSyncService,
-    IEndUserService endUserService)
+    IEndUserService endUserService,
+    RekazClient rekazClient)
     : Controller
 {
     public async Task<IActionResult> EndUsers(
@@ -35,7 +37,7 @@ public class EndUserController(
         if (ModelState.IsValid)
         {
             var result = await endUserService.CreateEndUserAsync(model);
-            
+
             if (result.Success)
             {
                 TempData["Success"] = result.Message;
@@ -44,7 +46,7 @@ public class EndUserController(
             {
                 TempData["Error"] = result.Message;
             }
-            
+
             return RedirectToAction(nameof(EndUsers));
         }
 
@@ -67,7 +69,7 @@ public class EndUserController(
         }
 
         var result = await endUserService.UpdateEndUserAsync(id, model);
-        
+
         if (result.Success)
         {
             TempData["Success"] = result.Message;
@@ -85,7 +87,7 @@ public class EndUserController(
         int id)
     {
         var result = await endUserService.DeleteEndUserAsync(id);
-        
+
         if (result.Success)
         {
             TempData["Success"] = result.Message;
@@ -132,7 +134,7 @@ public class EndUserController(
         }
 
         var result = await endUserService.StopSubscriptionAsync(model.EndUserId, model.StopReason);
-        
+
         if (result.Success)
         {
             TempData["Success"] = result.Message;
@@ -150,7 +152,7 @@ public class EndUserController(
         int endUserId)
     {
         var result = await endUserService.ReactivateSubscriptionAsync(endUserId);
-        
+
         if (result.Success)
         {
             TempData["Success"] = result.Message;
@@ -362,7 +364,17 @@ public class EndUserController(
 
     public async Task<IActionResult> SyncRekaz()
     {
-        
+        var customers = await rekazClient.GetCustomersAsync(int.MaxValue);
+
+        // call sync endusers
+        var syncResult = await endUserService.SyncRekazAsync(customers.Items);
+
+        if (syncResult.Success)
+        {
+            return Json(new { success = true, message = syncResult.Message });
+        }
+
+        return Json(new { success = false, message = syncResult.Message });
     }
 
     #endregion

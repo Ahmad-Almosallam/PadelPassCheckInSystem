@@ -202,6 +202,122 @@ function showAlert(message, type) {
     }, 5000);
 }
 
+// Sync Rekaz functionality
+function startSyncRekaz() {
+    // Show progress indicators
+    const progressDiv = document.getElementById('syncRekazProgress');
+    const resultDiv = document.getElementById('syncRekazResult');
+    const startButton = document.getElementById('startSyncRekazBtn');
+    
+    // Reset UI state
+    progressDiv.classList.remove('d-none');
+    resultDiv.innerHTML = '';
+    startButton.disabled = true;
+    startButton.innerHTML = '<i class="bi bi-hourglass-split"></i> Syncing...';
+    
+    // Call the sync API
+    fetch('/Admin/SyncRekaz', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+        }
+    })
+    .then(async response => {
+        const data = await response.json();
+        
+        // Hide progress indicator
+        progressDiv.classList.add('d-none');
+        
+        if (response.ok && data.success) {
+            // Show success result
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <h6><i class="bi bi-check-circle"></i> Sync Completed Successfully!</h6>
+                    <p class="mb-2">${data.message}</p>
+                    <hr>
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i> 
+                        ${data.syncedCount} customer${data.syncedCount !== 1 ? 's' : ''} synced from Rekaz.
+                    </small>
+                </div>
+            `;
+            
+            // Update button to allow closing
+            startButton.innerHTML = '<i class="bi bi-check-circle"></i> Sync Complete';
+            startButton.disabled = false;
+            startButton.setAttribute('data-bs-dismiss', 'modal');
+            
+            // Show success alert
+            showSuccessAlert(`Successfully synced ${data.syncedCount} Rekaz customers!`);
+            
+            // Auto-close modal after 3 seconds and reload page to show updated data
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(document.getElementById('syncRekazModal')).hide();
+                window.location.reload();
+            }, 3000);
+        } else {
+            // Show error result
+            const errorMessage = data.message || 'An error occurred during sync.';
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <h6><i class="bi bi-exclamation-triangle"></i> Sync Failed</h6>
+                    <p class="mb-0">${errorMessage}</p>
+                </div>
+            `;
+            
+            // Reset button
+            startButton.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Retry Sync';
+            startButton.disabled = false;
+            startButton.removeAttribute('data-bs-dismiss');
+            
+            // Show error alert
+            showErrorAlert('Failed to sync Rekaz customers. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Sync Rekaz Error:', error);
+        
+        // Hide progress indicator
+        progressDiv.classList.add('d-none');
+        
+        // Show error result
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <h6><i class="bi bi-exclamation-triangle"></i> Connection Error</h6>
+                <p class="mb-0">Unable to connect to the server. Please check your connection and try again.</p>
+            </div>
+        `;
+        
+        // Reset button
+        startButton.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Retry Sync';
+        startButton.disabled = false;
+        startButton.removeAttribute('data-bs-dismiss');
+        
+        // Show error alert
+        showErrorAlert('Connection error occurred during sync. Please try again.');
+    });
+}
+
+// Reset Sync Rekaz modal when it's opened
+document.addEventListener('DOMContentLoaded', function() {
+    const syncRekazModal = document.getElementById('syncRekazModal');
+    if (syncRekazModal) {
+        syncRekazModal.addEventListener('show.bs.modal', function() {
+            // Reset modal state when opened
+            const progressDiv = document.getElementById('syncRekazProgress');
+            const resultDiv = document.getElementById('syncRekazResult');
+            const startButton = document.getElementById('startSyncRekazBtn');
+            
+            progressDiv.classList.add('d-none');
+            resultDiv.innerHTML = '';
+            startButton.disabled = false;
+            startButton.innerHTML = '<i class="bi bi-cloud-arrow-down"></i> Start Sync';
+            startButton.removeAttribute('data-bs-dismiss');
+        });
+    }
+});
+
 // Initialize page when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Set default start date to today when create modal opens
