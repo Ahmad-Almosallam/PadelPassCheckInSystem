@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Extensions;
+using PadelPassCheckInSystem.Integration.Rekaz;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Services;
 using PadelPassCheckInSystem.Settings;
@@ -70,6 +71,7 @@ builder.Services.AddScoped<IPlaytomicIntegrationService, PlaytomicIntegrationSer
 builder.Services.AddScoped<IDashboardAnalyticsService, DashboardAnalyticsService>();
 builder.Services.AddScoped<IWarningService, WarningService>();
 builder.Services.AddScoped<IBranchCourtService, BranchCourtService>();
+builder.Services.AddScoped<RekazClient>();
 
 builder.Services.AddHttpClient();
 
