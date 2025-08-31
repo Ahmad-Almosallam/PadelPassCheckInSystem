@@ -54,9 +54,9 @@ public class AdminCheckInController : CheckInBaseController
         var checkInDateUtc = request.CheckInDate;
 
         var isThereCheckInWithSameDate =
-            await _context.CheckIns.AnyAsync(x => x.CheckInDateTime.Date == checkInDateUtc.Date && x.Id  != checkIn.Id);
+            await _context.CheckIns.FirstOrDefaultAsync(x => x.CheckInDateTime.Date == checkInDateUtc.Date && x.Id  != checkIn.Id && x.EndUserId == checkIn.EndUserId);
 
-        if (isThereCheckInWithSameDate)
+        if (isThereCheckInWithSameDate != null)
         {
             return Json(new { success = false, message = "There is check in in this date." });
         }

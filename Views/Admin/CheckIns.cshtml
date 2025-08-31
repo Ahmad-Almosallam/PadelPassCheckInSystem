@@ -129,7 +129,7 @@
                         <td>@checkIn.EndUser.PhoneNumber</td>
                         <td>@checkIn.Branch.Name</td>
                         <td>@checkIn.CheckInDateTime.ToKSATime().ToString("yyyy-MM-dd")</td>
-                        <td>@checkIn.CheckInDateTime.ToKSATime().ToString("HH:mm:ss")</td>
+                        <td>@checkIn.CreatedAt.ToKSATime().ToString("HH:mm:ss")</td>
                         <td>
                             @if (checkIn.BranchCourtId.HasValue)
                             {

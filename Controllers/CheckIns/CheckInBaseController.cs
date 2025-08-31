@@ -79,7 +79,7 @@ public class CheckInBaseController : Controller
         }
 
         // Order the query before pagination
-        query = query.OrderByDescending(c => c.CheckInDateTime);
+        query = query.OrderByDescending(c => c.CreatedAt);
 
         // Get total count for pagination
         var totalItems = await query.CountAsync();
@@ -117,7 +117,7 @@ public class CheckInBaseController : Controller
         DateTime? fromDate,
         DateTime? toDate,
         int? branchId,
-        string? phoneNumber)
+        string phoneNumber)
     {
         // check if user is BranchUser and filter by branch
         if (User.IsInRole("BranchUser"))
