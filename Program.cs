@@ -71,6 +71,7 @@ builder.Services.AddScoped<IPlaytomicIntegrationService, PlaytomicIntegrationSer
 builder.Services.AddScoped<IDashboardAnalyticsService, DashboardAnalyticsService>();
 builder.Services.AddScoped<IWarningService, WarningService>();
 builder.Services.AddScoped<IBranchCourtService, BranchCourtService>();
+builder.Services.AddScoped<IEndUserService, EndUserService>();
 builder.Services.AddScoped<RekazClient>();
 
 builder.Services.AddHttpClient();

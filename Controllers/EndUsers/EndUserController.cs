@@ -15,7 +15,8 @@ public class EndUserController(
     ApplicationDbContext context,
     ILogger<EndUserController> logger,
     IPlaytomicIntegrationService playtomicIntegrationService,
-    IPlaytomicSyncService playtomicSyncService)
+    IPlaytomicSyncService playtomicSyncService,
+    IEndUserService endUserService)
     : Controller
 {
     public async Task<IActionResult> EndUsers(
@@ -23,80 +24,7 @@ public class EndUserController(
         int page = 1,
         int pageSize = 10)
     {
-        // Build base filtered query (without pagination)
-        var baseQuery = context.EndUsers.AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(searchPhoneNumber))
-        {
-            searchPhoneNumber = searchPhoneNumber.Trim();
-            baseQuery = baseQuery.Where(e => e.PhoneNumber.Contains(searchPhoneNumber));
-        }
-
-        // Compute statistics via SQL (before pagination)
-        var todayKsaDate = KSADateTimeExtensions.GetKSANow()
-            .Date;
-        var startOfKsaDayUtc = todayKsaDate.GetStartOfKSADayInUTC();
-        var endOfKsaDayUtc = todayKsaDate.GetEndOfKSADayInUTC();
-
-        var activeSubscriptions = await baseQuery
-            .CountAsync(u => u.SubscriptionStartDate <= endOfKsaDayUtc
-                             && u.SubscriptionEndDate >= startOfKsaDayUtc
-                             && !(
-                                 u.IsPaused &&
-                                 u.CurrentPauseStartDate != null &&
-                                 u.CurrentPauseEndDate != null &&
-                                 u.CurrentPauseStartDate <= endOfKsaDayUtc &&
-                                 u.CurrentPauseEndDate >= startOfKsaDayUtc
-                             )
-                             && !u.IsStopped);
-
-        var currentlyPaused = await baseQuery
-            .CountAsync(u => u.IsPaused
-                             && !u.IsStopped
-                             && u.CurrentPauseStartDate != null
-                             && u.CurrentPauseEndDate != null
-                             && u.CurrentPauseStartDate <= endOfKsaDayUtc
-                             && u.CurrentPauseEndDate >= startOfKsaDayUtc);
-
-        var stoppedCount = await baseQuery.CountAsync(u => u.IsStopped);
-
-        var expiredCount = await baseQuery
-            .CountAsync(u => !u.IsStopped && u.SubscriptionEndDate < startOfKsaDayUtc);
-
-        var notSetPlaytomicUserIdsCount = await baseQuery.CountAsync(u => u.PlaytomicUserId == null);
-
-        var stoppedByWarningsCount = await baseQuery.CountAsync(u => u.IsStoppedByWarning);
-
-        // Pagination remains in DB
-        var orderedQuery = baseQuery.OrderByDescending(e => e.CreatedAt);
-
-        var totalItems = await orderedQuery.CountAsync();
-        var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
-
-        var endUsers = await orderedQuery
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
-
-        var viewModel = new EndUsersPaginatedViewModel
-        {
-            EndUsers = new PaginatedResult<EndUser>
-            {
-                Items = endUsers,
-                CurrentPage = page,
-                TotalPages = totalPages,
-                TotalItems = totalItems,
-                PageSize = pageSize
-            },
-            SearchPhoneNumber = searchPhoneNumber,
-            ActiveSubscriptions = activeSubscriptions,
-            CurrentlyPaused = currentlyPaused,
-            StoppedCount = stoppedCount,
-            ExpiredCount = expiredCount,
-            NotSetPlaytomicUserIdsCount = notSetPlaytomicUserIdsCount,
-            StoppedByWarningsCount = stoppedByWarningsCount
-        };
-
+        var viewModel = await endUserService.GetEndUsersAsync(searchPhoneNumber, page, pageSize);
         return View("~/Views/Admin/EndUsers.cshtml", viewModel);
     }
 
@@ -106,47 +34,24 @@ public class EndUserController(
     {
         if (ModelState.IsValid)
         {
-            // Check if the end user already exists by phone number or email
-            var existingUser = await context.EndUsers
-                .FirstOrDefaultAsync(e => e.PhoneNumber == model.PhoneNumber || e.Email == model.Email.ToLower());
-
-            if (existingUser != null)
+            var result = await endUserService.CreateEndUserAsync(model);
+            
+            if (result.Success)
             {
-                TempData["Error"] = "An end user with the same phone number or email already exists.";
-                return RedirectToAction(nameof(EndUsers));
+                TempData["Success"] = result.Message;
             }
-
-            // Convert KSA dates to UTC for storage
-            var subscriptionStartUtc = model.SubscriptionStartDate;
-            var subscriptionEndUtc = model.SubscriptionEndDate;
-
-            var endUser = new EndUser
+            else
             {
-                Name = model.Name,
-                PhoneNumber = model.PhoneNumber,
-                Email = model.Email.ToLower(),
-                ImageUrl = model.ImageUrl,
-                SubscriptionStartDate = subscriptionStartUtc,
-                SubscriptionEndDate = subscriptionEndUtc,
-                UniqueIdentifier = Guid.NewGuid()
-                    .ToString("N")
-                    .Substring(0, 8)
-                    .ToUpper()
-            };
-
-            context.EndUsers.Add(endUser);
-            await context.SaveChangesAsync();
-
-            TempData["Success"] = "End user created successfully!";
+                TempData["Error"] = result.Message;
+            }
+            
             return RedirectToAction(nameof(EndUsers));
         }
-
 
         TempData["Error"] = string.Join(" | ",
             ModelState.Values
                 .SelectMany(v => v.Errors)
                 .Select(e => e.ErrorMessage));
-
 
         return RedirectToAction(nameof(EndUsers));
     }
@@ -156,32 +61,21 @@ public class EndUserController(
         int id,
         EndUserViewModel model)
     {
-        var endUser = await context.EndUsers.FindAsync(id);
-
-        if (endUser == null || !ModelState.IsValid) return RedirectToAction(nameof(EndUsers));
-
-        if ((endUser.PhoneNumber != model.PhoneNumber &&
-             await context.EndUsers.AnyAsync(e => e.PhoneNumber == model.PhoneNumber)) ||
-            (endUser.Email != model.Email.ToLower() &&
-             await context.EndUsers.AnyAsync(e => e.Email == model.Email.ToLower())))
+        if (!ModelState.IsValid)
         {
-            TempData["Error"] = "An end user with the same phone number or email already exists.";
             return RedirectToAction(nameof(EndUsers));
         }
 
-        // Convert KSA dates to UTC for storage
-        var subscriptionStartUtc = model.SubscriptionStartDate;
-        var subscriptionEndUtc = model.SubscriptionEndDate;
-
-        endUser.Name = model.Name;
-        endUser.PhoneNumber = model.PhoneNumber;
-        endUser.Email = model.Email;
-        endUser.ImageUrl = model.ImageUrl;
-        endUser.SubscriptionStartDate = subscriptionStartUtc;
-        endUser.SubscriptionEndDate = subscriptionEndUtc;
-
-        await context.SaveChangesAsync();
-        TempData["Success"] = "End user updated successfully!";
+        var result = await endUserService.UpdateEndUserAsync(id, model);
+        
+        if (result.Success)
+        {
+            TempData["Success"] = result.Message;
+        }
+        else
+        {
+            TempData["Error"] = result.Message;
+        }
 
         return RedirectToAction(nameof(EndUsers));
     }
@@ -190,13 +84,16 @@ public class EndUserController(
     public async Task<IActionResult> DeleteEndUser(
         int id)
     {
-        var endUser = await context.EndUsers.FindAsync(id);
-
-        if (endUser == null) return RedirectToAction(nameof(EndUsers));
-
-        context.EndUsers.Remove(endUser);
-        await context.SaveChangesAsync();
-        TempData["Success"] = "End user deleted successfully!";
+        var result = await endUserService.DeleteEndUserAsync(id);
+        
+        if (result.Success)
+        {
+            TempData["Success"] = result.Message;
+        }
+        else
+        {
+            TempData["Error"] = result.Message;
+        }
 
         return RedirectToAction(nameof(EndUsers));
     }
@@ -207,36 +104,22 @@ public class EndUserController(
         int endUserId,
         bool forceRegenerate = false)
     {
-        var endUser = await context.EndUsers.FindAsync(endUserId);
-        if (endUser == null)
+        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+        var result = await endUserService.GenerateQRCodeAsync(endUserId, forceRegenerate, baseUrl);
+
+        if (result.Success)
         {
-            return NotFound();
+            return Json(new
+            {
+                success = true,
+                downloadUrl = result.DownloadUrl,
+                message = result.Message
+            });
         }
-
-        // Check if QR has already been downloaded and not forcing regeneration
-        if (endUser.HasDownloadedQR && !forceRegenerate)
+        else
         {
-            return Json(new { success = false, message = "QR code has already been downloaded." });
+            return Json(new { success = false, message = result.Message });
         }
-
-        // Generate a new token and reset the download status
-        endUser.QRCodeDownloadToken = Guid.NewGuid()
-            .ToString("N");
-        endUser.HasDownloadedQR = false;
-        await context.SaveChangesAsync();
-
-        // Generate the download URL
-        var downloadUrl = Url.Action("Download", "QRCode", new { token = endUser.QRCodeDownloadToken },
-            Request.Scheme);
-
-        return Json(new
-        {
-            success = true,
-            downloadUrl = downloadUrl,
-            message = forceRegenerate
-                ? "New QR code generated successfully."
-                : "QR code download link generated successfully."
-        });
     }
 
     [HttpPost]
@@ -248,41 +131,15 @@ public class EndUserController(
             return View(model);
         }
 
-        var endUser = await context.EndUsers.FindAsync(model.EndUserId);
-        if (endUser == null)
+        var result = await endUserService.StopSubscriptionAsync(model.EndUserId, model.StopReason);
+        
+        if (result.Success)
         {
-            TempData["Error"] = "End user not found.";
-            return RedirectToAction("EndUsers");
+            TempData["Success"] = result.Message;
         }
-
-        if (endUser.IsStopped)
+        else
         {
-            TempData["Error"] = "Subscription is already stopped.";
-            return RedirectToAction("EndUsers");
-        }
-
-        // Stop the subscription
-        endUser.IsStopped = true;
-        endUser.StoppedDate = DateTime.UtcNow;
-        endUser.StopReason = model.StopReason;
-
-        // If the subscription was paused, unpause it when stopping
-        if (endUser.IsPaused)
-        {
-            endUser.IsPaused = false;
-            endUser.CurrentPauseStartDate = null;
-            endUser.CurrentPauseEndDate = null;
-        }
-
-        try
-        {
-            await context.SaveChangesAsync();
-            TempData["Success"] = $"Subscription for {endUser.Name} has been stopped successfully.";
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error stopping subscription for EndUser ID: {EndUserId}", model.EndUserId);
-            TempData["Error"] = "An error occurred while stopping the subscription.";
+            TempData["Error"] = result.Message;
         }
 
         return RedirectToAction("EndUsers");
@@ -292,39 +149,15 @@ public class EndUserController(
     public async Task<IActionResult> ReactivateSubscription(
         int endUserId)
     {
-        var endUser = await context.EndUsers.FindAsync(endUserId);
-        if (endUser == null)
+        var result = await endUserService.ReactivateSubscriptionAsync(endUserId);
+        
+        if (result.Success)
         {
-            TempData["Error"] = "End user not found.";
-            return RedirectToAction("EndUsers");
+            TempData["Success"] = result.Message;
         }
-
-        if (!endUser.IsStopped)
+        else
         {
-            TempData["Error"] = "Subscription is not stopped.";
-            return RedirectToAction("EndUsers");
-        }
-
-        // Reactivate the subscription
-        endUser.IsStopped = false;
-        endUser.StoppedDate = null;
-        endUser.StopReason = null;
-
-        if (endUser.IsStoppedByWarning)
-        {
-            endUser.IsStoppedByWarning = false;
-            endUser.WarningCount = 0;
-        }
-
-        try
-        {
-            await context.SaveChangesAsync();
-            TempData["Success"] = $"Subscription for {endUser.Name} has been reactivated successfully.";
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error reactivating subscription for EndUser ID: {EndUserId}", endUserId);
-            TempData["Error"] = "An error occurred while reactivating the subscription.";
+            TempData["Error"] = result.Message;
         }
 
         return RedirectToAction("EndUsers");
@@ -521,6 +354,15 @@ public class EndUserController(
             logger.LogError(ex, "Error getting Playtomic integration");
             return Json(new { success = false, message = "Error loading integration data" });
         }
+    }
+
+    #endregion
+
+    #region Rekaz
+
+    public async Task<IActionResult> SyncRekaz()
+    {
+        
     }
 
     #endregion
