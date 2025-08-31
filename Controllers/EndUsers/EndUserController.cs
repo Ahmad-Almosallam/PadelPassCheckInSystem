@@ -23,10 +23,11 @@ public class EndUserController(
 {
     public async Task<IActionResult> EndUsers(
         string searchPhoneNumber,
+        string status,
         int page = 1,
         int pageSize = 10)
     {
-        var viewModel = await endUserService.GetEndUsersAsync(searchPhoneNumber, page, pageSize);
+        var viewModel = await endUserService.GetEndUsersAsync(searchPhoneNumber, status, page, pageSize);
         return View("~/Views/Admin/EndUsers.cshtml", viewModel);
     }
 

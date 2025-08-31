@@ -29,6 +29,7 @@ namespace PadelPassCheckInSystem.Models.ViewModels
     {
         public PaginatedResult<EndUser> EndUsers { get; set; } = new PaginatedResult<EndUser>();
         public string SearchPhoneNumber { get; set; }
+        public string Status { get; set; }
         // Precomputed statistics (based on the filtered set, before pagination)
         public int ActiveSubscriptions { get; set; }
         public int CurrentlyPaused { get; set; }

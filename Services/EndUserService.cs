@@ -22,6 +22,7 @@ public class EndUserService : IEndUserService
 
     public async Task<EndUsersPaginatedViewModel> GetEndUsersAsync(
         string searchPhoneNumber,
+        string status,
         int page = 1,
         int pageSize = 10)
     {
@@ -70,6 +71,25 @@ public class EndUserService : IEndUserService
         var stoppedByWarningsCount = await baseQuery.CountAsync(u => u.IsStoppedByWarning);
         var syncedRekazUsersCount = await baseQuery.CountAsync(u => u.RekazId != null);
 
+        baseQuery = status switch
+        {
+            // filter by status
+            "Active" => baseQuery.Where(u =>
+                u.SubscriptionStartDate <= endOfKsaDayUtc && u.SubscriptionEndDate >= startOfKsaDayUtc &&
+                !(u.IsPaused && u.CurrentPauseStartDate != null && u.CurrentPauseEndDate != null &&
+                  u.CurrentPauseStartDate <= endOfKsaDayUtc && u.CurrentPauseEndDate >= startOfKsaDayUtc) &&
+                !u.IsStopped),
+            "Paused" => baseQuery.Where(u =>
+                u.IsPaused && !u.IsStopped && u.CurrentPauseStartDate != null && u.CurrentPauseEndDate != null &&
+                u.CurrentPauseStartDate <= endOfKsaDayUtc && u.CurrentPauseEndDate >= startOfKsaDayUtc),
+            "Stopped" => baseQuery.Where(u => u.IsStopped),
+            "StoppedByWarning" => baseQuery.Where(u => u.IsStoppedByWarning),
+            "Expired" => baseQuery.Where(u => !u.IsStopped && u.SubscriptionEndDate < startOfKsaDayUtc),
+            "NotSetPlaytomicUserIds" => baseQuery.Where(u => u.PlaytomicUserId == null),
+            "SyncedRekazUsers" => baseQuery.Where(u => u.RekazId != null),
+            _ => baseQuery
+        };
+
         // Pagination remains in DB
         var orderedQuery = baseQuery.OrderByDescending(e => e.CreatedAt);
 
@@ -92,6 +112,7 @@ public class EndUserService : IEndUserService
                 PageSize = pageSize
             },
             SearchPhoneNumber = searchPhoneNumber,
+            Status = status,
             ActiveSubscriptions = activeSubscriptions,
             CurrentlyPaused = currentlyPaused,
             StoppedCount = stoppedCount,

@@ -6,7 +6,7 @@ namespace PadelPassCheckInSystem.Services;
 
 public interface IEndUserService
 {
-    Task<EndUsersPaginatedViewModel> GetEndUsersAsync(string searchPhoneNumber, int page = 1, int pageSize = 10);
+    Task<EndUsersPaginatedViewModel> GetEndUsersAsync(string searchPhoneNumber,  string status, int page = 1, int pageSize = 10);
     Task<(bool Success, string Message, EndUser? EndUser)> CreateEndUserAsync(EndUserViewModel model);
     Task<(bool Success, string Message)> UpdateEndUserAsync(int id, EndUserViewModel model);
     Task<(bool Success, string Message)> DeleteEndUserAsync(int id);

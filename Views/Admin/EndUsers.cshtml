@@ -24,6 +24,9 @@
 
         if (!string.IsNullOrWhiteSpace(Model.SearchPhoneNumber))
             routeValues["searchPhoneNumber"] = Model.SearchPhoneNumber;
+            
+        if (!string.IsNullOrWhiteSpace(Model.Status))
+            routeValues["status"] = Model.Status;
 
         return Url.Action("EndUsers", "EndUser", routeValues);
     }
