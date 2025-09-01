@@ -7,7 +7,6 @@
     identifier = "F7AFD10B";
 #endif
 }
-
 <div class="row">
     <div class="col-md-8">
         <div class="card">
@@ -321,6 +320,8 @@
 <partial name="Components/_CheckInModal" model="@("confirm", false)"/>
 
 @section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
     <style>
         #qr-reader {
             border: 2px solid #dee2e6;
@@ -381,6 +382,7 @@
 @section Scripts {
     <!-- Include Html5-QRCode library -->
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="js/checkIn.js"></script>
     <script>
         let html5QrCode = null;

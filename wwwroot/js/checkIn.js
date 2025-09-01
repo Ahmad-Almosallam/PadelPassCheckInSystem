@@ -1,3 +1,6 @@
+
+
+
 function showCheckInConfirmation(data) {
     // Set user info
     const userImageDiv = document.getElementById('confirm-UserImage');
@@ -20,7 +23,18 @@ function showCheckInConfirmation(data) {
 
     // Set default values for court assignment
     if (data.defaultPlayStartTime) {
-        document.getElementById('confirm-PlayStartTime').value = data.defaultPlayStartTime;
+        // document.getElementById('confirm-PlayStartTime').value = data.defaultPlayStartTime;
+        // Set today's date but specific time
+        const [hours, minutes] = data.defaultPlayStartTime.split(':');
+        const playStartTimePicker = flatpickr("#confirm-PlayStartTime", {
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: "h:i K",
+            allowInput: true,
+            minuteIncrement: 30
+        });
+        playStartTimePicker.setDate(new Date().setHours(hours, minutes));
+
     }
     if (data.defaultPlayDurationMinutes) {
         document.getElementById('confirm-PlayDuration').value = data.defaultPlayDurationMinutes;
@@ -72,13 +86,15 @@ function confirmCheckInWithCourt() {
     const playerAttended = document.getElementById('confirm-PlayerAttended').checked;
     const checkInDate = document.getElementById('confirm-CheckInDate').value.trim();
 
-    const checkInDateTime = new Date(`${checkInDate}T${playStartTime}:00`);
+    var playStartTime24 = convertTo24Hour(playStartTime);
+    
+    let checkInDateTime = new Date(`${checkInDate}T${playStartTime24}:00`);
 
 
     let playStartDateTime = null;
-    if (playStartTime) {
+    if (playStartTime24) {
         const today = new Date();
-        const [hours, minutes] = playStartTime.split(':');
+        const [hours, minutes] = playStartTime24.split(':');
         playStartDateTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hours), parseInt(minutes));
     }
 
