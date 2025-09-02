@@ -1,4 +1,5 @@
 using PadelPassCheckInSystem.Models.Entities;
+using PadelPassCheckInSystem.Models.ViewModels;
 
 namespace PadelPassCheckInSystem.Services
 {
@@ -32,12 +33,7 @@ namespace PadelPassCheckInSystem.Services
             string identifier,
             int branchId, DateTime requestCheckInDateUtc);
 
-        Task<(bool Success, string Message)> EditCheckInAsync(
-            int checkInId,
-            string courtName,
-            int playDurationMinutes,
-            DateTime? playStartTime,
-            string notes);
+        Task<(bool Success, string Message)> EditCheckInAsync(EditCheckInRequest request);
 
         Task<(bool Success, string Message, int? CheckInId)> AdminManualCheckInAsync(
             string phoneNumber,

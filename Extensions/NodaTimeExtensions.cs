@@ -91,4 +91,12 @@ public static class NodaTimeExtensions
         return startOfNextDay.ToDateTimeUtc()
             .AddTicks(-1);
     }
+
+    public static DateTime EnsureUtc(
+        this DateTime dt)
+    {
+        if (dt.Kind == DateTimeKind.Unspecified) return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+        if (dt.Kind == DateTimeKind.Local) return dt.ToUniversalTime();
+        return dt; // already UTC
+    }
 }
