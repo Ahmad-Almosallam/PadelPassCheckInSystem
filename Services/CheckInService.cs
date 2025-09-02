@@ -288,25 +288,31 @@ public class CheckInService : ICheckInService
             .ToList();
     }
 
-    public async Task<List<CheckIn>> GetTodayCheckInsWithCourtInfoAsync(
-        int branchId)
+    public async Task<List<CheckIn>> GetTodayCheckInsWithCourtInfoAsync(int branchId)
     {
-        // Use KSA date for filtering today's check-ins
-        var todayKSA = KSADateTimeExtensions.GetKSANow()
-            .Date;
+        // 1) Get branch TZ
+        var tz = await _context.Branches
+            .Where(b => b.Id == branchId)
+            .Select(b => b.TimeZoneId)
+            .SingleOrDefaultAsync();
 
-        var allCheckIns = await _context.CheckIns
+        if (string.IsNullOrWhiteSpace(tz))
+            return new List<CheckIn>(); // or throw/handle as you prefer
+
+        // 2) Compute branch-local "today" and its UTC window
+        var todayLocal = NodaTimeExtensions.GetLocalNow(tz).Date;
+        var startUtc = todayLocal.GetStartOfDayUtc(tz);
+        var endUtc   = todayLocal.GetEndOfDayUtc(tz);
+
+        // 3) Query in UTC (efficient) + include related info
+        return await _context.CheckIns
             .Include(c => c.EndUser)
-            .Include(x => x.BranchCourt)
-            .Where(c => c.BranchId == branchId)
-            .ToListAsync();
-
-        // Filter by KSA date and order by check-in time
-        return allCheckIns
-            .Where(c => c.CheckInDateTime.ToKSATime()
-                .Date == todayKSA)
+            .Include(c => c.BranchCourt)
+            .Where(c => c.BranchId == branchId &&
+                        c.CheckInDateTime >= startUtc &&
+                        c.CheckInDateTime <= endUtc)
             .OrderByDescending(c => c.CheckInDateTime)
-            .ToList();
+            .ToListAsync();
     }
 
 
