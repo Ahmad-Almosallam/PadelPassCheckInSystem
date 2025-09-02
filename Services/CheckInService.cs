@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using NodaTime.Extensions;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Extensions;
@@ -19,10 +20,12 @@ namespace PadelPassCheckInSystem.Services
             _warningService = warningService;
         }
 
-        public async Task<(bool Success, string Message, int? CheckInId)> CheckInAsync(string identifier,
-            int branchId, DateTime requestCheckInDate)
+        public async Task<(bool Success, string Message, int? CheckInId)> CheckInAsync(
+            string identifier,
+            int branchId,
+            DateTime requestCheckInDateUtc)
         {
-            var (isValid, message, endUser) = await ValidateCheckInAsync(identifier, branchId, requestCheckInDate);
+            var (isValid, message, endUser) = await ValidateCheckInAsync(identifier, branchId, requestCheckInDateUtc);
 
             if (!isValid)
             {
@@ -34,7 +37,7 @@ namespace PadelPassCheckInSystem.Services
             {
                 EndUserId = endUser.Id,
                 BranchId = branchId,
-                CheckInDateTime = requestCheckInDate.ToUTCFromKSA()
+                CheckInDateTime = requestCheckInDateUtc
             };
 
             _context.CheckIns.Add(checkIn);
@@ -72,11 +75,14 @@ namespace PadelPassCheckInSystem.Services
             }
 
             // Update check-in with court assignment
-            
+
             checkIn.BranchCourtId = branchCourtId;
             checkIn.PlayDuration = TimeSpan.FromMinutes(playDurationMinutes);
             checkIn.PlayStartTime = playStartTimeUtc ?? DateTime.UtcNow;
-            checkIn.Notes = notes.Trim().IsNullOrEmpty() ? null : notes.Trim();
+            checkIn.Notes = notes.Trim()
+                .IsNullOrEmpty()
+                ? null
+                : notes.Trim();
             checkIn.PlayerAttended = playerAttended;
 
             await _context.SaveChangesAsync();
@@ -301,86 +307,90 @@ namespace PadelPassCheckInSystem.Services
                 .ToList();
         }
 
+
         public async Task<(bool IsValid, string Message, EndUser User)> ValidateCheckInAsync(
             string identifier,
             int branchId,
-            DateTime requestCheckInDate) // Use the requested check-in date
+            DateTime requestCheckInDateUtc) // UTC
         {
-            // Find user by phone or unique identifier
+            // 1) Resolve user & branch
             var endUser = await _context.EndUsers
                 .FirstOrDefaultAsync(u => u.PhoneNumber == identifier || u.UniqueIdentifier == identifier);
 
-            if (endUser == null)
-            {
-                return (false, "User not found", null);
-            }
+            if (endUser is null) return (false, "User not found", null);
 
-            // Use KSA time for all validations
-            var nowKsa = KSADateTimeExtensions.GetKSANow();
-            var todayKsa = nowKsa.Date;
-            var currentTimeKsa = nowKsa.TimeOfDay;
-            var currentDayOfWeekKsa = nowKsa.DayOfWeek;
+            var branch = await _context.Branches.FindAsync(branchId);
 
-            // CHANGED: Use the requested check-in date for validation
-            var requestedDateKsa = requestCheckInDate.Date;
+            if (branch is null) return (false, "Branch not found", null);
+            if (!branch.IsActive) return (false, "Branch is not active", null);
+            if (string.IsNullOrWhiteSpace(branch.TimeZoneId)) return (false, "Branch time zone not set", null);
 
-            // Convert subscription dates to KSA for comparison
-            var subscriptionStartKsa = endUser.SubscriptionStartDate.ToKSATime().Date;
-            var subscriptionEndKsa = endUser.SubscriptionEndDate.ToKSATime().Date;
+            var tz = branch.TimeZoneId;
+
+            // 2) Compute branch-local context
+            var nowLocal = NodaTimeExtensions.GetLocalNow(tz);
+            var todayLocalDate = nowLocal.Date;
+
+            // Requested local date (once-per-local-day rule)
+            var reqLocalDate = requestCheckInDateUtc.ToLocalTime(tz)
+                .Date;
+
+            // Subscription window (compare as branch-local dates)
+            var subStartLocal = endUser.SubscriptionStartDate.ToLocalTime(tz)
+                .Date;
+            var subEndLocal = endUser.SubscriptionEndDate.ToLocalTime(tz)
+                .Date;
 
             if (endUser.IsStopped)
-            {
-                return (false, $"Subscription is currently stopped by admin", null);
-            }
+                return (false, "Subscription is currently stopped by admin", null);
 
-            // CHANGED: Check if subscription was paused on the requested date
-            if (endUser.IsPaused && endUser.CurrentPauseStartDate!.Value.ToKSATime().Date <= requestedDateKsa)
+            // Pause window (as branch-local dates)
+            if (endUser.IsPaused && endUser.CurrentPauseStartDate.HasValue)
             {
-                var pauseEndDateKsa = endUser.CurrentPauseEndDate?.ToKSATime().Date;
-                if (pauseEndDateKsa.HasValue && requestedDateKsa <= pauseEndDateKsa.Value)
-                {
-                    return (false, $"Subscription was paused on {requestedDateKsa:MMM dd, yyyy}", null);
-                }
+                var pauseStartLocal = endUser.CurrentPauseStartDate.Value.ToLocalTime(tz)
+                    .Date;
+                var pauseEndLocal = endUser.CurrentPauseEndDate!.Value.ToLocalTime(tz)
+                    .Date;
 
-                if (requestedDateKsa == todayKsa)
-                {
-                    // Only auto-unpause if we're checking for today and pause period has ended
+                var isPausedOnRequested = reqLocalDate >= pauseStartLocal && reqLocalDate <= pauseEndLocal;
+
+                if (isPausedOnRequested)
+                    return (false, $"Subscription was paused on {reqLocalDate:yyyy-MM-dd}", null);
+
+                // Auto-unpause if pause ended and we're checking "today" locally
+                if (reqLocalDate == todayLocalDate && todayLocalDate > pauseEndLocal)
                     await UnpauseSubscriptionAsync(endUser.Id);
-                }
             }
 
-            // CHANGED: Check subscription validity for the requested date
-            if (requestedDateKsa < subscriptionStartKsa || requestedDateKsa > subscriptionEndKsa)
-            {
-                var startDateStr = subscriptionStartKsa.ToString("MMM dd, yyyy");
-                var endDateStr = subscriptionEndKsa.ToString("MMM dd, yyyy");
+            if (reqLocalDate < subStartLocal || reqLocalDate > subEndLocal)
                 return (false,
-                    $"Subscription is not active for {requestedDateKsa:MMM dd, yyyy}. Valid period: {startDateStr} to {endDateStr}",
+                    $"Subscription is not active for {reqLocalDate:yyyy-MM-dd}. Valid: {subStartLocal:yyyy-MM-dd} to {subEndLocal:yyyy-MM-dd}",
                     null);
-            }
 
-            // CHANGED: Check if user has already checked in on the requested date
-            var hasCheckedInOnDate = await HasCheckedInOnDateAsync(endUser.Id, requestedDateKsa);
-            if (hasCheckedInOnDate)
+            // 3) Once-per-local-day: build UTC range for that local date and query in UTC
+            var hasCheckedIn = await HasCheckedInOnDateAsync(endUser.Id, reqLocalDate, tz);
+
+            if (hasCheckedIn)
             {
-                var dateDisplayText =
-                    requestedDateKsa == todayKsa ? "today" : requestedDateKsa.ToString("MMM dd, yyyy");
-                return (false, $"User has already checked in on {dateDisplayText}", null);
+                var label = reqLocalDate == todayLocalDate ? "today" : reqLocalDate.ToString("yyyy-MM-dd");
+                return (false, $"User has already checked in {label}", null);
             }
 
+            // 4) Slot validation based on current branch-local time
+            var isWithin = await IsWithinAllowedTimeSlotAsync(
+                branchId,
+                nowLocal.DayOfWeek,
+                nowLocal.TimeOfDay);
 
-            // Check if current time is within allowed branch time slots (using KSA time)
-            var isWithinAllowedTime =
-                await IsWithinAllowedTimeSlotAsync(branchId, currentDayOfWeekKsa, currentTimeKsa);
-            if (!isWithinAllowedTime)
+            if (!isWithin)
             {
-                var allowedTimes = await GetBranchTimeSlotDisplayAsync(branchId, currentDayOfWeekKsa);
-                return (false, $"Check-in is only allowed during: {allowedTimes}", null);
+                var allowed = await GetBranchTimeSlotDisplayAsync(branchId, nowLocal.DayOfWeek);
+                return (false, $"Check-in is only allowed during: {allowed}", null);
             }
-
 
             return (true, "Validation successful", endUser);
         }
+
 
         public async Task<(bool Success, string Message)> EditCheckInAsync(
             int checkInId,
@@ -421,7 +431,7 @@ namespace PadelPassCheckInSystem.Services
             string phoneNumber,
             int branchId,
             DateTime checkInDateTime,
-            int branchCourtId ,
+            int branchCourtId,
             int? playDurationMinutes = null,
             DateTime? playStartTime = null,
             string notes = null,
@@ -454,7 +464,8 @@ namespace PadelPassCheckInSystem.Services
                 var checkInDateTimeUtc = checkInDateTime;
 
                 // Check if user already has a check-in on this date
-                var checkInDateKSA = checkInDateTime.ToKSATime().Date;
+                var checkInDateKSA = checkInDateTime.ToKSATime()
+                    .Date;
                 var existingCheckIns = await _context.CheckIns
                     .Where(c => c.EndUserId == endUser.Id)
                     .ToListAsync();
@@ -498,7 +509,7 @@ namespace PadelPassCheckInSystem.Services
 
                 _context.CheckIns.Add(checkIn);
                 await _context.SaveChangesAsync();
-                
+
                 var baseMessage = $"Manual check-in created successfully for {endUser.Name}";
                 var (isAutoStopped, warningMessage) =
                     await _warningService.ProcessPlayerAttendanceAsync(checkIn.Id, playerAttended);
@@ -589,17 +600,21 @@ namespace PadelPassCheckInSystem.Services
             }
         }
 
-        public async Task<bool> HasCheckedInOnDateAsync(int endUserId, DateTime checkInDate)
+        private async Task<bool> HasCheckedInOnDateAsync(
+            int endUserId,
+            DateTime checkInDate, // Local date
+            string branchTimeZoneId) // IANA time zone
         {
-            // Use the specific date for comparison
-            var checkInDateKSA = checkInDate.Date;
+            // Build UTC range for the given local date in the branch's time zone
+            var startUtc = checkInDate.GetStartOfDayUtc(branchTimeZoneId);
+            var endUtc = checkInDate.GetEndOfDayUtc(branchTimeZoneId);
 
-            // Get all check-ins for this user and convert to KSA time for comparison
-            var userCheckIns = await _context.CheckIns
-                .Where(c => c.EndUserId == endUserId)
-                .ToListAsync();
-
-            return userCheckIns.Any(c => c.CheckInDateTime.ToKSATime().Date == checkInDateKSA);
+            // Query directly in UTC for efficiency
+            return await _context.CheckIns
+                .AnyAsync(c =>
+                    c.EndUserId == endUserId &&
+                    c.CheckInDateTime >= startUtc &&
+                    c.CheckInDateTime <= endUtc);
         }
     }
 }

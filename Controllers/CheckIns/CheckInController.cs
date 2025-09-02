@@ -253,7 +253,7 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
 
             // First, perform the check-in
             var checkInResult = await _checkInService.CheckInAsync(request.Identifier.Trim(), user.BranchId.Value,
-                request.CheckInDate.ToKSATime());
+                request.CheckInDate);
             if (!checkInResult.Success)
             {
                 return Json(new { success = false, message = checkInResult.Message });

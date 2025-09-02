@@ -5,7 +5,7 @@ namespace PadelPassCheckInSystem.Services
     public interface ICheckInService
     {
         Task<(bool Success, string Message, int? CheckInId)> CheckInAsync(string identifier,
-            int branchId, DateTime requestCheckInDate);
+            int branchId, DateTime requestCheckInDateUTC);
 
         Task<(bool Success, string Message)> AssignCourtAsync(
             int checkInId,
@@ -30,7 +30,7 @@ namespace PadelPassCheckInSystem.Services
 
         Task<(bool IsValid, string Message, EndUser User)> ValidateCheckInAsync(
             string identifier,
-            int branchId, DateTime checkInDate);
+            int branchId, DateTime requestCheckInDateUtc);
 
         Task<(bool Success, string Message)> EditCheckInAsync(
             int checkInId,
