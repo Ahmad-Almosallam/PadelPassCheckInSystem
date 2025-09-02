@@ -332,6 +332,7 @@ namespace PadelPassCheckInSystem.Services
             var todayLocalDate = nowLocal.Date;
 
             // Requested local date (once-per-local-day rule)
+            var reqLocalDateTime = requestCheckInDateUtc.ToLocalTime(tz);
             var reqLocalDate = requestCheckInDateUtc.ToLocalTime(tz)
                 .Date;
 
@@ -379,8 +380,8 @@ namespace PadelPassCheckInSystem.Services
             // 4) Slot validation based on current branch-local time
             var isWithin = await IsWithinAllowedTimeSlotAsync(
                 branchId,
-                nowLocal.DayOfWeek,
-                nowLocal.TimeOfDay);
+                reqLocalDateTime.DayOfWeek,
+                reqLocalDateTime.TimeOfDay);
 
             if (!isWithin)
             {
