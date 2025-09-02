@@ -15,7 +15,8 @@ namespace PadelPassCheckInSystem.Models.ViewModels
         
         [Display(Name = "Playtomic Tenant ID")]
         public Guid? PlaytomicTenantId { get; set; }
-        
+
+        public string TimeZoneId { get; set; }
         public bool IsActive { get; set; }
     }
 }

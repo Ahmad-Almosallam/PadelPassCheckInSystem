@@ -31,7 +31,8 @@ public class BranchController(ApplicationDbContext context) : Controller
                 Name = model.Name,
                 Address = model.Address,
                 IsActive = true,
-                PlaytomicTenantId = model.PlaytomicTenantId
+                PlaytomicTenantId = model.PlaytomicTenantId,
+                TimeZoneId = model.TimeZoneId,
             };
 
             context.Branches.Add(branch);
@@ -55,6 +56,7 @@ public class BranchController(ApplicationDbContext context) : Controller
             branch.Address = model.Address;
             branch.IsActive = model.IsActive;
             branch.PlaytomicTenantId = model.PlaytomicTenantId;
+            branch.TimeZoneId = model.TimeZoneId;
 
             await context.SaveChangesAsync();
             TempData["Success"] = "Branch updated successfully!";

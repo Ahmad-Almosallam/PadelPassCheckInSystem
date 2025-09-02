@@ -1,4 +1,6 @@
-﻿using NodaTime;
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using NodaTime;
+using NodaTime.TimeZones;
 
 namespace PadelPassCheckInSystem.Extensions;
 
@@ -98,5 +100,42 @@ public static class NodaTimeExtensions
         if (dt.Kind == DateTimeKind.Unspecified) return DateTime.SpecifyKind(dt, DateTimeKind.Utc);
         if (dt.Kind == DateTimeKind.Local) return dt.ToUniversalTime();
         return dt; // already UTC
+    }
+
+    public static List<SelectListItem> Build()
+    {
+        var source = TzdbDateTimeZoneSource.Default;
+
+        // Only zones with geo info (skips Etc/* etc.)
+        var locations = source.ZoneLocations ?? Enumerable.Empty<TzdbZoneLocation>();
+
+        var items = locations
+            .OrderBy(l => l.CountryName)
+            .ThenBy(l => l.ZoneId)
+            .Select(l => new SelectListItem
+            {
+                Value = l.ZoneId, // e.g. "Asia/Riyadh"
+                Text = $"{l.CountryName}/{City(l.ZoneId)}" // e.g. "Saudi Arabia/Riyadh"
+            })
+            .ToList();
+
+        items.Add(new SelectListItem()
+        {
+            Value = "0",
+            Text = "Select Country",
+            Selected = true
+        });
+        
+        return items;
+    }
+
+    private static string City(
+        string zoneId)
+    {
+        var city = zoneId.Contains('/')
+            ? zoneId.Split('/')
+                .Last()
+            : zoneId;
+        return city.Replace('_', ' ');
     }
 }
