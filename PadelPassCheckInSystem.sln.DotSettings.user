@@ -3,5 +3,8 @@
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003ADateTime_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003FAppData_003FLocal_003FJetBrains_003FShared_003FvAny_003FSourcesCache_003F5553559cdb4b5664893497ec3d7831e41e3f7cff9dd2ef3258115769f70aa_003FDateTime_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AIndexBuilder_00601_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003FAppData_003FLocal_003FJetBrains_003FShared_003FvAny_003FDecompilerCache_003Fdecompiler_003F0c53ee5c91f047f387400d094b3581c4267420_003Fc1_003F0ec00487_003FIndexBuilder_00601_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AKudedal_002Ecshtml_002Fl_003A_002E_002E_003F_002E_002E_003FAppData_003FLocal_003FTemp_003FSandboxFiles_003FDudenaj_003FKudedal_002Ecshtml/@EntryIndexedValue">ForceIncluded</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=6b5ccd0f_002Dde46_002D4fd3_002D89eb_002D9163ba3cf5ae/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="All tests from Solution" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;Solution /&gt;&#xD;
+&lt;/SessionState&gt;</s:String>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=playtomic/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=rekaz/@EntryIndexedValue">True</s:Boolean></wpf:ResourceDictionary>
