@@ -50,19 +50,16 @@
                                 <div class="card-header">
                                     <h5 class="mb-0">Check-In by Phone</h5>
                                 </div>
-                                <div class="card-body">
+                                <div class="card-body justify-content-center d-flex">
                                     <div class="form-group">
                                         <label class="form-label">Phone Number</label>
                                         <div class="input-group">
-                                            <input type="tel" id="phoneNumberInput" class="form-control"
-                                                   placeholder="05xxxxxxxx"
-                                                   pattern="[0-9]{10}"
-                                                   maxlength="10">
+                                            <input type="tel" id="phoneNumberInput" class="form-control">
                                             <button class="btn btn-primary" onclick="processPhoneCheckIn()">
                                                 <i class="bi bi-phone"></i> Check-In
                                             </button>
                                         </div>
-                                        <small class="text-muted">Enter 10-digit phone number</small>
+                                        <small id="phoneInputError" class="text-danger d-none"></small>
                                     </div>
                                 </div>
                             </div>
@@ -131,20 +128,20 @@
                                     </div>
                                     <div class="text-end">
                                         <div class="mb-1">
-                                                <span class="badge bg-success">Court Assigned</span>
-                                                @if (checkIn.PlayDuration.HasValue)
-                                                {
-                                                    <br>
-                                                    <small
-                                                        class="text-muted">@((int)checkIn.PlayDuration.Value.TotalMinutes) min</small>
-                                                }
+                                            <span class="badge bg-success">Court Assigned</span>
+                                            @if (checkIn.PlayDuration.HasValue)
+                                            {
+                                                <br>
+                                                <small
+                                                    class="text-muted">@((int)checkIn.PlayDuration.Value.TotalMinutes) min</small>
+                                            }
 
-                                                @if (checkIn.PlayStartTime.HasValue)
-                                                {
-                                                    <br>
-                                                    <small
-                                                        class="text-muted">Start: @checkIn.PlayStartTime.Value.ToKSATime().ToString("HH:mm")</small>
-                                                }
+                                            @if (checkIn.PlayStartTime.HasValue)
+                                            {
+                                                <br>
+                                                <small
+                                                    class="text-muted">Start: @checkIn.PlayStartTime.Value.ToKSATime().ToString("HH:mm")</small>
+                                            }
                                         </div>
                                     </div>
                                 </div>
@@ -192,6 +189,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.8.3/build/css/intlTelInput.css">
 
     <style>
         #qr-reader {
@@ -252,6 +250,8 @@
 
 @section Scripts {
     <!-- Include Html5-QRCode library -->
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.8.3/build/js/intlTelInput.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.2.1/js/utils.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="js/checkIn.js"></script>
@@ -478,13 +478,13 @@
                                     ? `<img src="${checkIn.image}" alt="${checkIn.name}" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">`
                                     : `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;"><i class="bi bi-person text-white"></i></div>`;
 
-                                const courtInfo = 
-                                     `<br><small class="text-success"><i class="bi bi-geo-alt"></i> Court: ${checkIn.courtName}</small>`;
-                                    
+                                const courtInfo =
+                                    `<br><small class="text-success"><i class="bi bi-geo-alt"></i> Court: ${checkIn.courtName}</small>`;
 
-                                const statusBadge = 
-                                     '<span class="badge bg-success">Court Assigned</span>';
-                                    
+
+                                const statusBadge =
+                                    '<span class="badge bg-success">Court Assigned</span>';
+
 
                                 const durationInfo = checkIn.playDuration && checkIn.playDuration !== "Not assigned"
                                     ? `<br><small class="text-muted">${checkIn.playDuration}</small>`
@@ -493,7 +493,7 @@
                                 const startTimeInfo = checkIn.playStartTime && checkIn.playStartTime !== "Not assigned"
                                     ? `<br><small class="text-muted">Start: ${checkIn.playStartTime}</small>`
                                     : '';
-                                
+
 
                                 html += `
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
@@ -653,12 +653,8 @@
         });
 
         function processPhoneCheckIn() {
-            const phoneNumber = document.getElementById('phoneNumberInput').value.trim();
+            const phoneNumber = phoneIti.getNumber();
 
-            if (!/^[0-9]{10}$/.test(phoneNumber)) {
-                showMessage('Invalid phone number. Please enter a 10-digit phone number.', 'danger');
-                return;
-            }
 
             fetch('/CheckIn/ProcessPhoneCheckIn', {
                 method: 'POST',

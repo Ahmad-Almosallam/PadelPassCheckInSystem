@@ -3,6 +3,17 @@
     ViewData["Title"] = "End Users Management";
 }
 
+@section Styles
+{
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.8.3/build/css/intlTelInput.css">
+    
+    <style>
+        .iti{
+            display: block;
+        }
+    </style>
+}
+
 @await Html.PartialAsync("~/Views/Admin/_EndUsersHeader.cshtml", Model)
 
 @await Html.PartialAsync("~/Views/Admin/_EndUsersStatistics.cshtml", Model)
@@ -30,6 +41,8 @@
 }
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.8.3/build/js/intlTelInput.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.2.1/js/utils.js"></script>
     <script src="~/js/endusers-management.js"></script>
     <script src="~/js/user-modals.js"></script>
     <script src="~/js/playtomic-integration.js"></script>

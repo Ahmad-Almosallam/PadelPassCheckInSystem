@@ -1,4 +1,59 @@
+// --- Phone check-in wiring ---
+const phoneInputEl = document.getElementById('phoneNumberInput');
+const phoneErrorEl = document.getElementById('phoneInputError');
 
+const phoneIti = window.intlTelInput(phoneInputEl, {
+    initialCountry: "sa",
+    nationalMode: false,                  // submit +E.164
+    autoPlaceholder: "aggressive",
+    geoIpLookup: cb => {
+        fetch("https://ipapi.co/json")
+            .then(r => r.json())
+            .then(d => cb(d.country_code))
+            .catch(() => cb(defaultFallback.toLowerCase()));
+    },
+    loadUtils: () => import("https://cdn.jsdelivr.net/npm/intl-tel-input@25.8.3/build/js/utils.js"),
+});
+
+const phoneErrorMap = {
+    0: "Invalid number",
+    1: "Invalid country code",
+    2: "Too short",
+    3: "Too long",
+    4: "Invalid number"
+};
+
+function validatePhone() {
+    const v = phoneInputEl.value.trim();
+    if (!v) {
+        phoneInputEl.setCustomValidity("Required");
+        phoneErrorEl.textContent = "Required";
+        phoneErrorEl.classList.remove("d-none");
+        return false;
+    }
+    // wait for utils to be ready on first load
+    if (phoneIti.promise && phoneIti.promise.pending) return true;
+
+    if (phoneIti.isValidNumber()) {
+        phoneInputEl.setCustomValidity("");
+        phoneErrorEl.classList.add("d-none");
+        return true;
+    } else {
+        const err = phoneIti.getValidationError();
+        const msg = phoneErrorMap[err] || "Invalid phone";
+        phoneInputEl.setCustomValidity(msg);
+        phoneErrorEl.textContent = msg;
+        phoneErrorEl.classList.remove("d-none");
+        return false;
+    }
+}
+
+// mark utils pending state
+if (phoneIti.promise) { phoneIti.promise.pending = true; phoneIti.promise.then(() => phoneIti.promise.pending = false); }
+
+phoneInputEl.addEventListener("keyup", validatePhone);
+phoneInputEl.addEventListener("input", () => { phoneInputEl.setCustomValidity(""); phoneErrorEl.classList.add("d-none"); });
+phoneInputEl.addEventListener("countrychange", validatePhone);
 
 
 function showCheckInConfirmation(data) {

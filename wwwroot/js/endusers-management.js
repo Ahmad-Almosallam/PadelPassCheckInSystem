@@ -1,11 +1,86 @@
 // End Users Management JavaScript
 // Core functionality for managing end users
 
+const utilUrl = "https://cdn.jsdelivr.net/npm/intl-tel-input@25.8.3/build/js/utils.js";
+
+const errorMap = {
+    0: "Invalid number",
+    1: "Invalid country code",
+    2: "Too short",
+    3: "Too long",
+    4: "Invalid number"
+};
+
+function wirePhone(inputEl, errorEl, defaultFallback = "sa") {
+    if (!inputEl) return null;
+
+    const iti = window.intlTelInput(inputEl, {
+        initialCountry: "auto",
+        strictMode: true,
+        hiddenInput: () => ({ phone: "PhoneNumber" }),
+        geoIpLookup: cb => {
+            fetch("https://ipapi.co/json")
+                .then(r => r.json())
+                .then(d => cb(d.country_code))
+                .catch(() => cb(defaultFallback.toLowerCase()));
+        },
+        loadUtils: () => import("https://cdn.jsdelivr.net/npm/intl-tel-input@25.8.3/build/js/utils.js"),
+    });
+
+    const doValidate = () => {
+        const v = inputEl.value.trim();
+        if (!v) {
+            inputEl.setCustomValidity("Required");
+            if (errorEl) { errorEl.textContent = "Required"; errorEl.classList.remove("d-none"); }
+            return false;
+        }
+        // avoid false negatives before utils is ready
+        if (iti.promise && iti.promise.pending) return true;
+
+        if (iti.isValidNumber()) {
+            inputEl.setCustomValidity("");
+            if (errorEl) errorEl.classList.add("d-none");
+            document.getElementById('hiddenPhoneNumber').value = iti.getNumber();
+            return true;
+        } else {
+            const err = iti.getValidationError();
+            const msg = errorMap[err] || "Invalid phone";
+            inputEl.setCustomValidity(msg);
+            if (errorEl) { errorEl.textContent = msg; errorEl.classList.remove("d-none"); }
+            return false;
+        }
+    };
+
+    // mark pending until resolved
+    if (iti.promise) iti.promise.pending = true;
+    iti.promise?.then(() => { iti.promise.pending = false; });
+
+    inputEl.addEventListener("keyup", doValidate);
+    inputEl.addEventListener("input", () => {
+        inputEl.setCustomValidity("");
+        errorEl?.classList.add("d-none");
+    });
+    inputEl.addEventListener("countrychange", doValidate);
+
+    return { iti, validate: doValidate };
+}
+
+// --- Create phone ---
+const createPhoneElm = document.querySelector("#PhoneNumber");
+const createPhoneError = document.querySelector("#createPhoneError");
+const createPhone = wirePhone(createPhoneElm, createPhoneError, "sa");
+
+// --- Edit phone ---
+const editPhoneElm = document.getElementById("editPhone");
+const editPhoneError = document.getElementById("editPhoneError"); // add this <small> in your edit modal
+const editPhone = wirePhone(editPhoneElm, editPhoneError, "sa");
+
+
 // User editing functionality
 function editUser(id, name, phone, email, imageUrl, startDate, endDate) {
     document.getElementById('editId').value = id;
     document.getElementById('editName').value = name;
-    document.getElementById('editPhone').value = phone;
+    editPhone.iti.setNumber(phone || '');
     document.getElementById('editEmail').value = email;
     document.getElementById('editImageUrl').value = imageUrl;
     // Dates are already converted to KSA format in the server
@@ -203,7 +278,7 @@ function showAlert(message, type) {
 }
 
 // Initialize page when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Set default start date to today when create modal opens
     const createModal = document.getElementById('createModal');
     if (createModal) {
@@ -240,7 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('stopSubscriptionForm').reset();
         });
     }
-    
-    
+
+
     document.getElementById("page-select").value = pageSize;
 });

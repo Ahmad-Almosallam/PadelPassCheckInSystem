@@ -12,8 +12,6 @@ namespace PadelPassCheckInSystem.Models.ViewModels
         
         [Required]
         [Phone]
-        [MinLength(10)]
-        [MaxLength(10)]
         [Display(Name = "Phone Number")]
         public string PhoneNumber { get; set; }
         
