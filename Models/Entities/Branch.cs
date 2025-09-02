@@ -16,6 +16,9 @@ namespace PadelPassCheckInSystem.Models.Entities
 
         public Guid? PlaytomicTenantId { get; set; }
 
+        [MaxLength(64)]
+        public string TimeZoneId { get; set; }
+
         // Navigation properties
         public virtual ICollection<ApplicationUser> BranchUsers { get; set; }
         public virtual ICollection<CheckIn> CheckIns { get; set; }
