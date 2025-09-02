@@ -46,14 +46,12 @@ public class AdminCheckInController : CheckInBaseController
     public async Task<IActionResult> ValidateUserForManualCheckIn(
         [FromBody] ValidateUserRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request?.PhoneNumber) || request.CheckInDate == default)
+        if (string.IsNullOrWhiteSpace(request?.PhoneNumber) || request.CheckInDate == default || request.BranchId <= 0)
         {
-            return Json(new { success = false, message = "Invalid phone number or check-in date." });
+            return Json(new { success = false, message = "Invalid phone number or check-in date or branch" });
         }
 
-        var (isValid, message, endUser) = await _checkInService.ValidateEndUserForManualCheckInAsync(
-            request.PhoneNumber.Trim(),
-            request.CheckInDate);
+        var (isValid, message, endUser) = await _checkInService.ValidateEndUserForManualCheckInAsync(request);
 
         if (isValid)
         {
@@ -119,4 +117,5 @@ public class ValidateUserRequest
 {
     public string PhoneNumber { get; set; }
     public DateTime CheckInDate { get; set; }
+    public int BranchId { get; set; }
 }

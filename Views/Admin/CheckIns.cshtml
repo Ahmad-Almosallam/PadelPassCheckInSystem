@@ -385,6 +385,18 @@
                                             <input type="date" id="manualCheckInDate" class="form-control" required>
                                         </div>
                                     </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Branch *</label>
+                                            <select id="manualBranchId" class="form-select" required onchange="">
+                                                <option value="">Select Branch</option>
+                                                @foreach (var branch in Model.Branches)
+                                                {
+                                                    <option value="@branch.Id">@branch.Name</option>
+                                                }
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="d-grid">
                                     <button type="button" class="btn btn-primary"
@@ -425,18 +437,6 @@
                             </div>
                             <div class="card-body">
                                 <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label">Branch *</label>
-                                            <select id="manualBranchId" class="form-select" required onchange="">
-                                                <option value="">Select Branch</option>
-                                                @foreach (var branch in Model.Branches)
-                                                {
-                                                    <option value="@branch.Id">@branch.Name</option>
-                                                }
-                                            </select>
-                                        </div>
-                                    </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label class="form-label">Court Name/Number</label>
@@ -779,12 +779,34 @@
 
         
         document.getElementById('manualBranchId').addEventListener('change', function () {
+            let isUserInfoLoaded = document.getElementById('userInfoSection').classList.contains('d-none');
+            if (!isUserInfoLoaded) {
+                document.getElementById('userInfoSection').classList.add('d-none');
+                document.getElementById('checkInDetailsSection').classList.add('d-none');
+            }
+            
             const branchId = this.value;
             if (branchId) {
                 getCourtsByBranchId(branchId, 'manualCourtName', null);
             } else {
                 // Clear courts if no branch selected
                 document.getElementById('manualCourtName').innerHTML = '';
+            }
+        });
+
+        document.getElementById('manualCheckInDate').addEventListener('change', function () {
+            let isUserInfoLoaded = document.getElementById('userInfoSection').classList.contains('d-none');
+            if (!isUserInfoLoaded) {
+                document.getElementById('userInfoSection').classList.add('d-none');
+                document.getElementById('checkInDetailsSection').classList.add('d-none');
+            }
+        });
+
+        document.getElementById('manualPhoneNumber').addEventListener('change', function () {
+            let isUserInfoLoaded = document.getElementById('userInfoSection').classList.contains('d-none');
+            if (!isUserInfoLoaded) {
+                document.getElementById('userInfoSection').classList.add('d-none');
+                document.getElementById('checkInDetailsSection').classList.add('d-none');
             }
         });
         
@@ -808,6 +830,7 @@
         function validateUserForManualCheckIn() {
             const phoneNumber = document.getElementById('manualPhoneNumber').value.trim();
             const checkInDate = document.getElementById('manualCheckInDate').value;
+            const branchId = parseInt(document.getElementById('manualBranchId').value);
 
             if (!phoneNumber || !/^[0-9]{10}$/.test(phoneNumber)) {
                 showAlert('Please enter a valid 10-digit phone number.', 'danger');
@@ -830,7 +853,8 @@
                 },
                 body: JSON.stringify({
                     phoneNumber: phoneNumber,
-                    checkInDate: checkInDateTime
+                    checkInDate: checkInDateTime,
+                    branchId: branchId
                 })
             })
                 .then(response => response.json())

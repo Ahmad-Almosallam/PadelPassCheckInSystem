@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using NodaTime.Extensions;
+using PadelPassCheckInSystem.Controllers.CheckIns;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Extensions;
@@ -400,7 +401,7 @@ public class CheckInService : ICheckInService
         if (request is null || request.CheckInId <= 0)
             return new(false, "Invalid check-in data.");
 
-         var checkIn = await _context.CheckIns
+        var checkIn = await _context.CheckIns
             .Include(c => c.EndUser)
             .Include(c => c.Branch) // need TimeZoneId
             .FirstOrDefaultAsync(c => c.Id == request.CheckInId);
@@ -419,7 +420,7 @@ public class CheckInService : ICheckInService
         // Compute the branch-local date from requested UTC, then build the UTC day window
         var requestedLocalDate = requestedUtc.ToLocalTime(tz)
             .Date;
-         var startUtc = requestedLocalDate.GetStartOfDayUtc(tz);
+        var startUtc = requestedLocalDate.GetStartOfDayUtc(tz);
         var endUtc = requestedLocalDate.GetEndOfDayUtc(tz);
 
         // GLOBAL per-local-day: block if ANY other check-in (any branch) exists in this local day
@@ -555,85 +556,85 @@ public class CheckInService : ICheckInService
     }
 
     public async Task<(bool IsValid, string Message, EndUser User)> ValidateEndUserForManualCheckInAsync(
-        string phoneNumber,
-        DateTime checkInDate)
+        ValidateUserRequest request)
     {
         try
         {
-            // Find user by phone number
+            // 1) Find user
             var endUser = await _context.EndUsers
-                .FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+                .FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
 
-            if (endUser == null)
-            {
+            if (endUser is null)
                 return (false, "User not found with the provided phone number", null);
-            }
 
-            // Convert dates to KSA for validation
-            var checkInDateKSA = checkInDate.Date;
-            var subscriptionStartKSA = endUser.SubscriptionStartDate.ToKSATime()
-                .Date;
-            var subscriptionEndKSA = endUser.SubscriptionEndDate.ToKSATime()
+            // 2) pass the branch TZ here.
+            var branch = await _context.Branches.FindAsync(request.BranchId);
+
+            if (branch is null)
+                return (false, "Branch not found", null);
+
+            if (!branch.IsActive)
+                return (false, "Branch is not active", null);
+
+            var tz = branch.TimeZoneId;
+
+            // Requested local date (assumes request.CheckInDate is UTC or should be treated as UTC if unspecified)
+            var reqLocalDate = request.CheckInDate.ToLocalTime(tz)
                 .Date;
 
-            // Check subscription validity for the selected date
-            if (checkInDateKSA < subscriptionStartKSA || checkInDateKSA > subscriptionEndKSA)
+            // Subscription window (local KSA dates)
+            var subStartLocal = endUser.SubscriptionStartDate.ToLocalTime(tz)
+                .Date;
+            var subEndLocal = endUser.SubscriptionEndDate.ToLocalTime(tz)
+                .Date;
+
+            if (reqLocalDate < subStartLocal || reqLocalDate > subEndLocal)
             {
-                var startDateStr = subscriptionStartKSA.ToString("MMM dd, yyyy");
-                var endDateStr = subscriptionEndKSA.ToString("MMM dd, yyyy");
-                return (false,
-                    $"Subscription is not valid for selected date. Valid period: {startDateStr} to {endDateStr}",
+                var startStr = subStartLocal.ToString("MMM dd, yyyy");
+                var endStr = subEndLocal.ToString("MMM dd, yyyy");
+                return (false, $"Subscription is not valid for selected date. Valid period: {startStr} to {endStr}",
                     null);
             }
 
-            // Check if subscription was paused on the selected date
+            // Pause window (local)
             if (endUser.IsPaused)
             {
-                var pauseStartKSA = endUser.CurrentPauseStartDate?.ToKSATime()
+                var pauseStartLocal = endUser.CurrentPauseStartDate!.Value.ToLocalTime(tz)
                     .Date;
-                var pauseEndKSA = endUser.CurrentPauseEndDate?.ToKSATime()
+                var pauseEndLocal = endUser.CurrentPauseEndDate!.Value.ToLocalTime(tz)
                     .Date;
 
-                if (pauseStartKSA.HasValue && pauseEndKSA.HasValue &&
-                    checkInDateKSA >= pauseStartKSA.Value && checkInDateKSA <= pauseEndKSA.Value)
+                if (reqLocalDate >= pauseStartLocal && reqLocalDate <= pauseEndLocal)
                 {
                     return (false,
-                        $"Subscription was paused on the selected date ({pauseStartKSA.Value:MMM dd, yyyy} to {pauseEndKSA.Value:MMM dd, yyyy})",
+                        $"Subscription was paused on the selected date ({pauseStartLocal:MMM dd, yyyy} to {pauseEndLocal:MMM dd, yyyy})",
                         null);
                 }
             }
 
-            // Check if user already has a check-in on this date
-            var existingCheckIns = await _context.CheckIns
-                .Where(c => c.EndUserId == endUser.Id)
-                .ToListAsync();
+            // 3) Once-per-local-day (KSA): build UTC range for that local date and query in UTC
+            var hasExistingCheckIn = await HasCheckedInOnDateAsync(endUser.Id, reqLocalDate, tz);
 
-            var hasExistingCheckIn = existingCheckIns.Any(c =>
-                c.CheckInDateTime.ToKSATime()
-                    .Date == checkInDateKSA);
 
             if (hasExistingCheckIn)
-            {
-                return (false, $"User already has a check-in record for {checkInDateKSA:MMM dd, yyyy}", null);
-            }
+                return (false, $"User already has a check-in record for {reqLocalDate:MMM dd, yyyy}", null);
 
             return (true, "User is valid for manual check-in", endUser);
         }
-        catch (Exception ex)
+        catch
         {
-            // Log the exception here
             return (false, "An error occurred while validating user", null);
         }
     }
 
     private async Task<bool> HasCheckedInOnDateAsync(
         int endUserId,
-        DateTime checkInDate, // Local date
+        DateTime checkInLocalDate, // Local date
         string branchTimeZoneId) // IANA time zone
     {
         // Build UTC range for the given local date in the branch's time zone
-        var startUtc = checkInDate.GetStartOfDayUtc(branchTimeZoneId);
-        var endUtc = checkInDate.GetEndOfDayUtc(branchTimeZoneId);
+        var startUtc = checkInLocalDate.GetStartOfDayUtc(branchTimeZoneId);
+        var endUtc = checkInLocalDate.GetEndOfDayUtc(branchTimeZoneId);
 
         // Query directly in UTC for efficiency
         return await _context.CheckIns

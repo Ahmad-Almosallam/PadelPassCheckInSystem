@@ -1,3 +1,4 @@
+using PadelPassCheckInSystem.Controllers.CheckIns;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
 
@@ -46,7 +47,6 @@ namespace PadelPassCheckInSystem.Services
             bool playerAttended = true);
 
         Task<(bool IsValid, string Message, EndUser User)> ValidateEndUserForManualCheckInAsync(
-            string phoneNumber,
-            DateTime checkInDate);
+            ValidateUserRequest request);
     }
 }
