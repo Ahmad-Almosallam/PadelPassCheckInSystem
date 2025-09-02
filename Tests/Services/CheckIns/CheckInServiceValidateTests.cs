@@ -5,7 +5,7 @@ using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Services;
 using Xunit;
 
-namespace PadelPassCheckInSystem.Tests.Services;
+namespace PadelPassCheckInSystem.Tests.Services.CheckIns;
 
 public class CheckInServiceValidateTests : IDisposable
 {

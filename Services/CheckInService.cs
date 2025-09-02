@@ -400,7 +400,7 @@ public class CheckInService : ICheckInService
         if (request is null || request.CheckInId <= 0)
             return new(false, "Invalid check-in data.");
 
-        var checkIn = await _context.CheckIns
+         var checkIn = await _context.CheckIns
             .Include(c => c.EndUser)
             .Include(c => c.Branch) // need TimeZoneId
             .FirstOrDefaultAsync(c => c.Id == request.CheckInId);
@@ -419,7 +419,7 @@ public class CheckInService : ICheckInService
         // Compute the branch-local date from requested UTC, then build the UTC day window
         var requestedLocalDate = requestedUtc.ToLocalTime(tz)
             .Date;
-        var startUtc = requestedLocalDate.GetStartOfDayUtc(tz);
+         var startUtc = requestedLocalDate.GetStartOfDayUtc(tz);
         var endUtc = requestedLocalDate.GetEndOfDayUtc(tz);
 
         // GLOBAL per-local-day: block if ANY other check-in (any branch) exists in this local day
