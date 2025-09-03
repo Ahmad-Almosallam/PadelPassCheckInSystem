@@ -378,7 +378,7 @@ public class EndUserService : IEndUserService
                 }
 
                 var existingUser = await _context.EndUsers
-                    .FirstOrDefaultAsync(e => e.PhoneNumber == customer.MobileNumber.Replace("966", "0")
+                    .FirstOrDefaultAsync(e => e.PhoneNumber == "+" + customer.MobileNumber
                         .Trim());
 
                 if (existingUser != null)

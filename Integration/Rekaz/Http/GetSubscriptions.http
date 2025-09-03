@@ -1,0 +1,6 @@
+﻿### Get subscriptions from Rekaz API
+GET {{baseUrl}}/subscriptions
+__tenant: {{tenantId}}
+Authorization: Basic {{apiKey}}
+
+###
