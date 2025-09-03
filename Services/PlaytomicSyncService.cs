@@ -269,7 +269,7 @@ public class PlaytomicSyncService : IPlaytomicSyncService
                                                      .Date < todyayKSA))
             {
                 csv.AppendLine(
-                    $"\"{user.Name}\",\"{user.Email ?? ""}\",\"{user.PhoneNumber}\",\"\",\"\",\"\",\"\"");
+                    $"\"{user.Name}\",\"{user.Email ?? ""}\",\"\",\"\",\"\",\"\",\"\"");
             }
             else
             {
@@ -287,7 +287,7 @@ public class PlaytomicSyncService : IPlaytomicSyncService
                 }
 
                 csv.AppendLine(
-                    $"\"{user.Name}\",\"{user.Email ?? ""}\",\"{user.PhoneNumber}\",\"\",\"\",\"Padel Pass\",\"{categoryExpires}\"");
+                    $"\"{user.Name}\",\"{user.Email ?? ""}\",\"\",\"\",\"\",\"Padel Pass\",\"{categoryExpires}\"");
             }
         }
 
