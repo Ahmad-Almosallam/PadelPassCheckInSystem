@@ -1,11 +1,13 @@
+using PadelPassCheckInSystem.Controllers.CheckIns;
 using PadelPassCheckInSystem.Models.Entities;
+using PadelPassCheckInSystem.Models.ViewModels;
 
 namespace PadelPassCheckInSystem.Services
 {
     public interface ICheckInService
     {
         Task<(bool Success, string Message, int? CheckInId)> CheckInAsync(string identifier,
-            int branchId, DateTime requestCheckInDate);
+            int branchId, DateTime requestCheckInDateUTC);
 
         Task<(bool Success, string Message)> AssignCourtAsync(
             int checkInId,
@@ -30,14 +32,9 @@ namespace PadelPassCheckInSystem.Services
 
         Task<(bool IsValid, string Message, EndUser User)> ValidateCheckInAsync(
             string identifier,
-            int branchId, DateTime checkInDate);
+            int branchId, DateTime requestCheckInDateUtc);
 
-        Task<(bool Success, string Message)> EditCheckInAsync(
-            int checkInId,
-            string courtName,
-            int playDurationMinutes,
-            DateTime? playStartTime,
-            string notes);
+        Task<(bool Success, string Message)> EditCheckInAsync(EditCheckInRequest request);
 
         Task<(bool Success, string Message, int? CheckInId)> AdminManualCheckInAsync(
             string phoneNumber,
@@ -50,7 +47,6 @@ namespace PadelPassCheckInSystem.Services
             bool playerAttended = true);
 
         Task<(bool IsValid, string Message, EndUser User)> ValidateEndUserForManualCheckInAsync(
-            string phoneNumber,
-            DateTime checkInDate);
+            ValidateUserRequest request);
     }
 }

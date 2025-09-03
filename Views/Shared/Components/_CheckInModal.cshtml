@@ -58,18 +58,23 @@
                         }
                         else
                         {
-                            <input type="date"
-                                   id="@Model.prefix-CheckInDate"
-                                   class="form-control"
-                                   required="required"
-                                   value=""
-                                   min="@DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd")"
-                                   max="@DateTime.Now.ToString("yyyy-MM-dd")"/>
+                            <select id="@Model.prefix-CheckInDate" required="required" class="form-control">
+                                <option value="" selected="selected">Select date</option>
+                                <option value="@DateTime.Now.ToString("yyyy-MM-dd")">Today (@DateTime.Now.ToString("yyyy-MM-dd"))</option>
+                                <option value="@DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd")">Yesterday (@DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd"))</option>
+                            </select>
                         }
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Play Start Time <small class="text-muted">(KSA)</small></label>
-                        <input type="time" id="@Model.prefix-PlayStartTime" class="form-control">
+                        @if (Model.isAdmin)
+                        {
+                            <input type="time" id="@Model.prefix-PlayStartTime" class="form-control">
+                        }
+                        else
+                        {
+                            <input type="text" id="@Model.prefix-PlayStartTime" class="form-control">
+                        }
                     </div>
                     <div class="mb-3">
                         <div class="form-check">

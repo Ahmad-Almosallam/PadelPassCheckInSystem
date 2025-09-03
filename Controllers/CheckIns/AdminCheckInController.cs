@@ -37,71 +37,8 @@ public class AdminCheckInController : CheckInBaseController
     public async Task<IActionResult> EditCheckIn(
         [FromBody] EditCheckInRequest request)
     {
-        if (request == null || request.CheckInId <= 0)
-        {
-            return Json(new { success = false, message = "Invalid check-in data." });
-        }
-
-        var checkIn = await _context.CheckIns
-            .Include(c => c.EndUser)
-            .FirstOrDefaultAsync(c => c.Id == request.CheckInId);
-
-        if (checkIn == null)
-        {
-            return Json(new { success = false, message = "Check-in record not found." });
-        }
-
-        var checkInDateUtc = request.CheckInDate;
-
-        var isThereCheckInWithSameDate =
-            await _context.CheckIns.AnyAsync(x => x.CheckInDateTime.Date == checkInDateUtc.Date && x.Id  != checkIn.Id);
-
-        if (isThereCheckInWithSameDate)
-        {
-            return Json(new { success = false, message = "There is check in in this date." });
-        }
-
-        // Convert play start time from KSA to UTC for storage
-        DateTime? playStartTimeUtc = null;
-        if (request.PlayStartTime.HasValue)
-        {
-            playStartTimeUtc = request.PlayStartTime.Value;
-        }
-
-        // Update check-in details
-        checkIn.BranchCourtId = request.BranchCourtId;
-        checkIn.PlayDuration = request.PlayDurationMinutes > 0
-            ? TimeSpan.FromMinutes(request.PlayDurationMinutes)
-            : null;
-        checkIn.PlayStartTime = playStartTimeUtc;
-        checkIn.Notes = !string.IsNullOrWhiteSpace(request.Notes) ? request.Notes.Trim() : null;
-        checkIn.CheckInDateTime = checkInDateUtc;
-
-        // Handle player attendance and warnings
-        checkIn.PlayerAttended = request.PlayerAttended;
-        var (isAutoStopped, warningMessage) =
-            await _warningService.ProcessPlayerAttendanceAsync(request.CheckInId, request.PlayerAttended);
-
-        try
-        {
-            await _context.SaveChangesAsync();
-
-            var baseMessage = $"Check-in details updated successfully for {checkIn.EndUser.Name}";
-            if (isAutoStopped)
-            {
-                return Json(new { success = true, message = $"{baseMessage}. {warningMessage}" });
-            }
-            else if (!request.PlayerAttended)
-            {
-                return Json(new { success = true, message = $"{baseMessage}. {warningMessage}" });
-            }
-
-            return Json(new { success = true, message = baseMessage });
-        }
-        catch (Exception ex)
-        {
-            return Json(new { success = false, message = "An error occurred while updating check-in details." });
-        }
+        var result = await _checkInService.EditCheckInAsync(request);
+        return Json(new { success = result.Success, message = result.Message });
     }
 
 
@@ -109,14 +46,12 @@ public class AdminCheckInController : CheckInBaseController
     public async Task<IActionResult> ValidateUserForManualCheckIn(
         [FromBody] ValidateUserRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request?.PhoneNumber) || request.CheckInDate == default)
+        if (string.IsNullOrWhiteSpace(request?.PhoneNumber) || request.CheckInDate == default || request.BranchId <= 0)
         {
-            return Json(new { success = false, message = "Invalid phone number or check-in date." });
+            return Json(new { success = false, message = "Invalid phone number or check-in date or branch" });
         }
 
-        var (isValid, message, endUser) = await _checkInService.ValidateEndUserForManualCheckInAsync(
-            request.PhoneNumber.Trim(),
-            request.CheckInDate);
+        var (isValid, message, endUser) = await _checkInService.ValidateEndUserForManualCheckInAsync(request);
 
         if (isValid)
         {
@@ -182,4 +117,5 @@ public class ValidateUserRequest
 {
     public string PhoneNumber { get; set; }
     public DateTime CheckInDate { get; set; }
+    public int BranchId { get; set; }
 }

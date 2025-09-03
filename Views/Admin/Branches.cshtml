@@ -15,51 +15,61 @@
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Address</th>
-                        <th>Playtomic Tenant ID</th>
-                        <th>Branch Users</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
+                <tr>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Playtomic Tenant ID</th>
+                    <th>Time Zone</th>
+                    <th>Branch Users</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
                 </thead>
                 <tbody>
-                    @foreach (var branch in Model)
-                    {
-                        <tr>
-                            <td>@branch.Name</td>
-                            <td>@branch.Address</td>
-                            <td>
-                                @if (branch.PlaytomicTenantId.HasValue)
-                                {
-                                    <span class="badge bg-info">@branch.PlaytomicTenantId.Value.ToString("D")</span>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">Not set</span>
-                                }
-                            </td>
-                            <td>
-                                <span class="badge bg-secondary">@branch.BranchUsers.Count users</span>
-                            </td>
-                            <td>
-                                @if (branch.IsActive)
-                                {
-                                    <span class="badge bg-success">Active</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-danger">Inactive</span>
-                                }
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-warning" onclick="editBranch(@branch.Id, '@branch.Name', '@branch.Address', '@(branch.PlaytomicTenantId?.ToString("D") ?? "")', @branch.IsActive.ToString().ToLower())">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </button>
-                            </td>
-                        </tr>
-                    }
+                @foreach (var branch in Model)
+                {
+                    <tr>
+                        <td>@branch.Name</td>
+                        <td>@branch.Address</td>
+                        <td>
+                            @if (branch.PlaytomicTenantId.HasValue)
+                            {
+                                <span class="badge bg-info">@branch.PlaytomicTenantId.Value.ToString("D")</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Not set</span>
+                            }
+                        </td>
+                        <td>
+                            @branch.TimeZoneId
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">@branch.BranchUsers.Count users</span>
+                        </td>
+                        <td>
+                            @if (branch.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Inactive</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-warning"
+                                    onclick="editBranch(@branch.Id,
+                                    '@branch.Name',
+                                    '@branch.Address',
+                                    '@(branch.PlaytomicTenantId?.ToString("D") ?? "")',
+                                    @branch.IsActive.ToString().ToLower(),
+                                    '@branch.TimeZoneId')">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                        </td>
+                    </tr>
+                }
                 </tbody>
             </table>
         </div>
@@ -86,9 +96,14 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Playtomic Tenant ID</label>
-                        <input type="text" name="PlaytomicTenantId" class="form-control" 
+                        <input type="text" name="PlaytomicTenantId" class="form-control"
                                pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}">
                         <small class="text-muted">Must be a valid GUID format if provided.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Country</label>
+                        <select class="form-control" name="TimeZoneId" id="createTimeZone"
+                                asp-items="NodaTimeExtensions.Build()"></select>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -121,13 +136,19 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Playtomic Tenant ID</label>
-                        <input type="text" id="editPlaytomicTenantId" name="PlaytomicTenantId" class="form-control" 
+                        <input type="text" id="editPlaytomicTenantId" name="PlaytomicTenantId" class="form-control"
                                pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}">
                         <small class="text-muted">Must be a valid GUID format if provided.</small>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Country</label>
+                        <select class="form-control" name="TimeZoneId" id="editTimeZone"
+                                asp-items="NodaTimeExtensions.Build()"></select>
+                    </div>
+                    <div class="mb-3">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="editIsActive" name="IsActive" value="true">
+                            <input class="form-check-input" type="checkbox" id="editIsActive" name="IsActive"
+                                   value="true">
                             <label class="form-check-label" for="editIsActive">
                                 Active
                             </label>
@@ -143,20 +164,50 @@
     </div>
 </div>
 
+@section Styles
+{
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
+}
+
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script>
-        function editBranch(id, name, address, playtomicTenantId, isActive) {
+      const createChoices = new Choices('#createTimeZone', {
+            searchEnabled: true,
+            removeItemButton: false,
+            placeholder: true,
+            itemSelectText: '',
+            allowHTML: false
+        });
+
+      const editChoices = new Choices('#editTimeZone', {
+            searchEnabled: true,
+            removeItemButton: false,
+            placeholder: true,
+            itemSelectText: '',
+            allowHTML: false
+        });
+        function editBranch(id, name, address, playtomicTenantId, isActive, timeZoneId) {
             document.getElementById('editId').value = id;
             document.getElementById('editName').value = name;
             document.getElementById('editAddress').value = address;
             document.getElementById('editPlaytomicTenantId').value = playtomicTenantId;
             document.getElementById('editIsActive').checked = isActive;
 
+            // select #editTimeZone to timeZoneId
+            if (timeZoneId) {
+                editChoices.setChoiceByValue(timeZoneId);
+            } else {
+                editChoices.setChoiceByValue("0"); // Default to first option
+            }
+
             new bootstrap.Modal(document.getElementById('editModal')).show();
         }
-        
+
         // Add change event for editIsActive and once the checkbox is checked, set the value to true otherwise false
-        document.getElementById('editIsActive').addEventListener('change', function() {
+        document.getElementById('editIsActive').addEventListener('change', function () {
             this.value = this.checked ? 'True' : 'False';
         });
 
@@ -168,14 +219,16 @@
         }
 
         // Add form validation for GUID format
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
+            
+
             const createForm = document.querySelector('#createModal form');
             const editForm = document.querySelector('#editModal form');
 
             function validateGuidField(form) {
                 const guidInput = form.querySelector('[name="PlaytomicTenantId"]');
                 const guid = guidInput.value.trim();
-                
+
                 if (guid && !isValidGuid(guid)) {
                     alert('Please enter a valid GUID format (e.g., 12345678-1234-1234-1234-123456789012) or leave empty.');
                     guidInput.focus();
@@ -184,13 +237,13 @@
                 return true;
             }
 
-            createForm.addEventListener('submit', function(e) {
+            createForm.addEventListener('submit', function (e) {
                 if (!validateGuidField(this)) {
                     e.preventDefault();
                 }
             });
 
-            editForm.addEventListener('submit', function(e) {
+            editForm.addEventListener('submit', function (e) {
                 if (!validateGuidField(this)) {
                     e.preventDefault();
                 }

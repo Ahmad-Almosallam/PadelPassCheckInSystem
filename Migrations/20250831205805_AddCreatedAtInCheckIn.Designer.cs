@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PadelPassCheckInSystem.Data;
 
@@ -11,9 +12,11 @@ using PadelPassCheckInSystem.Data;
 namespace PadelPassCheckInSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250831205805_AddCreatedAtInCheckIn")]
+    partial class AddCreatedAtInCheckIn
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -289,10 +292,6 @@ namespace PadelPassCheckInSystem.Migrations
                     b.Property<Guid?>("PlaytomicTenantId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("TimeZoneId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
                     b.HasKey("Id");
 
                     b.ToTable("Branches", "access");
@@ -434,9 +433,6 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.Property<string>("QRCodeDownloadToken")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("RekazId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("StopReason")
                         .HasColumnType("nvarchar(max)");

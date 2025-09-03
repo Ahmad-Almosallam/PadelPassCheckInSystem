@@ -41,11 +41,9 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
             }
 
             var todayCheckIns = await _checkInService.GetTodayCheckInsWithCourtInfoAsync(user.BranchId.Value);
-            var pendingCourtAssignments = await _checkInService.GetPendingCourtAssignmentsAsync(user.BranchId.Value);
 
             ViewBag.BranchName = (await _context.Branches.FindAsync(user.BranchId))?.Name;
             ViewBag.TodayCount = todayCheckIns.Count;
-            ViewBag.PendingAssignments = pendingCourtAssignments.Count;
 
             return View(todayCheckIns);
         }
@@ -108,6 +106,7 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
 
             var allCheckIns = await _context.CheckIns
                 .Include(c => c.EndUser)
+                .Include(x => x.BranchCourt)
                 .Where(c => c.BranchId == user.BranchId)
                 .OrderByDescending(c => c.CheckInDateTime)
                 .Take(50) // Get more records to filter
@@ -125,7 +124,7 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
                     time = c.CheckInDateTime.ToKSATime()
                         .ToString("HH:mm:ss"), // Convert to KSA time
                     image = c.EndUser.ImageUrl,
-                    courtName = c.CourtName,
+                    courtName = c.BranchCourt.CourtName,
                     playDuration = c.PlayDuration.HasValue
                         ? c.PlayDuration.Value.TotalMinutes.ToString("F0") + " min"
                         : "Not assigned",
@@ -138,31 +137,6 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
                 .ToList();
 
             return Json(new { success = true, checkIns = recentCheckIns });
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> GetPendingCourtAssignments()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user?.BranchId == null)
-            {
-                return Json(new { success = false });
-            }
-
-            var pendingAssignments = await _checkInService.GetPendingCourtAssignmentsAsync(user.BranchId.Value);
-
-            var result = pendingAssignments.Select(c => new
-                {
-                    id = c.Id,
-                    name = c.EndUser.Name,
-                    checkInTime = c.CheckInDateTime.ToKSATime()
-                        .ToString("HH:mm:ss"), // Convert to KSA time
-                    image = c.EndUser.ImageUrl,
-                    phoneNumber = c.EndUser.PhoneNumber
-                })
-                .ToList();
-
-            return Json(new { success = true, pendingAssignments = result });
         }
         
         [HttpPost]
@@ -253,7 +227,7 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
 
             // First, perform the check-in
             var checkInResult = await _checkInService.CheckInAsync(request.Identifier.Trim(), user.BranchId.Value,
-                request.CheckInDate.ToKSATime());
+                request.CheckInDate);
             if (!checkInResult.Success)
             {
                 return Json(new { success = false, message = checkInResult.Message });

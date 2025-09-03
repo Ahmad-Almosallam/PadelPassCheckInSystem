@@ -229,7 +229,9 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Phone Number *</label>
-                                <input type="tel" name="PhoneNumber" class="form-control" required>
+                                <input type="tel" id="PhoneNumber" class="form-control" required>
+                                @* <input type="hidden" name="PhoneNumber" id="hiddenPhoneNumber" class="form-control" required> *@
+                                <small id="createPhoneError" class="d-none text-danger"></small>
                             </div>
                         </div>
                     </div>

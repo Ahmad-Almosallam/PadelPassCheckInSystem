@@ -7,9 +7,8 @@
     identifier = "F7AFD10B";
 #endif
 }
-
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-md-12">
         <div class="card">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">
@@ -25,13 +24,8 @@
             <div class="card-body">
                 <div class="text-center mb-4">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <h5>Today's Check-Ins: <span class="badge bg-success">@ViewBag.TodayCount</span></h5>
-                        </div>
-                        <div class="col-md-6">
-                            <h5>Pending Court Assignments: <span class="badge bg-warning"
-                                                                 id="pendingCount">@ViewBag.PendingAssignments</span>
-                            </h5>
                         </div>
                     </div>
                 </div>
@@ -56,19 +50,16 @@
                                 <div class="card-header">
                                     <h5 class="mb-0">Check-In by Phone</h5>
                                 </div>
-                                <div class="card-body">
+                                <div class="card-body justify-content-center d-flex">
                                     <div class="form-group">
                                         <label class="form-label">Phone Number</label>
                                         <div class="input-group">
-                                            <input type="tel" id="phoneNumberInput" class="form-control"
-                                                   placeholder="05xxxxxxxx"
-                                                   pattern="[0-9]{10}"
-                                                   maxlength="10">
+                                            <input type="tel" id="phoneNumberInput" class="form-control">
                                             <button class="btn btn-primary" onclick="processPhoneCheckIn()">
                                                 <i class="bi bi-phone"></i> Check-In
                                             </button>
                                         </div>
-                                        <small class="text-muted">Enter 10-digit phone number</small>
+                                        <small id="phoneInputError" class="text-danger d-none"></small>
                                     </div>
                                 </div>
                             </div>
@@ -137,35 +128,19 @@
                                     </div>
                                     <div class="text-end">
                                         <div class="mb-1">
-                                            @if (string.IsNullOrEmpty(checkIn.CourtName))
+                                            <span class="badge bg-success">Court Assigned</span>
+                                            @if (checkIn.PlayDuration.HasValue)
                                             {
-                                                <span class="badge bg-warning">Pending Assignment</span>
+                                                <br>
+                                                <small
+                                                    class="text-muted">@((int)checkIn.PlayDuration.Value.TotalMinutes) min</small>
                                             }
-                                            else
-                                            {
-                                                <span class="badge bg-success">Court Assigned</span>
-                                                @if (checkIn.PlayDuration.HasValue)
-                                                {
-                                                    <br>
-                                                    <small
-                                                        class="text-muted">@((int)checkIn.PlayDuration.Value.TotalMinutes) min</small>
-                                                }
 
-                                                @if (checkIn.PlayStartTime.HasValue)
-                                                {
-                                                    <br>
-                                                    <small
-                                                        class="text-muted">Start: @checkIn.PlayStartTime.Value.ToKSATime().ToString("HH:mm")</small>
-                                                }
-                                            }
-                                        </div>
-                                        <div class="btn-group" role="group">
-                                            @if (string.IsNullOrEmpty(checkIn.CourtName))
+                                            @if (checkIn.PlayStartTime.HasValue)
                                             {
-                                                <button class="btn btn-sm btn-warning"
-                                                        onclick="showCourtAssignmentModal(@checkIn.Id, '@checkIn.EndUser.Name')">
-                                                    <i class="bi bi-geo-alt"></i> Assign
-                                                </button>
+                                                <br>
+                                                <small
+                                                    class="text-muted">Start: @checkIn.PlayStartTime.Value.ToKSATime().ToString("HH:mm")</small>
                                             }
                                         </div>
                                     </div>
@@ -178,114 +153,6 @@
                         <p class="text-muted text-center">No check-ins today</p>
                     }
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <!-- Instructions Card -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Instructions</h5>
-            </div>
-            <div class="card-body">
-                <ol>
-                    <li class="mb-2">Click "Start QR Scanner" to activate the camera</li>
-                    <li class="mb-2">Ask the customer to show their QR code</li>
-                    <li class="mb-2">Position the QR code within the camera view</li>
-                    <li class="mb-2">After successful scan, assign court and play time</li>
-                    <li class="mb-2">Verify the customer's name and photo</li>
-                    <li class="mb-2">Use delete button to remove incorrect check-ins</li>
-                </ol>
-
-                <div class="alert alert-info mt-3">
-                    <i class="bi bi-info-circle"></i> Two-step process: Scan → Assign Court
-                </div>
-
-                <div class="alert alert-warning mt-3">
-                    <i class="bi bi-camera"></i> Camera permission is required for scanning
-                </div>
-
-                <div class="alert alert-light mt-3">
-                    <i class="bi bi-clock"></i> All times shown in KSA Time (UTC+3)
-                </div>
-
-
-            </div>
-        </div>
-
-        <!-- Pending Court Assignments -->
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Pending Assignments</h5>
-                <button class="btn btn-sm btn-outline-warning" onclick="updatePendingAssignments()">
-                    <i class="bi bi-arrow-clockwise"></i> Refresh
-                </button>
-            </div>
-            <div class="card-body">
-                <div id="pendingAssignmentsList">
-                    <!-- Will be populated by JavaScript -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Court Assignment Modal -->
-<div class="modal fade" id="courtAssignmentModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Assign Court</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="courtAssignmentForm">
-                    <input type="hidden" id="assignCheckInId">
-                    <div class="mb-3">
-                        <label class="form-label">Customer Name</label>
-                        <input type="text" id="assignCustomerName" class="form-control" readonly>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Court Name/Number *</label>
-                        <input type="text" id="assignCourtName" class="form-control"
-                               placeholder="e.g., Court 1, Court A" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Play Duration (minutes) *</label>
-                        <select id="assignPlayDuration" class="form-select" required>
-                            <option value="60">60 minutes</option>
-                            <option value="90" selected>90 minutes</option>
-                            <option value="120">120 minutes</option>
-                            <option value="150">150 minutes</option>
-                            <option value="180">180 minutes</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Play Start Time <small class="text-muted">(KSA)</small></label>
-                        <input type="time" id="assignPlayStartTime" class="form-control">
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="assignPlayerAttended" checked>
-                            <label class="form-check-label" for="assignPlayerAttended">
-                                <i class="bi bi-person-check"></i> Player Attended
-                            </label>
-                        </div>
-                        <small class="text-muted">Uncheck if player did not show up</small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Notes</label>
-                        <textarea id="assignNotes" class="form-control" rows="2"
-                                  placeholder="Additional notes (optional)"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitCourtAssignment()">Assign Court</button>
             </div>
         </div>
     </div>
@@ -321,6 +188,9 @@
 <partial name="Components/_CheckInModal" model="@("confirm", false)"/>
 
 @section Styles {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.8.3/build/css/intlTelInput.css">
+
     <style>
         #qr-reader {
             border: 2px solid #dee2e6;
@@ -380,7 +250,10 @@
 
 @section Scripts {
     <!-- Include Html5-QRCode library -->
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.8.3/build/js/intlTelInput.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/18.2.1/js/utils.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="js/checkIn.js"></script>
     <script>
         let html5QrCode = null;
@@ -535,7 +408,6 @@
                         bootstrap.Modal.getInstance(document.getElementById('courtAssignmentModal')).hide();
                         showMessage(data.message, 'success');
                         updateRecentCheckIns();
-                        updatePendingAssignments();
                         playSuccessSound();
                     } else {
                         alert(data.message);
@@ -578,7 +450,6 @@
                     if (data.success) {
                         showMessage(data.message, 'success');
                         updateRecentCheckIns();
-                        updatePendingAssignments();
                         updateTodayCount(-1); // Decrease count by 1
                         playSuccessSound();
                     } else {
@@ -607,13 +478,13 @@
                                     ? `<img src="${checkIn.image}" alt="${checkIn.name}" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">`
                                     : `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;"><i class="bi bi-person text-white"></i></div>`;
 
-                                const courtInfo = checkIn.hasCourtAssignment
-                                    ? `<br><small class="text-success"><i class="bi bi-geo-alt"></i> Court: ${checkIn.courtName}</small>`
-                                    : '';
+                                const courtInfo =
+                                    `<br><small class="text-success"><i class="bi bi-geo-alt"></i> Court: ${checkIn.courtName}</small>`;
 
-                                const statusBadge = checkIn.hasCourtAssignment
-                                    ? '<span class="badge bg-success">Court Assigned</span>'
-                                    : '<span class="badge bg-warning">Pending Assignment</span>';
+
+                                const statusBadge =
+                                    '<span class="badge bg-success">Court Assigned</span>';
+
 
                                 const durationInfo = checkIn.playDuration && checkIn.playDuration !== "Not assigned"
                                     ? `<br><small class="text-muted">${checkIn.playDuration}</small>`
@@ -623,11 +494,6 @@
                                     ? `<br><small class="text-muted">Start: ${checkIn.playStartTime}</small>`
                                     : '';
 
-                                const assignButton = !checkIn.hasCourtAssignment
-                                    ? `<button class="btn btn-sm btn-warning" onclick="showCourtAssignmentModal(${checkIn.id}, '${checkIn.name}')">
-                                     <i class="bi bi-geo-alt"></i> Assign
-                                   </button>`
-                                    : '';
 
                                 html += `
                                     <div class="list-group-item d-flex justify-content-between align-items-center">
@@ -645,9 +511,6 @@
                                                 ${durationInfo}
                                                 ${startTimeInfo}
                                             </div>
-                                            <div class="btn-group" role="group">
-                                                ${assignButton}
-                                            </div>
                                         </div>
                                     </div>
                                 `;
@@ -656,51 +519,6 @@
                             listDiv.innerHTML = html;
                         } else {
                             listDiv.innerHTML = '<p class="text-muted text-center">No check-ins today</p>';
-                        }
-                    }
-                });
-        }
-
-        function updatePendingAssignments() {
-            fetch('/CheckIn/GetPendingCourtAssignments')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const listDiv = document.getElementById('pendingAssignmentsList');
-                        const countBadge = document.getElementById('pendingCount');
-
-                        countBadge.textContent = data.pendingAssignments.length;
-
-                        if (data.pendingAssignments.length > 0) {
-                            let html = '<div class="list-group">';
-                            data.pendingAssignments.forEach(assignment => {
-                                const imageHtml = assignment.image
-                                    ? `<img src="${assignment.image}" alt="${assignment.name}" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">`
-                                    : `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;"><i class="bi bi-person text-white"></i></div>`;
-
-                                html += `
-                                    <div class="list-group-item pending-assignment-item">
-                                        <div class="d-flex align-items-center justify-content-between">
-                                            <div class="d-flex align-items-center">
-                                                ${imageHtml}
-                                                <div>
-                                                    <h6 class="mb-0">${assignment.name}</h6>
-                                                    <small class="text-muted">${assignment.checkInTime} <span class="badge badge-sm bg-info">KSA</span></small>
-                                                </div>
-                                            </div>
-                                            <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-warning" onclick="showCourtAssignmentModal(${assignment.id}, '${assignment.name}')">
-                                                    <i class="bi bi-geo-alt"></i> Assign
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
-                            });
-                            html += '</div>';
-                            listDiv.innerHTML = html;
-                        } else {
-                            listDiv.innerHTML = '<p class="text-muted text-center">No pending assignments</p>';
                         }
                     }
                 });
@@ -807,7 +625,6 @@
                     <h4>${data.userName}</h4>
                     <h5 class="text-info">Subscription End Date: ${data.subEndDate}</h5>
                     <div class="mt-3">
-                        <p class="text-info"><i class="bi bi-info-circle"></i> Court assignment required</p>
                         ${data.checkInTimeKSA ? `<small class="text-muted">Check-in time: ${data.checkInTimeKSA} KSA</small>` : ''}
                     </div>`;
 
@@ -822,7 +639,6 @@
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function () {
-            // updatePendingAssignments();
             // click event on btn-confirm-checkin
             document.getElementById('confirm-btn-checkin').addEventListener('click', function () {
                 confirmCheckInWithCourt();
@@ -837,12 +653,8 @@
         });
 
         function processPhoneCheckIn() {
-            const phoneNumber = document.getElementById('phoneNumberInput').value.trim();
+            const phoneNumber = phoneIti.getNumber();
 
-            if (!/^[0-9]{10}$/.test(phoneNumber)) {
-                showMessage('Invalid phone number. Please enter a 10-digit phone number.', 'danger');
-                return;
-            }
 
             fetch('/CheckIn/ProcessPhoneCheckIn', {
                 method: 'POST',

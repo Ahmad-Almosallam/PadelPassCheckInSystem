@@ -1,3 +1,61 @@
+// --- Phone check-in wiring ---
+const phoneInputEl = document.getElementById('phoneNumberInput');
+const phoneErrorEl = document.getElementById('phoneInputError');
+
+const phoneIti = window.intlTelInput(phoneInputEl, {
+    initialCountry: "sa",
+    nationalMode: false,                  // submit +E.164
+    autoPlaceholder: "aggressive",
+    geoIpLookup: cb => {
+        fetch("https://ipapi.co/json")
+            .then(r => r.json())
+            .then(d => cb(d.country_code))
+            .catch(() => cb(defaultFallback.toLowerCase()));
+    },
+    loadUtils: () => import("https://cdn.jsdelivr.net/npm/intl-tel-input@25.8.3/build/js/utils.js"),
+});
+
+const phoneErrorMap = {
+    0: "Invalid number",
+    1: "Invalid country code",
+    2: "Too short",
+    3: "Too long",
+    4: "Invalid number"
+};
+
+function validatePhone() {
+    const v = phoneInputEl.value.trim();
+    if (!v) {
+        phoneInputEl.setCustomValidity("Required");
+        phoneErrorEl.textContent = "Required";
+        phoneErrorEl.classList.remove("d-none");
+        return false;
+    }
+    // wait for utils to be ready on first load
+    if (phoneIti.promise && phoneIti.promise.pending) return true;
+
+    if (phoneIti.isValidNumber()) {
+        phoneInputEl.setCustomValidity("");
+        phoneErrorEl.classList.add("d-none");
+        return true;
+    } else {
+        const err = phoneIti.getValidationError();
+        const msg = phoneErrorMap[err] || "Invalid phone";
+        phoneInputEl.setCustomValidity(msg);
+        phoneErrorEl.textContent = msg;
+        phoneErrorEl.classList.remove("d-none");
+        return false;
+    }
+}
+
+// mark utils pending state
+if (phoneIti.promise) { phoneIti.promise.pending = true; phoneIti.promise.then(() => phoneIti.promise.pending = false); }
+
+phoneInputEl.addEventListener("keyup", validatePhone);
+phoneInputEl.addEventListener("input", () => { phoneInputEl.setCustomValidity(""); phoneErrorEl.classList.add("d-none"); });
+phoneInputEl.addEventListener("countrychange", validatePhone);
+
+
 function showCheckInConfirmation(data) {
     // Set user info
     const userImageDiv = document.getElementById('confirm-UserImage');
@@ -20,7 +78,18 @@ function showCheckInConfirmation(data) {
 
     // Set default values for court assignment
     if (data.defaultPlayStartTime) {
-        document.getElementById('confirm-PlayStartTime').value = data.defaultPlayStartTime;
+        // document.getElementById('confirm-PlayStartTime').value = data.defaultPlayStartTime;
+        // Set today's date but specific time
+        const [hours, minutes] = data.defaultPlayStartTime.split(':');
+        const playStartTimePicker = flatpickr("#confirm-PlayStartTime", {
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: "h:i K",
+            allowInput: true,
+            minuteIncrement: 30
+        });
+        playStartTimePicker.setDate(new Date().setHours(hours, minutes));
+
     }
     if (data.defaultPlayDurationMinutes) {
         document.getElementById('confirm-PlayDuration').value = data.defaultPlayDurationMinutes;
@@ -72,13 +141,15 @@ function confirmCheckInWithCourt() {
     const playerAttended = document.getElementById('confirm-PlayerAttended').checked;
     const checkInDate = document.getElementById('confirm-CheckInDate').value.trim();
 
-    const checkInDateTime = new Date(`${checkInDate}T${playStartTime}:00`);
+    var playStartTime24 = convertTo24Hour(playStartTime);
+    
+    let checkInDateTime = new Date(`${checkInDate}T${playStartTime24}:00`);
 
 
     let playStartDateTime = null;
-    if (playStartTime) {
+    if (playStartTime24) {
         const today = new Date();
-        const [hours, minutes] = playStartTime.split(':');
+        const [hours, minutes] = playStartTime24.split(':');
         playStartDateTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(hours), parseInt(minutes));
     }
 

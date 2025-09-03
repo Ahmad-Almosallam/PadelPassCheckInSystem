@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PadelPassCheckInSystem.Data;
 
@@ -11,9 +12,11 @@ using PadelPassCheckInSystem.Data;
 namespace PadelPassCheckInSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250902084821_AddTimeZoneIdToBranch")]
+    partial class AddTimeZoneIdToBranch
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -434,9 +437,6 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.Property<string>("QRCodeDownloadToken")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("RekazId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("StopReason")
                         .HasColumnType("nvarchar(max)");
