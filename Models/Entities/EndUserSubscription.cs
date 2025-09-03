@@ -20,6 +20,9 @@ public class EndUserSubscription
     [Required, MaxLength(100)] public string Name { get; set; }
     [Required] public decimal Price { get; set; }
     [Required] public decimal Discount { get; set; }
+    [Required] public bool IsPaused { get; set; }
+    [Required] public DateTime? PausedAt { get; set; }
+    [Required] public DateTime? ResumedAt { get; set; }
 
     public virtual EndUser EndUser { get; set; }
 }
