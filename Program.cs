@@ -72,6 +72,7 @@ builder.Services.AddScoped<IDashboardAnalyticsService, DashboardAnalyticsService
 builder.Services.AddScoped<IWarningService, WarningService>();
 builder.Services.AddScoped<IBranchCourtService, BranchCourtService>();
 builder.Services.AddScoped<IEndUserService, EndUserService>();
+builder.Services.AddScoped<IEndUserSubscriptionService, EndUserSubscriptionService>();
 builder.Services.AddHttpClient<RekazClient>();
 
 builder.Services.AddHttpClient();

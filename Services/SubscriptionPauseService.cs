@@ -171,7 +171,7 @@ namespace PadelPassCheckInSystem.Services
                     PauseEndDate = sp.PauseEndDate, // Will be converted to KSA in the view
                     PauseDays = sp.PauseDays,
                     Reason = sp.Reason,
-                    CreatedByUserName = sp.CreatedByUser.FullName,
+                    CreatedByUserName = sp.CreatedByUser != null ? sp.CreatedByUser.FullName : sp.CreatedByUserId,
                     CreatedAt = sp.CreatedAt, // Will be converted to KSA in the view
                     IsActive = sp.IsActive
                 })
@@ -192,7 +192,7 @@ namespace PadelPassCheckInSystem.Services
                     PauseEndDate = sp.PauseEndDate, // Will be converted to KSA in the view
                     PauseDays = sp.PauseDays,
                     Reason = sp.Reason,
-                    CreatedByUserName = sp.CreatedByUser.FullName,
+                    CreatedByUserName = sp.CreatedByUser != null ? sp.CreatedByUser.FullName : sp.CreatedByUserId,
                     CreatedAt = sp.CreatedAt, // Will be converted to KSA in the view
                     IsActive = sp.IsActive
                 })

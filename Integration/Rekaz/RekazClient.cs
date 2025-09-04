@@ -2,6 +2,7 @@ using PadelPassCheckInSystem.Integration.Rekaz.Models;
 using PadelPassCheckInSystem.Settings;
 using System.Text.Json;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace PadelPassCheckInSystem.Integration.Rekaz;
 
@@ -59,6 +60,37 @@ public class RekazClient
         {
             _logger.LogError(ex, "JSON parsing error while processing customers response from Rekaz API.");
             throw new InvalidOperationException($"Failed to parse customers response from Rekaz API: {ex.Message}", ex);
+        }
+    }
+
+    public async Task<SubscriptionsResponse> GetSubscriptionsAsync()
+    {
+        try
+        {
+            var url = $"{_rekazSettings.BaseUrl}/subscriptions";
+
+            var response = await _httpClient.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+
+            var options = new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter() }
+            };
+            var subResponse = await response.Content.ReadFromJsonAsync<SubscriptionsResponse>(options);
+
+
+            return subResponse ??  new SubscriptionsResponse();
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request error while fetching Subscriptions from Rekaz API.");
+            throw new InvalidOperationException($"Failed to retrieve Subscriptions from Rekaz API: {ex.Message}", ex);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "JSON parsing error while processing Subscriptions response from Rekaz API.");
+            throw new InvalidOperationException($"Failed to parse Subscriptions response from Rekaz API: {ex.Message}",
+                ex);
         }
     }
 }

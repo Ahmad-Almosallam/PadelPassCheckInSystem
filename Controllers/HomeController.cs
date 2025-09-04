@@ -2,8 +2,10 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using PadelPassCheckInSystem.Integration.Rekaz;
 using PadelPassCheckInSystem.Models;
 using PadelPassCheckInSystem.Models.Entities;
+using PadelPassCheckInSystem.Services;
 
 namespace PadelPassCheckInSystem.Controllers
 {
@@ -11,11 +13,19 @@ namespace PadelPassCheckInSystem.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<HomeController> _logger;
+        private readonly IEndUserSubscriptionService _endUserSubscriptionService;
+        private readonly RekazClient _rekazClient;
 
-        public HomeController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger)
+        public HomeController(
+            UserManager<ApplicationUser> userManager,
+            ILogger<HomeController> logger,
+            IEndUserSubscriptionService endUserSubscriptionService,
+            RekazClient rekazClient)
         {
             _userManager = userManager;
             _logger = logger;
+            _endUserSubscriptionService = endUserSubscriptionService;
+            _rekazClient = rekazClient;
         }
 
         [Authorize]
@@ -46,6 +56,17 @@ namespace PadelPassCheckInSystem.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+
+        public async Task<IActionResult> Sync()
+        {
+            var subs = await _rekazClient.GetSubscriptionsAsync();
+            foreach (var sub in subs.Items.GroupBy(x => x.CustomerId))
+            {
+                await _endUserSubscriptionService.SyncRekazAsync(sub);
+            }
+
+            return Ok();
+        }
     }
 }
-
