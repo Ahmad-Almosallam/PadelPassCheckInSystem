@@ -4,3 +4,13 @@ __tenant: {{tenantId}}
 Authorization: Basic {{apiKey}}
 
 ###
+
+
+POST {{baseUrl}}/subscriptions/3a1c3261-7cde-da51-4f28-26c2fa70ad24/resume
+__tenant: {{tenantId}}
+Authorization: Basic {{apiKey}}
+Content-Type: application/json
+
+{
+  "resumeAt": "2025-09-07T00:00:00Z"
+}

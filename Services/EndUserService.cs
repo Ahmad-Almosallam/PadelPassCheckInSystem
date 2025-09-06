@@ -152,7 +152,8 @@ public class EndUserService : IEndUserService
                 UniqueIdentifier = Guid.NewGuid()
                     .ToString("N")
                     .Substring(0, 8)
-                    .ToUpper()
+                    .ToUpper(),
+                RekazId = model.RekazId
             };
 
             _context.EndUsers.Add(endUser);

@@ -16,7 +16,7 @@ EncryptExtension.SaltKey = builder.Configuration["Keys:SecretId"];
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Error()
+    .MinimumLevel.Information()
     .WriteTo.Console()
     .WriteTo.File("logs/padelpass_.log", 
         rollingInterval: RollingInterval.Day,

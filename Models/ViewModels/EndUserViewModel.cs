@@ -34,6 +34,7 @@ namespace PadelPassCheckInSystem.Models.ViewModels
         public int? SubscriptionDurationMonths { get; set; }
         
         public string UniqueIdentifier { get; set; }
+        public Guid? RekazId { get; set; }
     }
 }
 
