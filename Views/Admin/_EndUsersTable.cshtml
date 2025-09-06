@@ -147,6 +147,12 @@
                                         </button>
                                     </li>
                                     <li>
+                                        <a class="dropdown-item" 
+                                           href="@Url.Action("EndUserSubscriptions", "EndUserSubscriptions", new { endUserId = user.Id })">
+                                            <i class="bi bi-file-earmark-text"></i> View Subscriptions
+                                        </a>
+                                    </li>
+                                    <li>
                                         <hr class="dropdown-divider">
                                     </li>
                                     @if (user.IsPaused)

@@ -1,0 +1,456 @@
+﻿@model EndUserSubscriptionsPaginatedViewModel
+@using PadelPassCheckInSystem.Integration.Rekaz.Enums
+@{
+    ViewData["Title"] = Model.EndUserId.HasValue ? $"Subscriptions for {Model.EndUserName}" : "All User Subscriptions";
+}
+
+@section Styles
+{
+    <style>
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .subscription-card {
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .subscription-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>
+            @if (Model.EndUserId.HasValue)
+            {
+                <span>Subscriptions for @Model.EndUserName</span>
+            }
+            else
+            {
+                <span>All User Subscriptions</span>
+            }
+        </h1>
+        @if (Model.EndUserId.HasValue)
+        {
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="@Url.Action("EndUsers", "EndUser")">End Users</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">Subscriptions</li>
+                </ol>
+            </nav>
+        }
+    </div>
+    <div>
+        <div class="text-muted small mb-2">
+            <i class="bi bi-clock"></i> Current
+            Time: @KSADateTimeExtensions.GetKSANow().ToString("yyyy-MM-dd HH:mm:ss") KSA
+        </div>
+        @if (Model.EndUserId.HasValue)
+        {
+            <a href="@Url.Action("EndUsers", "EndUser")" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to End Users
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-2">
+        <div class="card bg-light subscription-card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Total</h5>
+                <h2 class="text-primary">@Model.Subscriptions.TotalItems</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-light subscription-card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Active</h5>
+                <h2 class="text-success">@Model.ActiveCount</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-light subscription-card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Paused</h5>
+                <h2 class="text-warning">@Model.PausedCount</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-light subscription-card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Pending</h5>
+                <h2 class="text-info">@Model.PendingCount</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-light subscription-card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Starting Soon</h5>
+                <h2 class="text-secondary">@Model.StartingSoonCount</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card bg-light subscription-card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Expired</h5>
+                <h2 class="text-muted">@Model.ExpiredCount</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter Form -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="card-title mb-0">
+            <i class="bi bi-funnel"></i> Search & Filter Subscriptions
+        </h6>
+    </div>
+    <div class="card-body">
+        <form method="get" action="@Url.Action("EndUserSubscriptions", "EndUserSubscriptions")">
+            @if (Model.EndUserId.HasValue)
+            {
+                <input type="hidden" name="endUserId" value="@Model.EndUserId.Value"/>
+            }
+
+            <div class="row align-items-end">
+                @if (!Model.EndUserId.HasValue)
+                {
+                    <!-- User Search -->
+                    <div class="col-md-4">
+                        <label for="searchUserName" class="form-label">
+                            <i class="bi bi-person-search"></i> Search by User Name/Phone
+                        </label>
+                        <input type="text"
+                               id="searchUserName"
+                               name="searchUserName"
+                               class="form-control"
+                               value="@Model.SearchUserName"
+                               placeholder="Enter user name or phone...">
+                    </div>
+                }
+
+                <!-- Status Filter -->
+                <div class="col-md-4">
+                    <label for="status" class="form-label">
+                        <i class="bi bi-filter-circle"></i> Filter by Status
+                    </label>
+                    <select id="status" name="status" class="form-select" asp-for="Status">
+                        <option value="">All Statuses (@Model.Subscriptions.TotalItems)</option>
+                        <option value="@SubscriptionStatus.Active">Active (@Model.ActiveCount)</option>
+                        <option value="@SubscriptionStatus.Paused">Paused (@Model.PausedCount)</option>
+                        <option value="@SubscriptionStatus.Pending">Pending (@Model.PendingCount)</option>
+                        <option value="@SubscriptionStatus.StartingSoon">Starting Soon (@Model.StartingSoonCount)
+                        </option>
+                        <option value="@SubscriptionStatus.Expired">Expired (@Model.ExpiredCount)</option>
+                        <option value="@SubscriptionStatus.Cancelled">Cancelled (@Model.CancelledCount)</option>
+                    </select>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="col-md-4">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetSearch()">
+                            <i class="bi bi-arrow-clockwise"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preserve current page size -->
+            <input type="hidden" name="pageSize" value="@Model.Subscriptions.PageSize">
+        </form>
+
+        <!-- Search Results Summary -->
+        @if (!string.IsNullOrWhiteSpace(Model.SearchUserName) || Model.Status.HasValue)
+        {
+            <div class="mt-3">
+                <div class="alert alert-info d-flex align-items-center">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <div>
+                        <strong>Filtered Results:</strong>
+                        Showing @Model.Subscriptions.TotalItems result@(Model.Subscriptions.TotalItems != 1 ? "s" : "")
+
+                        @if (!string.IsNullOrWhiteSpace(Model.SearchUserName))
+                        {
+                            <span class="badge bg-secondary ms-2">
+                                <i class="bi bi-person"></i> User: @Model.SearchUserName
+                            </span>
+                        }
+
+                        @if (Model.Status.HasValue)
+                        {
+                            <span class="badge bg-primary ms-2">
+                                <i class="bi bi-filter"></i> Status: @Model.Status.Value
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Subscriptions Table -->
+<div class="card">
+    <div class="card-body">
+        <!-- Pagination Info -->
+        @if (Model.Subscriptions.TotalItems > 0)
+        {
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="text-muted">
+                    <small>
+                        Showing @Model.Subscriptions.StartIndex - @Model.Subscriptions.EndIndex of @Model.Subscriptions.TotalItems subscriptions
+                    </small>
+                </div>
+                <div class="d-flex align-items-center">
+                    <label class="form-label me-2 mb-0">Page size:</label>
+                    <select class="form-select form-select-sm" id="page-select" style="width: auto;"
+                            onchange="changePageSize(this.value)">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+        }
+
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    @if (!Model.EndUserId.HasValue)
+                    {
+                        <th>User</th>
+                    }
+                    <th>Subscription Details</th>
+                    <th>Period <small class="text-muted">(KSA Time)</small></th>
+                    <th>Pricing</th>
+                    <th>Status</th>
+                    <th>Pause Info</th>
+                    @if (!Model.EndUserId.HasValue)
+                    {
+                        <th>Actions</th>
+                    }
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var subscription in Model.Subscriptions.Items)
+                {
+                    <tr>
+                        @if (!Model.EndUserId.HasValue)
+                        {
+                            <td>
+                                <div>
+                                    <strong>@subscription.EndUser.Name</strong><br>
+                                    <small class="text-muted">@subscription.EndUser.PhoneNumber</small>
+                                </div>
+                            </td>
+                        }
+                        <td>
+                            <div>
+                                <strong>@subscription.Name</strong><br>
+                                <a href="https://platform.rekaz.io/subscriptions/view/@subscription.RekazId"
+                                   target="_blank">
+                                    <small
+                                        class="text-muted">ID: @subscription.RekazId.ToString().Substring(0, 8)...</small>
+                                </a>
+                            </div>
+                        </td>
+                        <td>
+                            <small>
+                                <strong>Start:</strong> @subscription.StartDate.ToKSATime().ToString("MMM dd, yyyy")<br>
+                                <strong>End:</strong> @subscription.EndDate.ToKSATime().ToString("MMM dd, yyyy")
+                            </small>
+                        </td>
+                        <td>
+                            <div>
+                                <strong>@subscription.Price.ToString("C")</strong>
+                                @if (subscription.Discount > 0)
+                                {
+                                    <br>
+                                    <small class="text-success">-@subscription.Discount.ToString("C") discount</small>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            @{
+                                var badgeClass = subscription.Status.GetBadgeClass();
+                            }
+                            <span class="badge @badgeClass status-badge">
+                                @subscription.Status
+                            </span>
+                        </td>
+                        <td>
+                            @if (subscription.IsPaused)
+                            {
+                                <div class="text-warning">
+                                    <i class="bi bi-pause-circle"></i> <strong>Paused</strong>
+                                    @if (subscription.PausedAt.HasValue)
+                                    {
+                                        <br>
+                                        <small>Since: @subscription.PausedAt.Value.ToKSATime().ToString("MMM dd, yyyy")</small>
+                                    }
+                                    @if (subscription.ResumedAt.HasValue)
+                                    {
+                                        <br>
+                                        <small>Resume: @subscription.ResumedAt.Value.ToKSATime().ToString("MMM dd, yyyy")</small>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </td>
+                        @if (!Model.EndUserId.HasValue)
+                        {
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                            data-bs-toggle="dropdown">
+                                        <i class="bi bi-gear"></i> Actions
+                                    </button>
+                                    <ul class="dropdown-menu">
+
+                                        <li>
+                                            <a class="dropdown-item"
+                                               href="@Url.Action("EndUserSubscriptions", "EndUserSubscriptions", new { endUserId = subscription.EndUserId })">
+                                                <i class="bi bi-person-lines-fill"></i> View User's All Subscriptions
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item"
+                                               href="@Url.Action("EndUsers", "EndUser", new { searchPhoneNumber = subscription.EndUser.PhoneNumber })">
+                                                <i class="bi bi-person"></i> View User Details
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        }
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!Model.Subscriptions.Items.Any())
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-file-earmark-text fs-1 mb-3"></i>
+                @if (!string.IsNullOrWhiteSpace(Model.SearchUserName) || Model.Status.HasValue)
+                {
+                    <h5>No Subscriptions Found</h5>
+                    <p>No subscriptions found matching your search criteria.</p>
+                    <button type="button" class="btn btn-primary" onclick="resetSearch()">
+                        <i class="bi bi-arrow-left"></i> Show All Subscriptions
+                    </button>
+                }
+                else if (Model.EndUserId.HasValue)
+                {
+                    <h5>No Subscriptions Found</h5>
+                    <p>This user doesn't have any subscriptions yet.</p>
+                    <a href="@Url.Action("EndUsers", "EndUser")" class="btn btn-primary">
+                        <i class="bi bi-arrow-left"></i> Back to End Users
+                    </a>
+                }
+                else
+                {
+                    <h5>No Subscriptions Found</h5>
+                    <p>No user subscriptions have been synced yet.</p>
+                    <a href="@Url.Action("EndUsers", "EndUser")" class="btn btn-primary">
+                        <i class="bi bi-cloud-arrow-down"></i> Sync from Rekaz
+                    </a>
+                }
+            </div>
+        }
+
+        <!-- Pagination -->
+        @if (Model.Subscriptions.TotalPages > 1)
+        {
+            @await Html.PartialAsync("~/Views/Admin/EndUserSubscriptions/_EndUserSubscriptionsPagination.cshtml", Model)
+        }
+
+        @if (Model.Subscriptions.Items.Any())
+        {
+            <div class="mt-3 text-muted">
+                <small>
+                    <i class="bi bi-info-circle"></i>
+                    Showing @Model.Subscriptions.StartIndex - @Model.Subscriptions.EndIndex of @Model.Subscriptions.TotalItems subscription(s).
+                    All dates displayed in KSA Time (UTC+3).
+                </small>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+
+    public string GetPageUrl(int page)
+    {
+        var routeValues = new RouteValueDictionary
+        {
+            ["page"] = page,
+            ["pageSize"] = Model.Subscriptions.PageSize
+        };
+
+        if (Model.EndUserId.HasValue)
+            routeValues["endUserId"] = Model.EndUserId.Value;
+
+        if (!string.IsNullOrWhiteSpace(Model.SearchUserName))
+            routeValues["searchUserName"] = Model.SearchUserName;
+
+        if (Model.Status.HasValue)
+            routeValues["status"] = Model.Status.Value;
+
+        return Url.Action("EndUserSubscriptions", "EndUserSubscriptions", routeValues);
+    }
+
+}
+
+@section Scripts {
+    <script>
+        // Configure URLs for the JavaScript files
+        const pageSize = @Model.Subscriptions.PageSize;
+
+        function changePageSize(pageSize) {
+            const url = new URL(window.location);
+            url.searchParams.set('pageSize', pageSize);
+            url.searchParams.set('page', '1'); // Reset to first page when changing page size
+            window.location.href = url.toString();
+        }
+
+        function resetSearch() {
+            const url = new URL(window.location);
+            url.searchParams.delete('searchUserName');
+            url.searchParams.delete('status');
+            url.searchParams.set('page', '1');
+            window.location.href = url.toString();
+        }
+
+        // Initialize page when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById("page-select").value = pageSize;
+        });
+    </script>
+}
