@@ -41,4 +41,9 @@
       <Folder Include="Data\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Remove="Properties\PublishProfiles\padelpass-001-site1 - FTP.pubxml" />
+      <None Remove="Properties\PublishProfiles\padelpass-001-subsite2 - FTP.pubxml" />
+    </ItemGroup>
+
 </Project>

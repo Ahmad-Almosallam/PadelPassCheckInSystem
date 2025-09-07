@@ -13,22 +13,22 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "access",
+                schema: "test",
                 table: "CheckIns");
 
             migrationBuilder.AddColumn<Guid>(
                 name: "RekazId",
-                schema: "access",
+                schema: "test",
                 table: "EndUsers",
                 type: "uniqueidentifier",
                 nullable: true);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "access",
+                schema: "test",
                 table: "CheckIns",
                 column: "BranchCourtId",
-                principalSchema: "access",
+                principalSchema: "test",
                 principalTable: "BranchCourts",
                 principalColumn: "Id");
         }
@@ -38,20 +38,20 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "access",
+                schema: "test",
                 table: "CheckIns");
 
             migrationBuilder.DropColumn(
                 name: "RekazId",
-                schema: "access",
+                schema: "test",
                 table: "EndUsers");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "access",
+                schema: "test",
                 table: "CheckIns",
                 column: "BranchCourtId",
-                principalSchema: "access",
+                principalSchema: "test",
                 principalTable: "BranchCourts",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.SetNull);

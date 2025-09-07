@@ -13,7 +13,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.CreateTable(
                 name: "PlaytomicIntegrations",
-                schema: "access",
+                schema: "test",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -36,7 +36,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropTable(
                 name: "PlaytomicIntegrations",
-                schema: "access");
+                schema: "test");
         }
     }
 }

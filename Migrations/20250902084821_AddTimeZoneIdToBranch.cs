@@ -12,14 +12,14 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.AddColumn<string>(
                 name: "TimeZoneId",
-                schema: "access",
+                schema: "test",
                 table: "Branches",
                 type: "nvarchar(64)",
                 maxLength: 64,
                 nullable: true);
             
             migrationBuilder.Sql(
-                @"UPDATE [access].[Branches] 
+                @"UPDATE [test].[Branches] 
                   SET [TimeZoneId] = 'Asia/Riyadh' 
                   WHERE [TimeZoneId] IS NULL;"
             );
@@ -30,7 +30,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "TimeZoneId",
-                schema: "access",
+                schema: "test",
                 table: "Branches");
         }
     }

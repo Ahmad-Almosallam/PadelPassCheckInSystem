@@ -12,7 +12,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.AddColumn<long>(
                 name: "PlaytomicUserId",
-                schema: "access",
+                schema: "test",
                 table: "EndUsers",
                 type: "bigint",
                 nullable: true);
@@ -23,7 +23,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "PlaytomicUserId",
-                schema: "access",
+                schema: "test",
                 table: "EndUsers");
         }
     }

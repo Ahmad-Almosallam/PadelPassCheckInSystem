@@ -13,12 +13,12 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "access",
+                schema: "test",
                 table: "CheckIns");
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "CreatedAt",
-                schema: "access",
+                schema: "test",
                 table: "CheckIns",
                 type: "datetime2",
                 nullable: false,
@@ -26,10 +26,10 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.AddForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "access",
+                schema: "test",
                 table: "CheckIns",
                 column: "BranchCourtId",
-                principalSchema: "access",
+                principalSchema: "test",
                 principalTable: "BranchCourts",
                 principalColumn: "Id");
         }
@@ -39,20 +39,20 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "access",
+                schema: "test",
                 table: "CheckIns");
 
             migrationBuilder.DropColumn(
                 name: "CreatedAt",
-                schema: "access",
+                schema: "test",
                 table: "CheckIns");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "access",
+                schema: "test",
                 table: "CheckIns",
                 column: "BranchCourtId",
-                principalSchema: "access",
+                principalSchema: "test",
                 principalTable: "BranchCourts",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.SetNull);
