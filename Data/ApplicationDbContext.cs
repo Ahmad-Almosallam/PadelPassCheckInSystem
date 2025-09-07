@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Models.Entities;
+using PadelPassCheckInSystem.Shared;
 
 namespace PadelPassCheckInSystem.Data
 {
@@ -27,13 +28,13 @@ namespace PadelPassCheckInSystem.Data
             base.OnModelCreating(builder);
 
             // Set schema for all Identity tables
-            builder.HasDefaultSchema("access");
+            builder.HasDefaultSchema(AppConstant.Schema);
 
             // Set schema for Identity tables
             foreach (var entityType in builder.Model.GetEntityTypes())
             {
                 builder.Entity(entityType.ClrType)
-                    .ToTable(entityType.GetTableName(), "access");
+                    .ToTable(entityType.GetTableName(), AppConstant.Schema);
             }
 
             builder.Entity<CheckIn>()

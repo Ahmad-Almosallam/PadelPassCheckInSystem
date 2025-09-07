@@ -385,8 +385,8 @@ public class EndUserSubscriptionService(
     private DateTime NormalizeDate(
         DateTime date)
     {
-        // If time is not midnight, move to next day at midnight
-        if (date.TimeOfDay != TimeSpan.Zero)
+        // If time is exactly 21:00:00, move to next day at midnight
+        if (date.TimeOfDay == new TimeSpan(21, 0, 0))
             return date.Date.AddDays(1);
 
         return date.Date;

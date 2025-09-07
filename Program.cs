@@ -6,6 +6,7 @@ using PadelPassCheckInSystem.Integration.Rekaz;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Services;
 using PadelPassCheckInSystem.Settings;
+using PadelPassCheckInSystem.Shared;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,7 +31,7 @@ builder.Host.UseSerilog();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection").Decrypt(), options =>
     {
-        options.MigrationsHistoryTable("__EFMigrationsHistory", "access");
+        options.MigrationsHistoryTable("__EFMigrationsHistory", AppConstant.Schema);
     }));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
