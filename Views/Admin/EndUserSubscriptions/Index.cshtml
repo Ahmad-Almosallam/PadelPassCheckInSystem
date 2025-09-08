@@ -238,6 +238,7 @@
             <table class="table table-hover">
                 <thead>
                 <tr>
+                    <th>Subscription Id</th>
                     @if (!Model.EndUserId.HasValue)
                     {
                         <th>User</th>
@@ -258,6 +259,9 @@
                 @foreach (var subscription in Model.Subscriptions.Items)
                 {
                     <tr>
+                        <td>
+                            @subscription.Id
+                        </td>
                         @if (!Model.EndUserId.HasValue)
                         {
                             <td>

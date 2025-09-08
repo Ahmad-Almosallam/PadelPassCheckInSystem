@@ -52,6 +52,7 @@ public class CheckInBaseController : Controller
             .Include(c => c.EndUser)
             .Include(c => c.Branch)
             .Include(x => x.BranchCourt)
+            .Include(x => x.EndUserSubscription)
             .AsQueryable();
 
         if (branchId.HasValue)
@@ -136,6 +137,7 @@ public class CheckInBaseController : Controller
             .Include(c => c.EndUser)
             .Include(c => c.Branch)
             .Include(x => x.BranchCourt)
+            .Include(x => x.EndUserSubscription)
             .AsQueryable();
 
         if (branchId.HasValue)

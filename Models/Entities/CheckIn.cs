@@ -26,11 +26,15 @@ namespace PadelPassCheckInSystem.Models.Entities
         [ForeignKey(nameof(BranchCourt))]
         public int? BranchCourtId { get; set; }
 
+        [ForeignKey(nameof(EndUserSubscription))]
+        public int? EndUserSubscriptionId { get; set; }
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         
         public virtual BranchCourt BranchCourt { get; set; }
         public virtual EndUser EndUser { get; set; }
         public virtual Branch Branch { get; set; }
+        public virtual EndUserSubscription EndUserSubscription { get; set; }
     }
 }
 

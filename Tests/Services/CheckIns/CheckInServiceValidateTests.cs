@@ -13,7 +13,9 @@ public class CheckInServiceValidateTests : IDisposable
     private readonly Mock<IWarningService> _warningServiceMock;
     private readonly CheckInService _checkInService;
     private readonly DbContextOptions<ApplicationDbContext> _options;
+    private readonly Mock<ILogger<CheckInService>> _loogerMock;
 
+    
     public CheckInServiceValidateTests()
     {
         // Setup in-memory database
@@ -24,7 +26,8 @@ public class CheckInServiceValidateTests : IDisposable
 
         _context = new ApplicationDbContext(_options);
         _warningServiceMock = new Mock<IWarningService>();
-        _checkInService = new CheckInService(_context, _warningServiceMock.Object);
+        _loogerMock = new Mock<ILogger<CheckInService>>();
+        _checkInService = new CheckInService(_context, _warningServiceMock.Object,_loogerMock.Object);
 
         // Seed test data
         SeedTestData();

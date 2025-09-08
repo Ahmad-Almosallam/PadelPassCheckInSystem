@@ -15,6 +15,7 @@ namespace PadelPassCheckInSystem.Services
             // Headers
             worksheet.Cell(1, 1).Value = "End User Name";
             worksheet.Cell(1, 2).Value = "Phone Number";
+            worksheet.Cell(1, 2).Value = "Subscription Code";
             worksheet.Cell(1, 3).Value = "Branch Name";
             worksheet.Cell(1, 4).Value = "Check-In Date";
             worksheet.Cell(1, 5).Value = "Check-In Time";
@@ -29,6 +30,7 @@ namespace PadelPassCheckInSystem.Services
             {
                 worksheet.Cell(row, 1).Value = checkIn.EndUser.Name;
                 worksheet.Cell(row, 2).Value = checkIn.EndUser.PhoneNumber;
+                worksheet.Cell(row, 2).Value = checkIn.EndUserSubscription.Code;
                 worksheet.Cell(row, 3).Value = checkIn.Branch.Name;
                 worksheet.Cell(row, 4).Value = checkIn.CheckInDateTime.ToLocalTime(AppConstant.KsaTimeZoneId).ToString("yyyy-MM-dd");
                 worksheet.Cell(row, 5).Value = checkIn.CreatedAt.ToLocalTime(AppConstant.KsaTimeZoneId).ToString("HH:mm:ss");
