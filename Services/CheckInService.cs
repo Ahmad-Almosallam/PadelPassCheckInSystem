@@ -43,6 +43,7 @@ public class CheckInService : ICheckInService
         if (currentActiveEndUserSub == null)
         {
             _logger.LogError("No currentActiveEndUserSub for EndUser Id {Id}", endUser.Id);
+            return (false, "No active subscription to link with the Check In for User Id " + endUser.Id, null);
         }
 
         // Create check-in record
@@ -518,12 +519,12 @@ public class CheckInService : ICheckInService
             }
 
             var tz = branch.TimeZoneId;
-            
+
             var checkInDateTimeUtc = checkInDateTime.EnsureUtc();
 
             var reqLocalDate = checkInDateTime.ToLocalTime(tz)
                 .Date;
-            
+
             var nowLocal = NodaTimeExtensions.GetLocalNow(tz);
             var todayLocalDate = nowLocal.Date;
 
@@ -553,7 +554,7 @@ public class CheckInService : ICheckInService
             {
                 _logger.LogError("No endUserSubscription for EndUser Id {EndUserId}", endUser.Id);
             }
-            
+
             // Create check-in record
             var checkIn = new CheckIn
             {
