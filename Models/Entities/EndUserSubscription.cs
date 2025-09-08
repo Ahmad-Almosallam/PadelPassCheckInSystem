@@ -23,6 +23,9 @@ public class EndUserSubscription
     [Required] public bool IsPaused { get; set; }
     public DateTime? PausedAt { get; set; }
     public DateTime? ResumedAt { get; set; }
+    
+    [MaxLength(100)]
+    public string Code { get; set; }
 
     public virtual EndUser EndUser { get; set; }
 }

@@ -715,7 +715,8 @@ public class EndUserSubscriptionService(
                 Discount = data.Discount,
                 IsPaused = status == SubscriptionStatus.Paused,
                 PausedAt = pausedAtUtc,
-                ResumedAt = resumeAtUtc
+                ResumedAt = resumeAtUtc,
+                Code = data.Code,
             };
 
             context.Add(dbSub);
@@ -731,6 +732,7 @@ public class EndUserSubscriptionService(
             dbSub.IsPaused = status == SubscriptionStatus.Paused;
             dbSub.PausedAt = pausedAtUtc;
             dbSub.ResumedAt = resumeAtUtc;
+            dbSub.Code = data.Code;
 
             context.Update(dbSub);
         }
