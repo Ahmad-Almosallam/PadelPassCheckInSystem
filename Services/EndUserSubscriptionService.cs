@@ -112,7 +112,8 @@ public class EndUserSubscriptionService(
                 IsFullyPaid = isFullyPaid,
                 IsPaused = sub.IsPaused,
                 PausedAt = pauseAtUtc,
-                ResumedAt = resumeAtUtc
+                ResumedAt = resumeAtUtc,
+                Code = sub.Code
             };
         }
         catch
@@ -143,7 +144,8 @@ public class EndUserSubscriptionService(
                 Discount = processedSub.Discount,
                 IsPaused = processedSub.IsPaused,
                 PausedAt = processedSub.PausedAt,
-                ResumedAt = processedSub.ResumedAt
+                ResumedAt = processedSub.ResumedAt,
+                Code = processedSub.Code
             };
 
             context.Add(dbSub);
@@ -160,6 +162,7 @@ public class EndUserSubscriptionService(
             dbSub.IsPaused = processedSub.IsPaused;
             dbSub.PausedAt = processedSub.PausedAt;
             dbSub.ResumedAt = processedSub.ResumedAt;
+            dbSub.Code = processedSub.Code;
 
             context.Update(dbSub);
         }
@@ -400,6 +403,7 @@ public class EndUserSubscriptionService(
         public DateTime EndDate { get; set; }
         public SubscriptionStatus Status { get; set; }
         public string Name { get; set; }
+        public string Code { get; set; }
         public decimal Price { get; set; }
         public decimal Discount { get; set; }
         public decimal PaidAmount { get; set; }
