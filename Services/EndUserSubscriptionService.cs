@@ -424,11 +424,12 @@ public class EndUserSubscriptionService(
         {
             var data = webhookEvent.Data;
             var customerId = data.Customer.Id;
-            
-            logger.LogInformation("Webhook event received {@webhookEvent}", webhookEvent);
-            logger.LogInformation("Webhook event {eventName}, status: {status}",  webhookEvent.EventName, webhookEvent.Data.Status);
 
-            
+            logger.LogInformation("Webhook event received {@webhookEvent}", webhookEvent);
+            logger.LogInformation("Webhook event {eventName}, status: {status}", webhookEvent.EventName,
+                webhookEvent.Data.Status);
+
+
             // 1) Find EndUser
             var endUser = await context.EndUsers
                 .FirstOrDefaultAsync(e => e.RekazId == customerId);
@@ -462,6 +463,8 @@ public class EndUserSubscriptionService(
                 case "SubscriptionCancelledEvent":
                     return await HandleSubscriptionCancelled(endUser, data, webhookEvent.CreatedAt);
                 case "SubscriptionExpiredEvent":
+                    return await HandleSubscriptionExpired(endUser, data, webhookEvent.CreatedAt);
+                case "SubscriptionTransferedEvent":
                     return await HandleSubscriptionExpired(endUser, data, webhookEvent.CreatedAt);
                 default:
                     return false;
@@ -691,6 +694,19 @@ public class EndUserSubscriptionService(
         return true;
     }
 
+    private async Task<bool> HandleSubscriptionTransferred(EndUser endUser, WebhookSubscriptionData data,
+        DateTime eventTime)
+    {
+        // Update subscription record
+        await UpsertSubscriptionRecord(endUser.Id, data, SubscriptionStatus.Transferred, eventTime);
+        
+        // set the user to stop if he does not have any upcoming sub
+        await RecalculateUserSubscriptionState(endUser);
+
+        await context.SaveChangesAsync();
+        return true;
+    }
+
     private async Task UpsertSubscriptionRecord(int endUserId, WebhookSubscriptionData data, SubscriptionStatus status,
         DateTime eventTime)
     {
@@ -783,7 +799,7 @@ public class EndUserSubscriptionService(
         }
     }
 
-    private async Task RecalculateUserSubscriptionState(EndUser endUser)
+    private async Task RecalculateUserSubscriptionState(EndUser endUser, SubscriptionStatus? status = null)
     {
         var nowUtc = DateTime.UtcNow;
 
@@ -823,6 +839,13 @@ public class EndUserSubscriptionService(
                 endUser.CurrentPauseEndDate = null;
                 endUser.StopReason = null;
                 endUser.StoppedDate = null;
+
+
+                if (status is SubscriptionStatus.Transferred)
+                {
+                    endUser.IsStopped = true;
+                    endUser.StopReason = "Stopped because subscription is transferred";
+                }
 
                 context.Update(endUser);
             }
