@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "Check-In";
     var identifier = string.Empty;
+    string timeZoneId = ViewBag.BranchTimeZoneId;
 
 #if DEBUG
     identifier = "F7AFD10B";
@@ -16,8 +17,8 @@
                 </h4>
                 <div class="text-end">
                     <small>
-                        <i class="bi bi-clock"></i> @KSADateTimeExtensions.GetKSANow().ToString("yyyy-MM-dd HH:mm:ss")<br>
-                        <span class="badge bg-light text-dark">KSA Time (UTC+3)</span>
+                        <i class="bi bi-clock"></i> @DateTime.UtcNow.ToLocalTime(timeZoneId).ToString("yyyy-MM-dd HH:mm:ss")<br>
+                        <span class="badge bg-light text-dark">Time</span>
                     </small>
                 </div>
             </div>
@@ -185,7 +186,7 @@
 </div>
 
 <!-- Check-in Confirmation Modal with Court Assignment -->
-<partial name="Components/_CheckInModal" model="@("confirm", false)"/>
+<partial name="Components/_CheckInModal" model="@("confirm", false, timeZoneId)"/>
 
 @section Styles {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">

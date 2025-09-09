@@ -11,7 +11,7 @@ using PadelPassCheckInSystem.Services;
 
 namespace PadelPassCheckInSystem.Controllers.CheckIns
 {
-    [Authorize(Roles = "BranchUser,Admin")]
+    [Authorize(Roles = "BranchUser,Admin,Finance")]
     public class CheckInController : CheckInBaseController
     {
         private readonly IExcelService _excelService;
@@ -42,7 +42,9 @@ namespace PadelPassCheckInSystem.Controllers.CheckIns
 
             var todayCheckIns = await _checkInService.GetTodayCheckInsWithCourtInfoAsync(user.BranchId.Value);
 
-            ViewBag.BranchName = (await _context.Branches.FindAsync(user.BranchId))?.Name;
+            var branch = await _context.Branches.FindAsync(user.BranchId);
+            ViewBag.BranchName = branch?.Name;
+            ViewBag.BranchTimeZoneId = branch?.TimeZoneId;
             ViewBag.TodayCount = todayCheckIns.Count;
 
             return View(todayCheckIns);
