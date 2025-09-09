@@ -30,7 +30,7 @@ public class CheckInBaseController : Controller
         _userManager = userManager;
     }
 
-    [Authorize(Roles = "BranchUser,Admin")]
+    [Authorize(Roles = "BranchUser,Admin,Finance")]
     public async Task<IActionResult> CheckIns(
         DateTime? fromDate,
         DateTime? toDate,
@@ -112,7 +112,7 @@ public class CheckInBaseController : Controller
     }
 
     [HttpGet]
-    [Authorize(Roles = "BranchUser,Admin")]
+    [Authorize(Roles = "BranchUser,Admin,Finance")]
     public async Task<IActionResult> ExportCheckIns(
         DateTime? fromDate,
         DateTime? toDate,
