@@ -11,7 +11,7 @@ namespace PadelPassCheckInSystem.Data
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
             // Create roles
-            string[] roleNames = { "Admin", "BranchUser" };
+            string[] roleNames = ["Admin", "BranchUser", "Finance"];
             foreach (var roleName in roleNames)
             {
                 if (!await roleManager.RoleExistsAsync(roleName))
@@ -36,6 +36,25 @@ namespace PadelPassCheckInSystem.Data
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(adminUser, "Admin");
+                }
+            }
+            
+            // Create finance user
+            var financeEmail = "finance@checkin.com";
+            if (await userManager.FindByEmailAsync(financeEmail) == null)
+            {
+                var adminUser = new ApplicationUser
+                {
+                    UserName = financeEmail,
+                    Email = financeEmail,
+                    FullName = "Finance User",
+                    EmailConfirmed = true
+                };
+
+                var result = await userManager.CreateAsync(adminUser, "finance@123");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(adminUser, "Finance");
                 }
             }
         }

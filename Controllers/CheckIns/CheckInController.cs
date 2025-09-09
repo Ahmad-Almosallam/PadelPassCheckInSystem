@@ -11,7 +11,7 @@ using PadelPassCheckInSystem.Services;
 
 namespace PadelPassCheckInSystem.Controllers.CheckIns
 {
-    [Authorize(Roles = "BranchUser,Admin")]
+    [Authorize(Roles = "BranchUser,Admin,Finance")]
     public class CheckInController : CheckInBaseController
     {
         private readonly IExcelService _excelService;

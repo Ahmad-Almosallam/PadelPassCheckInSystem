@@ -36,7 +36,7 @@
                 <input type="text" name="phoneNumber" class="form-control"
                        value="@Model.PhoneNumber" placeholder="Enter phone number">
             </div>
-            @if (User.IsInRole("Admin"))
+            @if (User.IsInRole("Admin") || User.IsInRole("Finance"))
             {
                 <div class="col-md-3">
                     <label class="form-label">Branch</label>

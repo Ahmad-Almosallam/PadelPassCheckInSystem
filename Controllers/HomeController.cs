@@ -32,6 +32,10 @@ namespace PadelPassCheckInSystem.Controllers
             {
                 return RedirectToAction("Index", "CheckIn");
             }
+            else if (roles.Contains("Finance"))
+            {
+                return RedirectToAction("CheckIns", "CheckIn");
+            }
 
             return View();
         }
