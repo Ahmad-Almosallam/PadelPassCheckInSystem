@@ -12,7 +12,7 @@ namespace PadelPassCheckInSystem.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.EnsureSchema(
-                name: "access");
+                name: AppConstant.Schema);
 
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
@@ -86,7 +86,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
                         column: x => x.RoleId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -121,7 +121,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUsers_Branches_BranchId",
                         column: x => x.BranchId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "Branches",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
@@ -144,14 +144,14 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_CheckIns_Branches_BranchId",
                         column: x => x.BranchId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "Branches",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_CheckIns_EndUsers_EndUserId",
                         column: x => x.EndUserId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "EndUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -174,7 +174,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserClaims_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -196,7 +196,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserLogins_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -216,14 +216,14 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserRoles_AspNetRoles_RoleId",
                         column: x => x.RoleId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_AspNetUserRoles_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -245,7 +245,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_AspNetUserTokens_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
