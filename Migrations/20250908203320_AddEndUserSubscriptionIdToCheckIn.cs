@@ -28,7 +28,7 @@ namespace PadelPassCheckInSystem.Migrations
                 schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "EndUserSubscriptionId",
-                principalSchema: "access",
+                principalSchema: AppConstant.Schema,
                 principalTable: "EndUserSubscriptions",
                 principalColumn: "Id");
         }

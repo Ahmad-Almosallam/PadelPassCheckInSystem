@@ -36,7 +36,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_EndUserSubscriptions_EndUsers_EndUserId",
                         column: x => x.EndUserId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "EndUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);

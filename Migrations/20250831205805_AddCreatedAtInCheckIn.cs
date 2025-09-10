@@ -29,7 +29,7 @@ namespace PadelPassCheckInSystem.Migrations
                 schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "BranchCourtId",
-                principalSchema: "access",
+                principalSchema: AppConstant.Schema,
                 principalTable: "BranchCourts",
                 principalColumn: "Id");
         }
@@ -52,7 +52,7 @@ namespace PadelPassCheckInSystem.Migrations
                 schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "BranchCourtId",
-                principalSchema: "access",
+                principalSchema: AppConstant.Schema,
                 principalTable: "BranchCourts",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.SetNull);

@@ -88,7 +88,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_BranchTimeSlots_Branches_BranchId",
                         column: x => x.BranchId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "Branches",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -116,14 +116,14 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_SubscriptionPauses_AspNetUsers_CreatedByUserId",
                         column: x => x.CreatedByUserId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_SubscriptionPauses_EndUsers_EndUserId",
                         column: x => x.EndUserId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "EndUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);

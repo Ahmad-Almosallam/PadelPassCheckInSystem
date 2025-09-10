@@ -36,7 +36,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_BranchCourts_Branches_BranchId",
                         column: x => x.BranchId,
-                        principalSchema: "access",
+                        principalSchema: AppConstant.Schema,
                         principalTable: "Branches",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -59,7 +59,7 @@ namespace PadelPassCheckInSystem.Migrations
                 schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "BranchCourtId",
-                principalSchema: "access",
+                principalSchema: AppConstant.Schema,
                 principalTable: "BranchCourts",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.NoAction);
