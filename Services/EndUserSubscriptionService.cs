@@ -13,7 +13,8 @@ public interface IEndUserSubscriptionService
     Task<bool> SyncRekazAsync(
         IGrouping<Guid, SubscriptionResponse> subs);
 
-    Task<bool> ProcessWebhookEvent(WebhookEvent webhookEvent);
+    Task<bool> ProcessWebhookEvent(
+        WebhookEvent webhookEvent);
 }
 
 public class EndUserSubscriptionService(
@@ -418,7 +419,8 @@ public class EndUserSubscriptionService(
 
     #region Webhook
 
-    public async Task<bool> ProcessWebhookEvent(WebhookEvent webhookEvent)
+    public async Task<bool> ProcessWebhookEvent(
+        WebhookEvent webhookEvent)
     {
         try
         {
@@ -465,7 +467,7 @@ public class EndUserSubscriptionService(
                 case "SubscriptionExpiredEvent":
                     return await HandleSubscriptionExpired(endUser, data, webhookEvent.CreatedAt);
                 case "SubscriptionTransferedEvent":
-                    return await HandleSubscriptionExpired(endUser, data, webhookEvent.CreatedAt);
+                    return await HandleSubscriptionTransferred(endUser, data, webhookEvent.CreatedAt);
                 default:
                     return false;
             }
@@ -477,12 +479,16 @@ public class EndUserSubscriptionService(
         }
     }
 
-    private string GetCustomFieldValue(List<WebhookCustomField> customFields, string labelToFind, bool isImage = false)
+    private string GetCustomFieldValue(
+        List<WebhookCustomField> customFields,
+        string labelToFind,
+        bool isImage = false)
     {
         if (customFields == null) return null;
 
         var field = customFields.FirstOrDefault(cf =>
-            cf.Label != null && cf.Label.Contains(labelToFind.Split('-')[0].Trim()));
+            cf.Label != null && cf.Label.Contains(labelToFind.Split('-')[0]
+                .Trim()));
 
         if (isImage)
             field = customFields.FirstOrDefault(w => w.Type == "Image");
@@ -490,7 +496,8 @@ public class EndUserSubscriptionService(
         return field?.Value?.ToString();
     }
 
-    private async Task<EndUser> CreateEndUserFromWebhook(WebhookSubscriptionData data)
+    private async Task<EndUser> CreateEndUserFromWebhook(
+        WebhookSubscriptionData data)
     {
         try
         {
@@ -506,8 +513,10 @@ public class EndUserSubscriptionService(
             var imageUrl = GetCustomFieldValue(data.CustomFields, "صورة شخصية واضحة من كميرا الجوال", true);
 
             // Set default subscription dates (will be updated by event processing)
-            var startUtc = NormalizeDate(data.StartDate).EnsureUtc();
-            var endUtc = NormalizeDate(data.EndDate).EnsureUtc();
+            var startUtc = NormalizeDate(data.StartDate)
+                .EnsureUtc();
+            var endUtc = NormalizeDate(data.EndDate)
+                .EnsureUtc();
 
             var (isSuccess, message, endUser) = await endUserService.CreateEndUserAsync(new EndUserViewModel()
             {
@@ -539,7 +548,9 @@ public class EndUserSubscriptionService(
         }
     }
 
-    private async Task<bool> HandleSubscriptionCreated(EndUser endUser, WebhookSubscriptionData data,
+    private async Task<bool> HandleSubscriptionCreated(
+        EndUser endUser,
+        WebhookSubscriptionData data,
         DateTime eventTime)
     {
         // Create/Update subscription record
@@ -548,18 +559,31 @@ public class EndUserSubscriptionService(
         // For created events, don't change user state - wait for activation
         logger.LogInformation("Subscription created for user {UserId}, waiting for activation", endUser.Id);
 
+        var startUtc = NormalizeDate(data.StartDate)
+            .EnsureUtc();
+        var endUtc = NormalizeDate(data.EndDate)
+            .EnsureUtc();
+        if (!IsUserCurrentSubscription(endUser, startUtc, endUtc))
+        {
+            await RecalculateUserSubscriptionState(endUser);
+        }
+
         return true;
     }
 
-    private async Task<bool> HandleSubscriptionActivated(EndUser endUser, WebhookSubscriptionData data,
+    private async Task<bool> HandleSubscriptionActivated(
+        EndUser endUser,
+        WebhookSubscriptionData data,
         DateTime eventTime)
     {
         // Update subscription record
         await UpsertSubscriptionRecord(endUser.Id, data, data.Status, eventTime);
 
         // Update user state if this subscription is current
-        var startUtc = NormalizeDate(data.StartDate).EnsureUtc();
-        var endUtc = NormalizeDate(data.EndDate).EnsureUtc();
+        var startUtc = NormalizeDate(data.StartDate)
+            .EnsureUtc();
+        var endUtc = NormalizeDate(data.EndDate)
+            .EnsureUtc();
         var nowUtc = DateTime.UtcNow;
 
         if (data.Status == SubscriptionStatus.Active && startUtc.Date <= nowUtc.Date && nowUtc.Date <= endUtc.Date)
@@ -577,14 +601,19 @@ public class EndUserSubscriptionService(
         return true;
     }
 
-    private async Task<bool> HandleSubscriptionPaused(EndUser endUser, WebhookSubscriptionData data, DateTime eventTime)
+    private async Task<bool> HandleSubscriptionPaused(
+        EndUser endUser,
+        WebhookSubscriptionData data,
+        DateTime eventTime)
     {
         // Update subscription record
         await UpsertSubscriptionRecord(endUser.Id, data, SubscriptionStatus.Paused, eventTime);
 
         // Check if this is the user's current subscription
-        var startUtc = NormalizeDate(data.StartDate).EnsureUtc();
-        var endUtc = NormalizeDate(data.EndDate).EnsureUtc();
+        var startUtc = NormalizeDate(data.StartDate)
+            .EnsureUtc();
+        var endUtc = NormalizeDate(data.EndDate)
+            .EnsureUtc();
         var pausedAtUtc = data.PausedAt?.EnsureUtc();
         var resumeAtUtc = data.ResumeAt?.EnsureUtc();
 
@@ -625,15 +654,19 @@ public class EndUserSubscriptionService(
         return true;
     }
 
-    private async Task<bool> HandleSubscriptionResumed(EndUser endUser, WebhookSubscriptionData data,
+    private async Task<bool> HandleSubscriptionResumed(
+        EndUser endUser,
+        WebhookSubscriptionData data,
         DateTime eventTime)
     {
         // Update subscription record to Active
         await UpsertSubscriptionRecord(endUser.Id, data, SubscriptionStatus.Active, eventTime);
 
         // Check if this is the user's current subscription
-        var startUtc = NormalizeDate(data.StartDate).EnsureUtc();
-        var endUtc = NormalizeDate(data.EndDate).EnsureUtc();
+        var startUtc = NormalizeDate(data.StartDate)
+            .EnsureUtc();
+        var endUtc = NormalizeDate(data.EndDate)
+            .EnsureUtc();
 
         if (IsUserCurrentSubscription(endUser, startUtc, endUtc))
         {
@@ -654,15 +687,19 @@ public class EndUserSubscriptionService(
         return true;
     }
 
-    private async Task<bool> HandleSubscriptionCancelled(EndUser endUser, WebhookSubscriptionData data,
+    private async Task<bool> HandleSubscriptionCancelled(
+        EndUser endUser,
+        WebhookSubscriptionData data,
         DateTime eventTime)
     {
         // Update subscription record
         await UpsertSubscriptionRecord(endUser.Id, data, SubscriptionStatus.Cancelled, eventTime);
 
         // Check if this was the user's current subscription
-        var startUtc = NormalizeDate(data.StartDate).EnsureUtc();
-        var endUtc = NormalizeDate(data.EndDate).EnsureUtc();
+        var startUtc = NormalizeDate(data.StartDate)
+            .EnsureUtc();
+        var endUtc = NormalizeDate(data.EndDate)
+            .EnsureUtc();
 
         if (IsUserCurrentSubscription(endUser, startUtc, endUtc))
         {
@@ -674,15 +711,19 @@ public class EndUserSubscriptionService(
         return true;
     }
 
-    private async Task<bool> HandleSubscriptionExpired(EndUser endUser, WebhookSubscriptionData data,
+    private async Task<bool> HandleSubscriptionExpired(
+        EndUser endUser,
+        WebhookSubscriptionData data,
         DateTime eventTime)
     {
         // Update subscription record
         await UpsertSubscriptionRecord(endUser.Id, data, SubscriptionStatus.Expired, eventTime);
 
         // Check if this was the user's current subscription
-        var startUtc = NormalizeDate(data.StartDate).EnsureUtc();
-        var endUtc = NormalizeDate(data.EndDate).EnsureUtc();
+        var startUtc = NormalizeDate(data.StartDate)
+            .EnsureUtc();
+        var endUtc = NormalizeDate(data.EndDate)
+            .EnsureUtc();
 
         if (IsUserCurrentSubscription(endUser, startUtc, endUtc))
         {
@@ -694,12 +735,14 @@ public class EndUserSubscriptionService(
         return true;
     }
 
-    private async Task<bool> HandleSubscriptionTransferred(EndUser endUser, WebhookSubscriptionData data,
+    private async Task<bool> HandleSubscriptionTransferred(
+        EndUser endUser,
+        WebhookSubscriptionData data,
         DateTime eventTime)
     {
         // Update subscription record
         await UpsertSubscriptionRecord(endUser.Id, data, SubscriptionStatus.Transferred, eventTime);
-        
+
         // set the user to stop if he does not have any upcoming sub
         await RecalculateUserSubscriptionState(endUser);
 
@@ -707,11 +750,16 @@ public class EndUserSubscriptionService(
         return true;
     }
 
-    private async Task UpsertSubscriptionRecord(int endUserId, WebhookSubscriptionData data, SubscriptionStatus status,
+    private async Task UpsertSubscriptionRecord(
+        int endUserId,
+        WebhookSubscriptionData data,
+        SubscriptionStatus status,
         DateTime eventTime)
     {
-        var startUtc = NormalizeDate(data.StartDate).EnsureUtc();
-        var endUtc = NormalizeDate(data.EndDate).EnsureUtc();
+        var startUtc = NormalizeDate(data.StartDate)
+            .EnsureUtc();
+        var endUtc = NormalizeDate(data.EndDate)
+            .EnsureUtc();
         var pausedAtUtc = data.PausedAt?.EnsureUtc();
         var resumeAtUtc = data.ResumeAt?.EnsureUtc();
 
@@ -760,13 +808,19 @@ public class EndUserSubscriptionService(
         await context.SaveChangesAsync();
     }
 
-    private bool IsUserCurrentSubscription(EndUser endUser, DateTime startDate, DateTime endDate)
+    private bool IsUserCurrentSubscription(
+        EndUser endUser,
+        DateTime startDate,
+        DateTime endDate)
     {
         // Check if the subscription dates match the user's current subscription
         return endUser.SubscriptionStartDate.Date == startDate.Date && endUser.SubscriptionEndDate.Date == endDate.Date;
     }
 
-    private async Task SetUserActiveSubscription(EndUser endUser, DateTime startDate, DateTime endDate)
+    private async Task SetUserActiveSubscription(
+        EndUser endUser,
+        DateTime startDate,
+        DateTime endDate)
     {
         endUser.SubscriptionStartDate = startDate;
         endUser.SubscriptionEndDate = endDate;
@@ -780,7 +834,10 @@ public class EndUserSubscriptionService(
         context.Update(endUser);
     }
 
-    private async Task SetUserUpcomingSubscription(EndUser endUser, DateTime startDate, DateTime endDate)
+    private async Task SetUserUpcomingSubscription(
+        EndUser endUser,
+        DateTime startDate,
+        DateTime endDate)
     {
         // Only set if user doesn't have a current active subscription
         var nowUtc = DateTime.UtcNow;
@@ -799,7 +856,9 @@ public class EndUserSubscriptionService(
         }
     }
 
-    private async Task RecalculateUserSubscriptionState(EndUser endUser, SubscriptionStatus? status = null)
+    private async Task RecalculateUserSubscriptionState(
+        EndUser endUser,
+        SubscriptionStatus? status = null)
     {
         var nowUtc = DateTime.UtcNow;
 
@@ -852,7 +911,10 @@ public class EndUserSubscriptionService(
         }
     }
 
-    private async Task CreatePauseRecord(EndUser endUser, DateTime pauseStart, DateTime pauseEnd)
+    private async Task CreatePauseRecord(
+        EndUser endUser,
+        DateTime pauseStart,
+        DateTime pauseEnd)
     {
         var existingPause = await context.Set<SubscriptionPause>()
             .AnyAsync(sp => sp.EndUserId == endUser.Id &&
@@ -878,7 +940,8 @@ public class EndUserSubscriptionService(
         }
     }
 
-    private bool IsValidWebhookEvent(WebhookEvent webhookEvent)
+    private bool IsValidWebhookEvent(
+        WebhookEvent webhookEvent)
     {
         if (webhookEvent?.Data == null)
             return false;
