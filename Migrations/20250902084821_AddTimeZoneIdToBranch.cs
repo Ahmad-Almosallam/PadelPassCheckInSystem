@@ -12,7 +12,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.AddColumn<string>(
                 name: "TimeZoneId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "Branches",
                 type: "nvarchar(64)",
                 maxLength: 64,
@@ -30,7 +30,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "TimeZoneId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "Branches");
         }
     }

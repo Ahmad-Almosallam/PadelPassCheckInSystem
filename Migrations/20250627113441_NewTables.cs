@@ -13,26 +13,26 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropIndex(
                 name: "IX_CheckIns_BranchId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "CurrentPauseEndDate",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers",
                 type: "datetime2",
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "CurrentPauseStartDate",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers",
                 type: "datetime2",
                 nullable: true);
 
             migrationBuilder.AddColumn<bool>(
                 name: "IsPaused",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers",
                 type: "bit",
                 nullable: false,
@@ -40,7 +40,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "CourtName",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 type: "nvarchar(50)",
                 maxLength: 50,
@@ -48,7 +48,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "Notes",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 type: "nvarchar(200)",
                 maxLength: 200,
@@ -56,21 +56,21 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.AddColumn<TimeSpan>(
                 name: "PlayDuration",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 type: "time",
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "PlayStartTime",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 type: "datetime2",
                 nullable: true);
 
             migrationBuilder.CreateTable(
                 name: "BranchTimeSlots",
-                schema: "access",
+                schema: AppConstant.Schema,
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -96,7 +96,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateTable(
                 name: "SubscriptionPauses",
-                schema: "access",
+                schema: AppConstant.Schema,
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -131,25 +131,25 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_CheckIn_Branch_DateTime",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 columns: new[] { "BranchId", "CheckInDateTime" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_BranchTimeSlot_Branch_Day_Active",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "BranchTimeSlots",
                 columns: new[] { "BranchId", "DayOfWeek", "IsActive" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_SubscriptionPause_EndUser_Active",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "SubscriptionPauses",
                 columns: new[] { "EndUserId", "IsActive" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_SubscriptionPauses_CreatedByUserId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "SubscriptionPauses",
                 column: "CreatedByUserId");
         }
@@ -159,55 +159,55 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropTable(
                 name: "BranchTimeSlots",
-                schema: "access");
+                schema: AppConstant.Schema);
 
             migrationBuilder.DropTable(
                 name: "SubscriptionPauses",
-                schema: "access");
+                schema: AppConstant.Schema);
 
             migrationBuilder.DropIndex(
                 name: "IX_CheckIn_Branch_DateTime",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.DropColumn(
                 name: "CurrentPauseEndDate",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers");
 
             migrationBuilder.DropColumn(
                 name: "CurrentPauseStartDate",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers");
 
             migrationBuilder.DropColumn(
                 name: "IsPaused",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers");
 
             migrationBuilder.DropColumn(
                 name: "CourtName",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.DropColumn(
                 name: "Notes",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.DropColumn(
                 name: "PlayDuration",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.DropColumn(
                 name: "PlayStartTime",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CheckIns_BranchId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "BranchId");
         }

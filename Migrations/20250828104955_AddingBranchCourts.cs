@@ -13,14 +13,14 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.AddColumn<int>(
                 name: "BranchCourtId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 type: "int",
                 nullable: true);
 
             migrationBuilder.CreateTable(
                 name: "BranchCourts",
-                schema: "access",
+                schema: AppConstant.Schema,
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -44,19 +44,19 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_CheckIns_BranchCourtId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "BranchCourtId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_BranchCourt_Branch_Active",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "BranchCourts",
                 columns: new[] { "BranchId", "IsActive" });
 
             migrationBuilder.AddForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "BranchCourtId",
                 principalSchema: "access",
@@ -70,21 +70,21 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.DropTable(
                 name: "BranchCourts",
-                schema: "access");
+                schema: AppConstant.Schema);
 
             migrationBuilder.DropIndex(
                 name: "IX_CheckIns_BranchCourtId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.DropColumn(
                 name: "BranchCourtId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
         }
     }

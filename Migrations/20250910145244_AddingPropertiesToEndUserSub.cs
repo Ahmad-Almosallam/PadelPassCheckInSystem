@@ -13,28 +13,28 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.AddColumn<DateTime>(
                 name: "CreatedAt",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions",
                 type: "datetime2",
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "LastModificationDate",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions",
                 type: "datetime2",
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "TransferredDate",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions",
                 type: "datetime2",
                 nullable: true);
 
             migrationBuilder.AddColumn<Guid>(
                 name: "TransferredToId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions",
                 type: "uniqueidentifier",
                 nullable: true);
@@ -45,22 +45,22 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "CreatedAt",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions");
 
             migrationBuilder.DropColumn(
                 name: "LastModificationDate",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions");
 
             migrationBuilder.DropColumn(
                 name: "TransferredDate",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions");
 
             migrationBuilder.DropColumn(
                 name: "TransferredToId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions");
         }
     }

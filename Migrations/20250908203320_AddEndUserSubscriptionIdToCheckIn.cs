@@ -12,20 +12,20 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.AddColumn<int>(
                 name: "EndUserSubscriptionId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 type: "int",
                 nullable: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_CheckIns_EndUserSubscriptionId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "EndUserSubscriptionId");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_CheckIns_EndUserSubscriptions_EndUserSubscriptionId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "EndUserSubscriptionId",
                 principalSchema: "access",
@@ -38,17 +38,17 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_CheckIns_EndUserSubscriptions_EndUserSubscriptionId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.DropIndex(
                 name: "IX_CheckIns_EndUserSubscriptionId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.DropColumn(
                 name: "EndUserSubscriptionId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
         }
     }

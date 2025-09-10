@@ -13,7 +13,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.AddColumn<bool>(
                 name: "IsStopped",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers",
                 type: "bit",
                 nullable: false,
@@ -21,14 +21,14 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.AddColumn<string>(
                 name: "StopReason",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers",
                 type: "nvarchar(max)",
                 nullable: true);
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "StoppedDate",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers",
                 type: "datetime2",
                 nullable: true);
@@ -39,17 +39,17 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "IsStopped",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers");
 
             migrationBuilder.DropColumn(
                 name: "StopReason",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers");
 
             migrationBuilder.DropColumn(
                 name: "StoppedDate",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUsers");
         }
     }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
+using PadelPassCheckInSystem.Shared;
 
 #nullable disable
 
@@ -12,7 +13,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.AddColumn<string>(
                 name: "Code",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions",
                 type: "nvarchar(100)",
                 maxLength: 100,
@@ -24,7 +25,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "Code",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions");
         }
     }

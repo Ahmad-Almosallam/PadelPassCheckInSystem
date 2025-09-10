@@ -13,7 +13,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.CreateTable(
                 name: "EndUserSubscriptions",
-                schema: "access",
+                schema: AppConstant.Schema,
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -44,7 +44,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_EndUserSubscriptions_EndUserId",
-                schema: "access",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions",
                 column: "EndUserId");
         }
@@ -54,7 +54,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropTable(
                 name: "EndUserSubscriptions",
-                schema: "access");
+                schema: AppConstant.Schema);
         }
     }
 }

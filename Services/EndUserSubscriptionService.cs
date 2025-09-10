@@ -1,10 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Extensions;
 using PadelPassCheckInSystem.Integration.Rekaz.Enums;
 using PadelPassCheckInSystem.Integration.Rekaz.Models;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
+using PadelPassCheckInSystem.Shared.Enums;
 
 namespace PadelPassCheckInSystem.Services;
 
@@ -422,8 +424,11 @@ public class EndUserSubscriptionService(
     public async Task<bool> ProcessWebhookEvent(
         WebhookEvent webhookEvent)
     {
+        WebhookEventLog eventLog = null;
         try
         {
+            eventLog = await SaveWebhookEvent(webhookEvent);
+
             var data = webhookEvent.Data;
             var customerId = data.Customer?.Id ?? data.FromCustomer.Id;
 
@@ -439,43 +444,87 @@ public class EndUserSubscriptionService(
             if (endUser == null)
             {
                 // Create EndUser for Created/Activated events
-                if (webhookEvent.EventName == "SubscriptionCreatedEvent" ||
-                    webhookEvent.EventName == "SubscriptionActivatedEvent")
+                if (webhookEvent.EventName == "SubscriptionCreatedEvent")
                 {
                     endUser = await CreateEndUserFromWebhook(data);
                 }
                 else
                 {
-                    // For other events, EndUser must exist
-                    return false;
+                    await Task.Delay(3000);
+                    endUser = await context.EndUsers
+                        .FirstOrDefaultAsync(e => e.RekazId == customerId);
+                    if (endUser == null) throw new Exception("EndUser not found");
                 }
             }
 
             // 2) Process based on event type
-            switch (webhookEvent.EventName)
+            var success = webhookEvent.EventName switch
             {
-                case "SubscriptionCreatedEvent":
-                    return await HandleSubscriptionCreated(endUser, data, webhookEvent.CreatedAt);
-                case "SubscriptionActivatedEvent":
-                    return await HandleSubscriptionActivated(endUser, data, webhookEvent.CreatedAt);
-                case "SubscriptionPausedEvent":
-                    return await HandleSubscriptionPaused(endUser, data, webhookEvent.CreatedAt);
-                case "SubscriptionResumedEvent":
-                    return await HandleSubscriptionResumed(endUser, data, webhookEvent.CreatedAt);
-                case "SubscriptionCancelledEvent":
-                    return await HandleSubscriptionCancelled(endUser, data, webhookEvent.CreatedAt);
-                case "SubscriptionExpiredEvent":
-                    return await HandleSubscriptionExpired(endUser, data, webhookEvent.CreatedAt);
-                case "SubscriptionTransferedEvent":
-                    return await HandleSubscriptionTransferred(endUser, data, webhookEvent.CreatedAt);
-                default:
-                    return false;
-            }
+                "SubscriptionCreatedEvent" => await HandleSubscriptionCreated(endUser, data, webhookEvent.CreatedAt),
+                "SubscriptionActivatedEvent" =>
+                    await HandleSubscriptionActivated(endUser, data, webhookEvent.CreatedAt),
+                "SubscriptionPausedEvent" => await HandleSubscriptionPaused(endUser, data, webhookEvent.CreatedAt),
+                "SubscriptionResumedEvent" => await HandleSubscriptionResumed(endUser, data, webhookEvent.CreatedAt),
+                "SubscriptionCancelledEvent" =>
+                    await HandleSubscriptionCancelled(endUser, data, webhookEvent.CreatedAt),
+                "SubscriptionExpiredEvent" => await HandleSubscriptionExpired(endUser, data, webhookEvent.CreatedAt),
+                "SubscriptionTransferedEvent" => await HandleSubscriptionTransferred(endUser, data,
+                    webhookEvent.CreatedAt),
+                _ => false
+            };
+
+            await UpdateEventLogStatus(eventLog.Id, success, null);
+            return success;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error processing webhook event: {EventId}", webhookEvent.Id);
-            return false;
+            if (eventLog != null)
+            {
+                await UpdateEventLogStatus(eventLog.Id, false, ex.Message);
+            }
+            throw;
+        }
+    }
+
+    private async Task<WebhookEventLog> SaveWebhookEvent(WebhookEvent webhookEvent)
+    {
+        var eventLog = new WebhookEventLog
+        {
+            WebhookEventId = webhookEvent.Id,
+            EventName = webhookEvent.EventName,
+            RawData = JsonSerializer.Serialize(webhookEvent),
+            ReceivedAt = DateTime.UtcNow,
+            Status = WebhookEventStatus.Received,
+            CustomerId = webhookEvent.Data.Customer?.Id ?? webhookEvent.Data.FromCustomer.Id
+        };
+
+        context.WebhookEventLogs.Add(eventLog);
+        await context.SaveChangesAsync();
+
+        logger.LogInformation("Webhook event {eventId} saved to database", webhookEvent.Id);
+        return eventLog;
+    }
+
+    private async Task UpdateEventLogStatus(int eventLogId, bool success, string errorMessage)
+    {
+        try
+        {
+            var eventLog = await context.WebhookEventLogs.FindAsync(eventLogId);
+            if (eventLog != null)
+            {
+                eventLog.Status = success ? WebhookEventStatus.Processed : WebhookEventStatus.Failed;
+                eventLog.ProcessedAt = DateTime.UtcNow;
+                eventLog.ErrorMessage = errorMessage;
+                eventLog.RetryCount += 1;
+
+                await context.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log but don't throw - we don't want to fail the main process for logging issues
+            logger.LogError(ex, "Failed to update webhook event log status for eventLogId: {eventLogId}", eventLogId);
         }
     }
 
