@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PadelPassCheckInSystem.Data;
 
@@ -11,13 +12,15 @@ using PadelPassCheckInSystem.Data;
 namespace PadelPassCheckInSystem.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250908152959_AddingCodeToEndUserSubs")]
+    partial class AddingCodeToEndUserSubs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("test")
+                .HasDefaultSchema("access")
                 .HasAnnotation("ProductVersion", "8.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
@@ -54,7 +57,7 @@ namespace PadelPassCheckInSystem.Migrations
                     b.HasIndex("BranchId", "DayOfWeek", "IsActive")
                         .HasDatabaseName("IX_BranchTimeSlot_Branch_Day_Active");
 
-                    b.ToTable("BranchTimeSlots", "test");
+                    b.ToTable("BranchTimeSlots", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -81,7 +84,7 @@ namespace PadelPassCheckInSystem.Migrations
                         .HasDatabaseName("RoleNameIndex")
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
-                    b.ToTable("AspNetRoles", "test");
+                    b.ToTable("AspNetRoles", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -106,7 +109,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims", "test");
+                    b.ToTable("AspNetRoleClaims", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -131,7 +134,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims", "test");
+                    b.ToTable("AspNetUserClaims", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
@@ -153,7 +156,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins", "test");
+                    b.ToTable("AspNetUserLogins", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
@@ -168,7 +171,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetUserRoles", "test");
+                    b.ToTable("AspNetUserRoles", "access");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -187,7 +190,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens", "test");
+                    b.ToTable("AspNetUserTokens", "access");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.ApplicationUser", b =>
@@ -260,7 +263,7 @@ namespace PadelPassCheckInSystem.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.ToTable("AspNetUsers", "test");
+                    b.ToTable("AspNetUsers", "access");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.Branch", b =>
@@ -295,7 +298,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Branches", "test");
+                    b.ToTable("Branches", "access");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.BranchCourt", b =>
@@ -325,7 +328,7 @@ namespace PadelPassCheckInSystem.Migrations
                     b.HasIndex("BranchId", "IsActive")
                         .HasDatabaseName("IX_BranchCourt_Branch_Active");
 
-                    b.ToTable("BranchCourts", "test");
+                    b.ToTable("BranchCourts", "access");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.CheckIn", b =>
@@ -355,9 +358,6 @@ namespace PadelPassCheckInSystem.Migrations
                     b.Property<int>("EndUserId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("EndUserSubscriptionId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Notes")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -377,15 +377,13 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasIndex("BranchCourtId");
 
-                    b.HasIndex("EndUserSubscriptionId");
-
                     b.HasIndex("BranchId", "CheckInDateTime")
                         .HasDatabaseName("IX_CheckIn_Branch_DateTime");
 
                     b.HasIndex("EndUserId", "CheckInDateTime")
                         .HasDatabaseName("IX_CheckIn_EndUser_Date");
 
-                    b.ToTable("CheckIns", "test");
+                    b.ToTable("CheckIns", "access");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.EndUser", b =>
@@ -470,7 +468,7 @@ namespace PadelPassCheckInSystem.Migrations
                         .IsUnique()
                         .HasFilter("[UniqueIdentifier] IS NOT NULL");
 
-                    b.ToTable("EndUsers", "test");
+                    b.ToTable("EndUsers", "access");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.EndUserSubscription", b =>
@@ -485,9 +483,6 @@ namespace PadelPassCheckInSystem.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateTime?>("CreatedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<decimal>("Discount")
                         .HasColumnType("decimal(18,2)");
 
@@ -499,9 +494,6 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.Property<bool>("IsPaused")
                         .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastModificationDate")
-                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .HasMaxLength(100)
@@ -525,17 +517,11 @@ namespace PadelPassCheckInSystem.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("TransferredDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("TransferredToId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
                     b.HasIndex("EndUserId");
 
-                    b.ToTable("EndUserSubscriptions", "test");
+                    b.ToTable("EndUserSubscriptions", "access");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.PlaytomicIntegration", b =>
@@ -570,50 +556,7 @@ namespace PadelPassCheckInSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PlaytomicIntegrations", "test");
-                });
-
-            modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.WebhookEventLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ErrorMessage")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("EventName")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("RawData")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ReceivedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("RetryCount")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<string>("WebhookEventId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("WebhookEventLogs", "access");
+                    b.ToTable("PlaytomicIntegrations", "access");
                 });
 
             modelBuilder.Entity("SubscriptionPause", b =>
@@ -657,7 +600,7 @@ namespace PadelPassCheckInSystem.Migrations
                     b.HasIndex("EndUserId", "IsActive")
                         .HasDatabaseName("IX_SubscriptionPause_EndUser_Active");
 
-                    b.ToTable("SubscriptionPauses", "test");
+                    b.ToTable("SubscriptionPauses", "access");
                 });
 
             modelBuilder.Entity("BranchTimeSlot", b =>
@@ -762,17 +705,11 @@ namespace PadelPassCheckInSystem.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PadelPassCheckInSystem.Models.Entities.EndUserSubscription", "EndUserSubscription")
-                        .WithMany()
-                        .HasForeignKey("EndUserSubscriptionId");
-
                     b.Navigation("Branch");
 
                     b.Navigation("BranchCourt");
 
                     b.Navigation("EndUser");
-
-                    b.Navigation("EndUserSubscription");
                 });
 
             modelBuilder.Entity("PadelPassCheckInSystem.Models.Entities.EndUserSubscription", b =>

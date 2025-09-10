@@ -24,5 +24,12 @@ public class EndUserSubscription
     public DateTime? PausedAt { get; set; }
     public DateTime? ResumedAt { get; set; }
 
+    [MaxLength(100)] public string Code { get; set; }
+
+
+    public DateTime? CreatedAt { get; set; }
+    public DateTime? LastModificationDate { get; set; }
+    public DateTime? TransferredDate { get; set; }
+    public Guid? TransferredToId { get; set; }
     public virtual EndUser EndUser { get; set; }
 }

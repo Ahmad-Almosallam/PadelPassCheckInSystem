@@ -21,6 +21,7 @@ namespace PadelPassCheckInSystem.Data
         public DbSet<PlaytomicIntegration> PlaytomicIntegrations { get; set; }
         public DbSet<BranchCourt> BranchCourts { get; set; }
         public DbSet<EndUserSubscription> EndUserSubscriptions { get; set; }
+        public DbSet<WebhookEventLog> WebhookEventLogs { get; set; }
 
         protected override void OnModelCreating(
             ModelBuilder builder)

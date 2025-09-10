@@ -13,12 +13,12 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "CreatedAt",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 type: "datetime2",
                 nullable: false,
@@ -26,10 +26,10 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.AddForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "BranchCourtId",
-                principalSchema: "test",
+                principalSchema: "access",
                 principalTable: "BranchCourts",
                 principalColumn: "Id");
         }
@@ -39,20 +39,20 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.DropColumn(
                 name: "CreatedAt",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "BranchCourtId",
-                principalSchema: "test",
+                principalSchema: "access",
                 principalTable: "BranchCourts",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.SetNull);

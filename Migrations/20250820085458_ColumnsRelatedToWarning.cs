@@ -12,7 +12,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.AddColumn<bool>(
                 name: "IsStoppedByWarning",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "EndUsers",
                 type: "bit",
                 nullable: false,
@@ -20,7 +20,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.AddColumn<int>(
                 name: "WarningCount",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "EndUsers",
                 type: "int",
                 nullable: false,
@@ -28,7 +28,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.AddColumn<bool>(
                 name: "PlayerAttended",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 type: "bit",
                 nullable: false,
@@ -40,17 +40,17 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "IsStoppedByWarning",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "EndUsers");
 
             migrationBuilder.DropColumn(
                 name: "WarningCount",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "EndUsers");
 
             migrationBuilder.DropColumn(
                 name: "PlayerAttended",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
         }
     }

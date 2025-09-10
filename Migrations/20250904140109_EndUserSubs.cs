@@ -13,7 +13,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.CreateTable(
                 name: "EndUserSubscriptions",
-                schema: "test",
+                schema: AppConstant.Schema,
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -36,7 +36,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_EndUserSubscriptions_EndUsers_EndUserId",
                         column: x => x.EndUserId,
-                        principalSchema: "test",
+                        principalSchema: "access",
                         principalTable: "EndUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -44,7 +44,7 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_EndUserSubscriptions_EndUserId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "EndUserSubscriptions",
                 column: "EndUserId");
         }
@@ -54,7 +54,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropTable(
                 name: "EndUserSubscriptions",
-                schema: "test");
+                schema: AppConstant.Schema);
         }
     }
 }

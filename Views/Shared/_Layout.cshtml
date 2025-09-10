@@ -60,8 +60,11 @@
                                 </a>
                                 <ul class="dropdown-menu">
                                     <li><a class="dropdown-item" asp-controller="Admin" asp-action="EndUsers">
-                                            <i class="bi bi-list"></i> All End Users
-                                        </a></li>
+                                        <i class="bi bi-list"></i> All End Users
+                                    </a></li>
+                                    <li><a class="dropdown-item" asp-controller="EndUserSubscriptions" asp-action="EndUserSubscriptions">
+                                        <i class="bi bi-list"></i> Users Subscriptions
+                                    </a></li>
                                     <li><a class="dropdown-item" asp-controller="Admin" asp-action="PauseHistory">
                                             <i class="bi bi-pause-circle"></i> Pause History
                                         </a></li>
@@ -80,6 +83,14 @@
                                     <i class="bi bi-qr-code-scan"></i> Check-In Portal
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="CheckIn" asp-action="CheckIns">
+                                    <i class="bi bi-list-check"></i> Check-Ins
+                                </a>
+                            </li>
+                        }
+                        else if (User.IsInRole("Finance"))
+                        {
                             <li class="nav-item">
                                 <a class="nav-link" asp-controller="CheckIn" asp-action="CheckIns">
                                     <i class="bi bi-list-check"></i> Check-Ins

@@ -56,7 +56,7 @@ namespace PadelPassCheckInSystem.Services
                 return (false, "Pause start date is after subscription end date");
             }
 
-            var pauseEndDate = pauseStartDate.AddDays(pauseDays - 1); // -1 because we include the start day
+            var pauseEndDate = pauseStartDate.AddDays(pauseDays - 2); // -2 because we include the start day
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try

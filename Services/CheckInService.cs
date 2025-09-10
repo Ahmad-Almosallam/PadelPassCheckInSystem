@@ -5,6 +5,7 @@ using PadelPassCheckInSystem.Controllers.CheckIns;
 using PadelPassCheckInSystem.Data;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Extensions;
+using PadelPassCheckInSystem.Integration.Rekaz.Enums;
 using PadelPassCheckInSystem.Models.ViewModels;
 
 namespace PadelPassCheckInSystem.Services;
@@ -13,13 +14,15 @@ public class CheckInService : ICheckInService
 {
     private readonly ApplicationDbContext _context;
     private readonly IWarningService _warningService;
+    private readonly ILogger<CheckInService> _logger;
 
     public CheckInService(
         ApplicationDbContext context,
-        IWarningService warningService)
+        IWarningService warningService, ILogger<CheckInService> logger)
     {
         _context = context;
         _warningService = warningService;
+        _logger = logger;
     }
 
     public async Task<(bool Success, string Message, int? CheckInId)> CheckInAsync(
@@ -34,12 +37,22 @@ public class CheckInService : ICheckInService
             return (false, message, null);
         }
 
+        var currentActiveEndUserSub =
+            await _context.EndUserSubscriptions.FirstOrDefaultAsync(x => x.Status == SubscriptionStatus.Active);
+
+        if (currentActiveEndUserSub == null)
+        {
+            _logger.LogError("No currentActiveEndUserSub for EndUser Id {Id}", endUser.Id);
+            return (false, "No active subscription to link with the Check In for User Id " + endUser.Id, null);
+        }
+
         // Create check-in record
         var checkIn = new CheckIn
         {
             EndUserId = endUser.Id,
             BranchId = branchId,
-            CheckInDateTime = requestCheckInDateUtc
+            CheckInDateTime = requestCheckInDateUtc,
+            EndUserSubscriptionId = currentActiveEndUserSub?.Id
         };
 
         _context.CheckIns.Add(checkIn);
@@ -302,7 +315,7 @@ public class CheckInService : ICheckInService
         // 2) Compute branch-local "today" and its UTC window
         var todayLocal = NodaTimeExtensions.GetLocalNow(tz).Date;
         var startUtc = todayLocal.GetStartOfDayUtc(tz);
-        var endUtc   = todayLocal.GetEndOfDayUtc(tz);
+        var endUtc = todayLocal.GetEndOfDayUtc(tz);
 
         // 3) Query in UTC (efficient) + include related info
         return await _context.CheckIns
@@ -438,6 +451,17 @@ public class CheckInService : ICheckInService
         if (duplicateExists)
             return new(false, "There is a check-in on this local date.");
 
+
+        // get EndUserSubscription within the requested dates
+        var checkInLocalDate = requestedUtc.ToLocalTime(tz);
+        var endUserSubscription =
+            await _context.EndUserSubscriptions.FirstOrDefaultAsync(x =>
+                x.StartDate <= checkInLocalDate && x.EndDate >= checkInLocalDate && x.EndUserId == checkIn.EndUserId);
+        if (endUserSubscription is null)
+        {
+            _logger.LogError("No endUserSubscription for EndUser Id {EndUserId}", checkIn.EndUserId);
+        }
+
         // Update details
         checkIn.BranchCourtId = request.BranchCourtId;
         checkIn.PlayDuration =
@@ -445,6 +469,7 @@ public class CheckInService : ICheckInService
         checkIn.PlayStartTime = request.PlayStartTime.HasValue ? request.PlayStartTime.Value.EnsureUtc() : null;
         checkIn.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
         checkIn.CheckInDateTime = requestedUtc; // store as UTC
+        checkIn.EndUserSubscriptionId = endUserSubscription?.Id;
 
         // Attendance & warnings
         checkIn.PlayerAttended = request.PlayerAttended;
@@ -493,37 +518,41 @@ public class CheckInService : ICheckInService
                 return (false, "Selected branch is not active", null);
             }
 
-            // Convert KSA check-in date to UTC for database storage
-            var checkInDateTimeUtc = checkInDateTime;
+            var tz = branch.TimeZoneId;
 
-            // Check if user already has a check-in on this date
-            var checkInDateKSA = checkInDateTime.ToKSATime()
+            var checkInDateTimeUtc = checkInDateTime.EnsureUtc();
+
+            var reqLocalDate = checkInDateTime.ToLocalTime(tz)
                 .Date;
-            var existingCheckIns = await _context.CheckIns
-                .Where(c => c.EndUserId == endUser.Id)
-                .ToListAsync();
 
-            var hasExistingCheckIn = existingCheckIns.Any(c =>
-                c.CheckInDateTime.ToKSATime()
-                    .Date == checkInDateKSA);
+            var nowLocal = NodaTimeExtensions.GetLocalNow(tz);
+            var todayLocalDate = nowLocal.Date;
 
-            if (hasExistingCheckIn)
+            if (endUser.IsPaused && endUser.CurrentPauseStartDate.HasValue)
             {
-                return (false, $"User already has a check-in record for {checkInDateKSA:MMM dd, yyyy}", null);
+                var pauseStartLocal = endUser.CurrentPauseStartDate.Value.ToLocalTime(tz)
+                    .Date;
+                var pauseEndLocal = endUser.CurrentPauseEndDate!.Value.ToLocalTime(tz)
+                    .Date;
+
+                var isPausedOnRequested = reqLocalDate >= pauseStartLocal && reqLocalDate <= pauseEndLocal;
+
+                if (isPausedOnRequested)
+                    return (false, $"Subscription was paused on {reqLocalDate:yyyy-MM-dd}", null);
+
+                // Auto-unpause if pause ended and we're checking "today" locally
+                if (reqLocalDate == todayLocalDate && todayLocalDate > pauseEndLocal)
+                    await UnpauseSubscriptionAsync(endUser.Id);
             }
 
-
-            var nowKSA = KSADateTimeExtensions.GetKSANow();
-            var todayKSA = nowKSA.Date;
-            if (endUser.IsPaused && endUser.CurrentPauseStartDate!.Value.ToKSATime()
-                    .Date <= todayKSA.Date)
+            // get EndUserSubscription within the requested dates
+            var checkInLocalDate = checkInDateTimeUtc.ToLocalTime(tz);
+            var endUserSubscription =
+                await _context.EndUserSubscriptions.FirstOrDefaultAsync(x =>
+                    x.StartDate <= checkInLocalDate && x.EndDate >= checkInLocalDate && x.EndUserId == endUser.Id);
+            if (endUserSubscription is null)
             {
-                var pauseEndDateKSA = endUser.CurrentPauseEndDate?.ToKSATime()
-                    .Date;
-                if (pauseEndDateKSA.HasValue && todayKSA > pauseEndDateKSA.Value)
-                {
-                    await UnpauseSubscriptionAsync(endUser.Id);
-                }
+                _logger.LogError("No endUserSubscription for EndUser Id {EndUserId}", endUser.Id);
             }
 
             // Create check-in record
@@ -537,7 +566,8 @@ public class CheckInService : ICheckInService
                     playDurationMinutes.HasValue ? TimeSpan.FromMinutes(playDurationMinutes.Value) : null,
                 PlayStartTime = playStartTime,
                 Notes = !string.IsNullOrWhiteSpace(notes) ? notes.Trim() : null,
-                PlayerAttended = playerAttended
+                PlayerAttended = playerAttended,
+                EndUserSubscriptionId = endUserSubscription?.Id,
             };
 
             _context.CheckIns.Add(checkIn);

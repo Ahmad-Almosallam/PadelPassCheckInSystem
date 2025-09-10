@@ -29,6 +29,7 @@ public class SubscriptionResponse
     [JsonPropertyName("pausedAt")] public DateTime? PausedAt { get; set; }
     [JsonPropertyName("resumeAt")] public DateTime? ResumeAt { get; set; }
     [JsonPropertyName("items")] public List<ItemResponse> Items { get; set; } = [];
+    [JsonPropertyName("subscriptionCode")] public string Code { get; set; }
 }
 
 public class ItemResponse

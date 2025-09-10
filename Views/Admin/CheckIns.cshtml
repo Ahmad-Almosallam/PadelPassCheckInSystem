@@ -36,7 +36,7 @@
                 <input type="text" name="phoneNumber" class="form-control"
                        value="@Model.PhoneNumber" placeholder="Enter phone number">
             </div>
-            @if (User.IsInRole("Admin"))
+            @if (User.IsInRole("Admin") || User.IsInRole("Finance"))
             {
                 <div class="col-md-3">
                     <label class="form-label">Branch</label>
@@ -101,6 +101,10 @@
                 <tr>
                     <th>End User</th>
                     <th>Phone</th>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <th>Subscription Code</th>
+                    }
                     <th>Branch</th>
                     <th>Date <small class="text-muted">(KSA)</small></th>
                     <th>Time <small class="text-muted">(KSA)</small></th>
@@ -127,6 +131,10 @@
                             </div>
                         </td>
                         <td>@checkIn.EndUser.PhoneNumber</td>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <td>@checkIn.EndUserSubscription.Code</td>
+                        }
                         <td>@checkIn.Branch.Name</td>
                         <td>@checkIn.CheckInDateTime.ToKSATime().ToString("yyyy-MM-dd")</td>
                         <td>@checkIn.CreatedAt.ToKSATime().ToString("HH:mm:ss")</td>
@@ -321,7 +329,7 @@
     </div>
 </div>
 
-<partial name="Components/_CheckInModal" model="@("edit", true)"/>
+<partial name="Components/_CheckInModal" model="@("edit", true, string.Empty)"/>
 
 <!-- Delete Confirmation Modal -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
@@ -544,7 +552,7 @@
 {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.8.3/build/css/intlTelInput.css">
     <style>
-        .iti{
+        .iti {
             display: block;
         }
     </style>
@@ -1048,7 +1056,7 @@
                 phoneErrorEl.classList.remove("d-none");
                 return false;
             }
-            
+
 
         }
 

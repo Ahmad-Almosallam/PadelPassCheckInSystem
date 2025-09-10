@@ -13,7 +13,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.AddColumn<Guid>(
                 name: "PlaytomicTenantId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "Branches",
                 type: "uniqueidentifier",
                 nullable: true);
@@ -24,7 +24,7 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "PlaytomicTenantId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "Branches");
         }
     }

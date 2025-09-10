@@ -14,6 +14,8 @@ public class CheckInServiceEditCheckInTests : IDisposable
     private readonly ApplicationDbContext _db;
     private readonly Mock<IWarningService> _warnings;
     private readonly CheckInService _svc;
+    private readonly Mock<ILogger<CheckInService>> _loogerMock;
+    
 
     public CheckInServiceEditCheckInTests()
     {
@@ -25,7 +27,10 @@ public class CheckInServiceEditCheckInTests : IDisposable
         _warnings = new Mock<IWarningService>(MockBehavior.Strict);
         _warnings.Setup(x => x.ProcessPlayerAttendanceAsync(It.IsAny<int>(), It.IsAny<bool>()))
             .ReturnsAsync((false, string.Empty));
-        _svc = new CheckInService(_db, _warnings.Object);
+        _loogerMock = new Mock<ILogger<CheckInService>>();
+        
+        _svc = new CheckInService(_db, _warnings.Object,_loogerMock.Object);
+        
     }
 
     public void Dispose() => _db?.Dispose();

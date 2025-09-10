@@ -13,14 +13,14 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.AddColumn<int>(
                 name: "BranchCourtId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 type: "int",
                 nullable: true);
 
             migrationBuilder.CreateTable(
                 name: "BranchCourts",
-                schema: "test",
+                schema: AppConstant.Schema,
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
@@ -36,7 +36,7 @@ namespace PadelPassCheckInSystem.Migrations
                     table.ForeignKey(
                         name: "FK_BranchCourts_Branches_BranchId",
                         column: x => x.BranchId,
-                        principalSchema: "test",
+                        principalSchema: "access",
                         principalTable: "Branches",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -44,22 +44,22 @@ namespace PadelPassCheckInSystem.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_CheckIns_BranchCourtId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "BranchCourtId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_BranchCourt_Branch_Active",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "BranchCourts",
                 columns: new[] { "BranchId", "IsActive" });
 
             migrationBuilder.AddForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns",
                 column: "BranchCourtId",
-                principalSchema: "test",
+                principalSchema: "access",
                 principalTable: "BranchCourts",
                 principalColumn: "Id",
                 onDelete: ReferentialAction.NoAction);
@@ -70,21 +70,21 @@ namespace PadelPassCheckInSystem.Migrations
         {
             migrationBuilder.DropForeignKey(
                 name: "FK_CheckIns_BranchCourts_BranchCourtId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.DropTable(
                 name: "BranchCourts",
-                schema: "test");
+                schema: AppConstant.Schema);
 
             migrationBuilder.DropIndex(
                 name: "IX_CheckIns_BranchCourtId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
 
             migrationBuilder.DropColumn(
                 name: "BranchCourtId",
-                schema: "test",
+                schema: AppConstant.Schema,
                 table: "CheckIns");
         }
     }
