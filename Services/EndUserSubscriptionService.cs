@@ -425,7 +425,7 @@ public class EndUserSubscriptionService(
         try
         {
             var data = webhookEvent.Data;
-            var customerId = data.Customer.Id;
+            var customerId = data.Customer?.Id ?? data.FromCustomer.Id;
 
             logger.LogInformation("Webhook event received {@webhookEvent}", webhookEvent);
             logger.LogInformation("Webhook event {eventName}, status: {status}", webhookEvent.EventName,
@@ -785,6 +785,7 @@ public class EndUserSubscriptionService(
                 PausedAt = pausedAtUtc,
                 ResumedAt = resumeAtUtc,
                 Code = data.Code,
+                CreatedAt = DateTime.UtcNow
             };
 
             context.Add(dbSub);
@@ -801,6 +802,9 @@ public class EndUserSubscriptionService(
             dbSub.PausedAt = pausedAtUtc;
             dbSub.ResumedAt = resumeAtUtc;
             dbSub.Code = data.Code;
+            dbSub.LastModificationDate = DateTime.UtcNow;
+            dbSub.TransferredDate = status == SubscriptionStatus.Transferred ? DateTime.UtcNow : null;
+            dbSub.TransferredToId = status == SubscriptionStatus.Transferred ? data.ToCustomer?.Id : null;
 
             context.Update(dbSub);
         }

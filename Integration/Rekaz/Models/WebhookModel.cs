@@ -24,6 +24,8 @@ public class WebhookSubscriptionData
     public decimal Price { get; set; }
     public decimal Discount { get; set; }
     public WebhookCustomer Customer { get; set; }
+    public WebhookCustomer FromCustomer { get; set; }
+    public WebhookCustomer ToCustomer { get; set; }
     public string Name { get; set; }
     public string Number { get; set; }
     public string Code { get; set; }
