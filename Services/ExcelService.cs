@@ -1,4 +1,5 @@
 using ClosedXML.Excel;
+using PadelPassCheckInSystem.Extensions;
 using PadelPassCheckInSystem.Models.Entities;
 
 namespace PadelPassCheckInSystem.Services
@@ -28,11 +29,11 @@ namespace PadelPassCheckInSystem.Services
                 worksheet.Cell(row, 1).Value = checkIn.EndUser.Name;
                 worksheet.Cell(row, 2).Value = checkIn.EndUser.PhoneNumber;
                 worksheet.Cell(row, 3).Value = checkIn.Branch.Name;
-                worksheet.Cell(row, 4).Value = checkIn.CheckInDateTime.ToLocalTime().ToString("yyyy-MM-dd");
-                worksheet.Cell(row, 5).Value = checkIn.CheckInDateTime.ToLocalTime().ToString("HH:mm:ss");
+                worksheet.Cell(row, 4).Value = checkIn.CheckInDateTime.ToLocalTime(checkIn.Branch.TimeZoneId).ToString("yyyy-MM-dd");
+                worksheet.Cell(row, 5).Value = checkIn.CreatedAt.ToLocalTime(checkIn.Branch.TimeZoneId).ToString("HH:mm:ss");
                 worksheet.Cell(row, 6).Value = checkIn.BranchCourtId.HasValue ? checkIn.BranchCourt.CourtName : checkIn.CourtName;
-                worksheet.Cell(row, 7).Value = checkIn.PlayDuration;
-                worksheet.Cell(row, 8).Value = checkIn.PlayStartTime;
+                worksheet.Cell(row,7).Value = checkIn.PlayDuration;
+                worksheet.Cell(row, 8).Value = checkIn.PlayStartTime!.Value.ToLocalTime(checkIn.Branch.TimeZoneId).ToString("HH:mm:ss");
                 worksheet.Cell(row, 9).Value = checkIn.PlayerAttended;
                 row++;
             }
