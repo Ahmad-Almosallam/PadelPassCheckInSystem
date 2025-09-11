@@ -19,7 +19,7 @@ namespace PadelPassCheckInSystem.Migrations
                 nullable: true);
             
             migrationBuilder.Sql(
-                @"UPDATE [access].[Branches] 
+                @$"UPDATE [{AppConstant.Schema}].[Branches] 
                   SET [TimeZoneId] = 'Asia/Riyadh' 
                   WHERE [TimeZoneId] IS NULL;"
             );
