@@ -11,7 +11,7 @@ namespace PadelPassCheckInSystem.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             // add +966 before the phonenumber
-            migrationBuilder.Sql("UPDATE test.EndUsers SET PhoneNumber = '+966' + RIGHT(PhoneNumber, LEN(PhoneNumber) - 1)");
+            migrationBuilder.Sql($"UPDATE {AppConstant.Schema}.EndUsers SET PhoneNumber = '+966' + RIGHT(PhoneNumber, LEN(PhoneNumber) - 1)");
         }
 
         /// <inheritdoc />

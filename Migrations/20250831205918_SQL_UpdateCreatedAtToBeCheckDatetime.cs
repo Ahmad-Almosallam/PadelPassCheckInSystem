@@ -10,7 +10,7 @@ namespace PadelPassCheckInSystem.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql("UPDATE test.CheckIns SET CreatedAt = CheckInDateTime");
+            migrationBuilder.Sql($"UPDATE {AppConstant.Schema}.CheckIns SET CreatedAt = CheckInDateTime");
         }
 
         /// <inheritdoc />
