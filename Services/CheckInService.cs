@@ -1,11 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using NodaTime.Extensions;
 using PadelPassCheckInSystem.Controllers.CheckIns;
 using PadelPassCheckInSystem.Data;
-using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Extensions;
 using PadelPassCheckInSystem.Integration.Rekaz.Enums;
+using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
 
 namespace PadelPassCheckInSystem.Services;
@@ -141,16 +140,6 @@ public class CheckInService : ICheckInService
             {
                 return (false, "You can only delete check-ins from your branch");
             }
-
-            // Only non-admin users are restricted to deleting today's check-ins (KSA time)
-            var todayKSA = KSADateTimeExtensions.GetKSANow()
-                .Date;
-            var checkInDateKSA = checkIn.CheckInDateTime.ToKSATime()
-                .Date;
-            if (checkInDateKSA != todayKSA)
-            {
-                return (false, "You can only delete today's check-ins");
-            }
         }
 
         var userName = checkIn.EndUser.Name;
@@ -159,22 +148,6 @@ public class CheckInService : ICheckInService
         await _context.SaveChangesAsync();
 
         return (true, $"Check-in for {userName} has been deleted successfully");
-    }
-
-    public async Task<bool> HasCheckedInTodayAsync(
-        int endUserId)
-    {
-        // Use KSA date for comparison
-        var todayKSA = KSADateTimeExtensions.GetKSANow()
-            .Date;
-
-        // Get all check-ins for this user and convert to KSA time for comparison
-        var userCheckIns = await _context.CheckIns
-            .Where(c => c.EndUserId == endUserId)
-            .ToListAsync();
-
-        return userCheckIns.Any(c => c.CheckInDateTime.ToKSATime()
-            .Date == todayKSA);
     }
 
     private async Task<bool> IsWithinAllowedTimeSlotAsync(
@@ -280,27 +253,7 @@ public class CheckInService : ICheckInService
             await _context.SaveChangesAsync();
         }
     }
-
-    public async Task<List<CheckIn>> GetPendingCourtAssignmentsAsync(
-        int branchId)
-    {
-        // Use KSA date for filtering today's check-ins
-        var todayKSA = KSADateTimeExtensions.GetKSANow()
-            .Date;
-
-        var allCheckIns = await _context.CheckIns
-            .Include(c => c.EndUser)
-            .Where(c => c.BranchId == branchId && string.IsNullOrEmpty(c.CourtName))
-            .ToListAsync();
-
-        // Filter by KSA date
-        return allCheckIns
-            .Where(c => c.CheckInDateTime.ToKSATime()
-                .Date == todayKSA)
-            .OrderBy(c => c.CheckInDateTime)
-            .ToList();
-    }
-
+    
     public async Task<List<CheckIn>> GetTodayCheckInsWithCourtInfoAsync(int branchId)
     {
         // 1) Get branch TZ
