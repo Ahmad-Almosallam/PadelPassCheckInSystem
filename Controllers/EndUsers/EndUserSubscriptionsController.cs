@@ -64,13 +64,7 @@ public class EndUserSubscriptionsController : Controller
             query = query.Where(s => s.EndUserId == endUserId.Value);
         }
 
-        // Filter by user name search
-        if (!string.IsNullOrWhiteSpace(searchUserName))
-        {
-            searchUserName = searchUserName.Trim();
-            query = query.Where(s => s.EndUser.Name.Contains(searchUserName) || 
-                                   s.EndUser.PhoneNumber.Contains(searchUserName));
-        }
+        
         
         // Get statistics for all statuses (before pagination)
         var activeCount = await query.CountAsync(s => s.Status == SubscriptionStatus.Active);
@@ -80,6 +74,15 @@ public class EndUserSubscriptionsController : Controller
         var expiredCount = await query.CountAsync(s => s.Status == SubscriptionStatus.Expired);
         var startingSoonCount = await query.CountAsync(s => s.Status == SubscriptionStatus.StartingSoon);
         var totalItems = await query.CountAsync();
+        
+        
+        // Filter by user name search
+        if (!string.IsNullOrWhiteSpace(searchUserName))
+        {
+            searchUserName = searchUserName.Trim();
+            query = query.Where(s => s.EndUser.Name.Contains(searchUserName) || 
+                                     s.EndUser.PhoneNumber.Contains(searchUserName));
+        }
 
         // Filter by subscription status
         if (status.HasValue)
@@ -91,7 +94,8 @@ public class EndUserSubscriptionsController : Controller
 
         // Order by creation date (newest first)
         var orderedQuery = query.OrderByDescending(s => s.StartDate)
-                               .ThenByDescending(s => s.Id);
+                               // .ThenByDescending(s => s.Id)
+            ;
 
         // Get total count
         var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
