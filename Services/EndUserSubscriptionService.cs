@@ -490,7 +490,15 @@ public class EndUserSubscriptionService(
 
     private async Task<WebhookEventLog> SaveWebhookEvent(WebhookEvent webhookEvent)
     {
-        var eventLog = new WebhookEventLog
+        var eventLog = await context.WebhookEventLogs.FirstOrDefaultAsync(x => x.WebhookEventId == webhookEvent.Id);
+
+        if (eventLog != null)
+        {
+            logger.LogInformation("Webhook event {eventId} got from database", webhookEvent.Id);
+            return eventLog;
+        }
+
+        eventLog = new WebhookEventLog
         {
             WebhookEventId = webhookEvent.Id,
             EventName = webhookEvent.EventName,

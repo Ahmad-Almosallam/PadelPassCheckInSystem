@@ -5,7 +5,7 @@ namespace PadelPassCheckInSystem.Integration.Rekaz.Models;
 
 public class WebhookEvent
 {
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public string EventName { get; set; }
     public DateTime CreatedAt { get; set; }
     public WebhookSubscriptionData Data { get; set; }

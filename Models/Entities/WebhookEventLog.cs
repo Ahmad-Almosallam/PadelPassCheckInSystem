@@ -1,11 +1,13 @@
-﻿using PadelPassCheckInSystem.Shared.Enums;
+﻿using Microsoft.EntityFrameworkCore;
+using PadelPassCheckInSystem.Shared.Enums;
 
 namespace PadelPassCheckInSystem.Models.Entities;
 
+[Index(nameof(WebhookEventId), IsUnique = true)]
 public class WebhookEventLog
 {
     public int Id { get; set; }
-    public string WebhookEventId { get; set; }
+    public Guid WebhookEventId { get; set; }
     public string EventName { get; set; }
     public Guid CustomerId { get; set; }
     public string RawData { get; set; }
