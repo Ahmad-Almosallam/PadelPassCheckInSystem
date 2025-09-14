@@ -483,6 +483,7 @@ public class EndUserSubscriptionService(
             {
                 await UpdateEventLogStatus(eventLog.Id, false, ex.Message);
             }
+
             throw;
         }
     }
@@ -680,6 +681,8 @@ public class EndUserSubscriptionService(
             }
             else
             {
+                var pauseEndDate = ConvertResumeAtToPauseEndDate(resumeAtUtc);
+
                 // Temporarily paused
                 var newEndDate = SubscriptionPredicates.GetNewEndDateAfterPause(
                     endUser, pausedAtUtc!.Value, resumeAtUtc!.Value);
@@ -687,13 +690,13 @@ public class EndUserSubscriptionService(
                 endUser.IsPaused = true;
                 endUser.IsStopped = false;
                 endUser.CurrentPauseStartDate = pausedAtUtc;
-                endUser.CurrentPauseEndDate = resumeAtUtc;
+                endUser.CurrentPauseEndDate = pauseEndDate;
                 endUser.SubscriptionEndDate = newEndDate;
                 endUser.StopReason = null;
                 endUser.StoppedDate = null;
 
                 // Create pause record
-                await CreatePauseRecord(endUser, pausedAtUtc.Value, resumeAtUtc.Value);
+                await CreatePauseRecord(endUser, pausedAtUtc.Value, pauseEndDate!.Value);
             }
 
             context.Update(endUser);
@@ -1021,6 +1024,12 @@ public class EndUserSubscriptionService(
         };
 
         return validEventNames.Contains(webhookEvent.EventName);
+    }
+
+
+    private DateTime? ConvertResumeAtToPauseEndDate(DateTime? resumeAt)
+    {
+        return resumeAt?.AddDays(-1);
     }
 
     #endregion
