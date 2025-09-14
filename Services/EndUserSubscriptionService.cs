@@ -977,10 +977,12 @@ public class EndUserSubscriptionService(
 
         if (!existingPause)
         {
+            var adminUser =
+                await context.Users.FirstOrDefaultAsync(x => x.NormalizedUserName == "admin@checkin.com".ToUpper());
             var pauseRecord = new SubscriptionPause
             {
                 CreatedAt = DateTime.UtcNow,
-                CreatedByUserId = "System-Webhook",
+                CreatedByUserId = adminUser.Id,
                 EndUserId = endUser.Id,
                 IsActive = true,
                 PauseStartDate = pauseStart,
