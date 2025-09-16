@@ -1,0 +1,384 @@
+﻿@model PadelPassCheckInSystem.Models.ViewModels.EndUserSubscriptionHistories.EndUserSubscriptionHistoryPaginatedViewModel
+@{
+    ViewData["Title"] = $"History for Subscription: {Model.SubscriptionName}";
+}
+
+@section Styles
+{
+    <style>
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .history-card {
+            transition: transform 0.2s ease-in-out;
+            border-left: 4px solid #dee2e6;
+        }
+
+        .history-card:hover {
+            transform: translateX(5px);
+            border-left-color: #007bff;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #007bff, #6c757d);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.8rem;
+            top: 1rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #007bff;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px #007bff;
+        }
+
+        .change-diff {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+        }
+
+        .diff-old {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .diff-new {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>
+            <i class="bi bi-clock-history"></i> Subscription History
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="@Url.Action("EndUserSubscriptions", "EndUserSubscriptions")">Subscriptions</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">History</li>
+            </ol>
+        </nav>
+    </div>
+    <div>
+        <div class="text-muted small mb-2">
+            <i class="bi bi-clock"></i> Current
+            Time: @KSADateTimeExtensions.GetKSANow().ToString("yyyy-MM-dd HH:mm:ss") KSA
+        </div>
+        <a href="@Url.Action("EndUserSubscriptions", "EndUserSubscriptions")" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Subscriptions
+        </a>
+    </div>
+</div>
+
+<!-- Subscription Info Card -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">
+            <i class="bi bi-file-earmark-text"></i> Subscription Information
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="bi bi-person-circle"></i> End User</h6>
+                <p class="mb-1"><strong>@Model.EndUserName</strong></p>
+                <p class="text-muted small">@Model.EndUserPhoneNumber</p>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="bi bi-bookmark"></i> Subscription Details</h6>
+                <p class="mb-1"><strong>@Model.SubscriptionName</strong></p>
+                <p class="text-muted small">
+                    Code: @Model.SubscriptionCode<br>
+                    <a href="https://platform.rekaz.io/subscriptions/view/@Model.RekazId" target="_blank"
+                       class="text-decoration-none">
+                        <i class="bi bi-box-arrow-up-right"></i> View in Rekaz
+                        (ID: @Model.RekazId.ToString().Substring(0, 8)...)
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- History Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-light text-center">
+            <div class="card-body">
+                <h5 class="card-title">Total Changes</h5>
+                <h2 class="text-primary">@Model.History.TotalItems</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light text-center">
+            <div class="card-body">
+                <h5 class="card-title">Webhook Events</h5>
+                <h2 class="text-info">@Model.History.Items.Count(h => h.EventName == "WebhookEvent")</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light text-center">
+            <div class="card-body">
+                <h5 class="card-title">Sync Updates</h5>
+                <h2 class="text-success">@Model.History.Items.Count(h => h.EventName == "SyncRekazAsync")</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light text-center">
+            <div class="card-body">
+                <h5 class="card-title">Recent Changes</h5>
+                <h2 class="text-warning">@Model.History.Items.Count(h => h.CreatedAt >= DateTime.UtcNow.AddDays(-7))</h2>
+                <small class="text-muted">Last 7 days</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- History Timeline -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="card-title mb-0">
+                <i class="bi bi-list-ul"></i> Change History
+            </h6>
+            @if (Model.History.TotalItems > 0)
+            {
+                <div class="text-muted small">
+                    Showing @Model.History.StartIndex - @Model.History.EndIndex of @Model.History.TotalItems changes
+                </div>
+            }
+        </div>
+    </div>
+    <div class="card-body">
+        @if (Model.History.Items.Any())
+        {
+            <div class="timeline">
+                @foreach (var historyItem in Model.History.Items)
+                {
+                    <div class="timeline-item">
+                        <div class="p-3">
+                            <!-- Header -->
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h6 class="mb-1">
+                                        @if (historyItem.EventName == "WebhookEvent")
+                                        {
+                                            <i class="bi bi-webhook text-info"></i>
+                                            <span class="badge bg-info">Webhook Event</span>
+                                        }
+                                        else if (historyItem.EventName == "SyncRekazAsync")
+                                        {
+                                            <i class="bi bi-cloud-arrow-down text-success"></i>
+                                            <span class="badge bg-success">Sync Update</span>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-gear text-secondary"></i>
+                                            <span class="badge bg-secondary">@historyItem.EventName</span>
+                                        }
+                                    </h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar"></i> @historyItem.CreatedAt.ToKSATime().ToString("MMM dd, yyyy 'at' HH:mm:ss") KSA
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    @{
+                                        var badgeClass = historyItem.Status.GetBadgeClass();
+                                    }
+                                    <span class="badge @badgeClass status-badge">
+                                        @historyItem.Status
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Change Reason -->
+                            @if (!string.IsNullOrWhiteSpace(historyItem.ChangeReason))
+                            {
+                                <div class="alert alert-light border-start border-primary border-3 mb-3">
+                                    <i class="bi bi-info-circle text-primary"></i>
+                                    <strong>Change Reason:</strong> @historyItem.ChangeReason
+                                </div>
+                            }
+
+                            <!-- Subscription Details at this point in time -->
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6><i class="bi bi-calendar-range"></i> Period</h6>
+                                    <p class="small mb-2">
+                                        <strong>Start:</strong> @historyItem.StartDate.ToKSATime().ToString("MMM dd, yyyy")<br>
+                                        <strong>End:</strong> @historyItem.EndDate.ToKSATime().ToString("MMM dd, yyyy")
+                                    </p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6><i class="bi bi-currency-dollar"></i> Pricing</h6>
+                                    <p class="small mb-2">
+                                        <strong>Price:</strong> @historyItem.Price.ToString("C")<br>
+                                        @if (historyItem.Discount > 0)
+                                        {
+                                            <strong>Discount:</strong>
+                                            <span class="text-success">-@historyItem.Discount.ToString("C")</span>
+                                        }
+                                    </p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6><i class="bi bi-pause-circle"></i> Pause Status</h6>
+                                    @if (historyItem.IsPaused)
+                                    {
+                                        <p class="small mb-2 text-warning">
+                                            <i class="bi bi-pause-fill"></i> <strong>Paused</strong><br>
+                                            @if (historyItem.PausedAt.HasValue)
+                                            {
+                                                <span>Since: @historyItem.PausedAt.Value.ToKSATime().ToString("MMM dd, yyyy")</span>
+                                                <br>
+                                            }
+                                            @if (historyItem.ResumedAt.HasValue)
+                                            {
+                                                <span>Resume: @historyItem.ResumedAt.Value.ToKSATime().ToString("MMM dd, yyyy")</span>
+                                            }
+                                        </p>
+                                    }
+                                    else
+                                    {
+                                        <p class="small mb-2 text-muted">
+                                            <i class="bi bi-play-fill"></i> Active
+                                        </p>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Additional Details -->
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <small class="text-muted">
+                                        <strong>Name:</strong> @historyItem.Name<br>
+                                        <strong>Code:</strong> @(historyItem.Code ?? "N/A")
+                                    </small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">
+                                        <strong>Rekaz ID:</strong>
+                                        <a href="https://platform.rekaz.io/subscriptions/view/@historyItem.RekazId"
+                                           target="_blank" class="text-decoration-none">
+                                            @historyItem.RekazId.ToString().Substring(0, 8)...
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Pagination -->
+            @if (Model.History.TotalPages > 1)
+            {
+                @await Html.PartialAsync("~/Views/Admin/EndUserSubscriptions/_SubscriptionHistoryPagination.cshtml", Model)
+            }
+        }
+        else
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-clock-history fs-1 mb-3"></i>
+                <h5>No History Found</h5>
+                <p>This subscription doesn't have any recorded changes yet.</p>
+                <a href="@Url.Action("EndUserSubscriptions", "EndUserSubscriptions")" class="btn btn-primary">
+                    <i class="bi bi-arrow-left"></i> Back to Subscriptions
+                </a>
+            </div>
+        }
+
+        @if (Model.History.Items.Any())
+        {
+            <div class="mt-3 text-muted text-center">
+                <small>
+                    <i class="bi bi-info-circle"></i>
+                    Showing @Model.History.StartIndex - @Model.History.EndIndex of @Model.History.TotalItems history
+                    record(s).
+                    All dates displayed in KSA Time (UTC+3).
+                </small>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+
+    public string GetPageUrl(
+        int page)
+    {
+        var routeValues = new RouteValueDictionary
+        {
+            ["subscriptionId"] = Model.SubscriptionId,
+            ["page"] = page,
+            ["pageSize"] = Model.History.PageSize
+        };
+
+        return Url.Action("SubscriptionHistory", "EndUserSubscriptions", routeValues);
+    }
+
+}
+
+@section Scripts {
+    <script>
+        // Add any JavaScript functionality here if needed
+        document.addEventListener('DOMContentLoaded', function () {
+            // Optional: Add animation effects or interactive features
+            const timelineItems = document.querySelectorAll('.timeline-item');
+
+            // Add fade-in animation on scroll (optional)
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+
+            timelineItems.forEach(item => {
+                item.style.opacity = '0.7';
+                item.style.transform = 'translateY(20px)';
+                item.style.transition = 'opacity 0.5s, transform 0.5s';
+                observer.observe(item);
+            });
+        });
+    </script>
+}

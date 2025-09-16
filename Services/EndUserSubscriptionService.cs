@@ -126,52 +126,76 @@ public class EndUserSubscriptionService(
     }
 
     private async Task UpsertSubscription(
-        ProcessedSubscription processedSub,
-        int endUserId)
+    ProcessedSubscription processedSub,
+    int endUserId)
+{
+    var dbSub = await context.Set<EndUserSubscription>()
+        .FirstOrDefaultAsync(x => x.RekazId == processedSub.RekazId);
+
+    if (dbSub is null)
     {
-        var dbSub = await context.Set<EndUserSubscription>()
-            .FirstOrDefaultAsync(x => x.RekazId == processedSub.RekazId);
-
-        if (dbSub is null)
+        // Create new subscription record
+        dbSub = new EndUserSubscription
         {
-            // Create new subscription record
-            dbSub = new EndUserSubscription
-            {
-                RekazId = processedSub.RekazId,
-                EndUserId = endUserId,
-                StartDate = processedSub.StartDate,
-                EndDate = processedSub.EndDate,
-                Status = processedSub.Status,
-                Name = processedSub.Name,
-                Price = processedSub.Price,
-                Discount = processedSub.Discount,
-                IsPaused = processedSub.IsPaused,
-                PausedAt = processedSub.PausedAt,
-                ResumedAt = processedSub.ResumedAt,
-                Code = processedSub.Code
-            };
+            RekazId = processedSub.RekazId,
+            EndUserId = endUserId,
+            StartDate = processedSub.StartDate,
+            EndDate = processedSub.EndDate,
+            Status = processedSub.Status,
+            Name = processedSub.Name,
+            Price = processedSub.Price,
+            Discount = processedSub.Discount,
+            IsPaused = processedSub.IsPaused,
+            PausedAt = processedSub.PausedAt,
+            ResumedAt = processedSub.ResumedAt,
+            Code = processedSub.Code,
+            CreatedAt = DateTime.UtcNow
+        };
 
-            context.Add(dbSub);
-        }
-        else
-        {
-            // Update existing subscription record
-            dbSub.StartDate = processedSub.StartDate;
-            dbSub.EndDate = processedSub.EndDate;
-            dbSub.Status = processedSub.Status;
-            dbSub.Name = processedSub.Name;
-            dbSub.Price = processedSub.Price;
-            dbSub.Discount = processedSub.Discount;
-            dbSub.IsPaused = processedSub.IsPaused;
-            dbSub.PausedAt = processedSub.PausedAt;
-            dbSub.ResumedAt = processedSub.ResumedAt;
-            dbSub.Code = processedSub.Code;
+        // Add initial history entry
+        dbSub.AddHistory("SyncRekazAsync", "Initial subscription creation from Rekaz sync");
 
-            context.Update(dbSub);
-        }
-
-        await context.SaveChangesAsync();
+        context.Add(dbSub);
     }
+    else
+    {
+        // Check if there are actual changes before adding history
+        bool hasChanges = 
+            dbSub.StartDate != processedSub.StartDate ||
+            dbSub.EndDate != processedSub.EndDate ||
+            dbSub.Status != processedSub.Status ||
+            dbSub.Name != processedSub.Name ||
+            dbSub.Price != processedSub.Price ||
+            dbSub.Discount != processedSub.Discount ||
+            dbSub.IsPaused != processedSub.IsPaused ||
+            dbSub.PausedAt != processedSub.PausedAt ||
+            dbSub.ResumedAt != processedSub.ResumedAt ||
+            dbSub.Code != processedSub.Code;
+
+        if (hasChanges)
+        {
+            // Add history before updating
+            dbSub.AddHistory("SyncRekazAsync", "Updated from Rekaz sync");
+        }
+
+        // Update existing subscription record
+        dbSub.StartDate = processedSub.StartDate;
+        dbSub.EndDate = processedSub.EndDate;
+        dbSub.Status = processedSub.Status;
+        dbSub.Name = processedSub.Name;
+        dbSub.Price = processedSub.Price;
+        dbSub.Discount = processedSub.Discount;
+        dbSub.IsPaused = processedSub.IsPaused;
+        dbSub.PausedAt = processedSub.PausedAt;
+        dbSub.ResumedAt = processedSub.ResumedAt;
+        dbSub.Code = processedSub.Code;
+        dbSub.LastModificationDate = DateTime.UtcNow;
+
+        context.Update(dbSub);
+    }
+
+    await context.SaveChangesAsync();
+}
 
     private async Task UpdateEndUserSubscriptionStatus(
         EndUser endUser,
@@ -811,66 +835,85 @@ public class EndUserSubscriptionService(
     }
 
     private async Task UpsertSubscriptionRecord(
-        int endUserId,
-        WebhookSubscriptionData data,
-        SubscriptionStatus status,
-        DateTime eventTime)
+    int endUserId,
+    WebhookSubscriptionData data,
+    SubscriptionStatus status,
+    DateTime eventTime)
+{
+    var startUtc = NormalizeDate(data.StartDate).EnsureUtc();
+    var endUtc = NormalizeDate(data.EndDate).EnsureUtc();
+    var pausedAtUtc = data.PausedAt?.EnsureUtc();
+    var resumeAtUtc = data.ResumeAt?.EnsureUtc();
+
+    var dbSub = await context.Set<EndUserSubscription>()
+        .FirstOrDefaultAsync(x => x.RekazId == data.Id);
+
+    var totalAmount = data.Price - data.Discount;
+
+    if (dbSub == null)
     {
-        var startUtc = NormalizeDate(data.StartDate)
-            .EnsureUtc();
-        var endUtc = NormalizeDate(data.EndDate)
-            .EnsureUtc();
-        var pausedAtUtc = data.PausedAt?.EnsureUtc();
-        var resumeAtUtc = data.ResumeAt?.EnsureUtc();
-
-        var dbSub = await context.Set<EndUserSubscription>()
-            .FirstOrDefaultAsync(x => x.RekazId == data.Id);
-
-        var totalAmount = data.Price - data.Discount;
-
-        if (dbSub == null)
+        dbSub = new EndUserSubscription
         {
-            // TODO: add check if there is overlap, and send a notification
-            dbSub = new EndUserSubscription
-            {
-                RekazId = data.Id,
-                EndUserId = endUserId,
-                StartDate = startUtc,
-                EndDate = endUtc,
-                Status = status,
-                Name = data.Name ?? "Unknown Subscription",
-                Price = totalAmount,
-                Discount = data.Discount,
-                IsPaused = status == SubscriptionStatus.Paused,
-                PausedAt = pausedAtUtc,
-                ResumedAt = resumeAtUtc,
-                Code = data.Code,
-                CreatedAt = DateTime.UtcNow
-            };
+            RekazId = data.Id,
+            EndUserId = endUserId,
+            StartDate = startUtc,
+            EndDate = endUtc,
+            Status = status,
+            Name = data.Name ?? "Unknown Subscription",
+            Price = totalAmount,
+            Discount = data.Discount,
+            IsPaused = status == SubscriptionStatus.Paused,
+            PausedAt = pausedAtUtc,
+            ResumedAt = resumeAtUtc,
+            Code = data.Code,
+            CreatedAt = DateTime.UtcNow
+        };
 
-            context.Add(dbSub);
-        }
-        else
-        {
-            dbSub.StartDate = startUtc;
-            dbSub.EndDate = endUtc;
-            dbSub.Status = status;
-            dbSub.Name = data.Name ?? dbSub.Name;
-            dbSub.Price = totalAmount;
-            dbSub.Discount = data.Discount;
-            dbSub.IsPaused = status == SubscriptionStatus.Paused;
-            dbSub.PausedAt = pausedAtUtc;
-            dbSub.ResumedAt = resumeAtUtc;
-            dbSub.Code = data.Code;
-            dbSub.LastModificationDate = DateTime.UtcNow;
-            dbSub.TransferredDate = status == SubscriptionStatus.Transferred ? DateTime.UtcNow : null;
-            dbSub.TransferredToId = status == SubscriptionStatus.Transferred ? data.ToCustomer?.Id : null;
+        // Add initial history entry from webhook
+        dbSub.AddHistory("WebhookEvent", $"Created from webhook event");
 
-            context.Update(dbSub);
-        }
-
-        await context.SaveChangesAsync();
+        context.Add(dbSub);
     }
+    else
+    {
+        // Check if there are actual changes before adding history
+        bool hasChanges = 
+            dbSub.StartDate != startUtc ||
+            dbSub.EndDate != endUtc ||
+            dbSub.Status != status ||
+            dbSub.Name != (data.Name ?? dbSub.Name) ||
+            dbSub.Price != totalAmount ||
+            dbSub.Discount != data.Discount ||
+            dbSub.IsPaused != (status == SubscriptionStatus.Paused) ||
+            dbSub.PausedAt != pausedAtUtc ||
+            dbSub.ResumedAt != resumeAtUtc ||
+            dbSub.Code != data.Code;
+
+        if (hasChanges)
+        {
+            // Add history before updating
+            dbSub.AddHistory("WebhookEvent", $"Updated from webhook event - Status: {status}");
+        }
+
+        dbSub.StartDate = startUtc;
+        dbSub.EndDate = endUtc;
+        dbSub.Status = status;
+        dbSub.Name = data.Name ?? dbSub.Name;
+        dbSub.Price = totalAmount;
+        dbSub.Discount = data.Discount;
+        dbSub.IsPaused = status == SubscriptionStatus.Paused;
+        dbSub.PausedAt = pausedAtUtc;
+        dbSub.ResumedAt = resumeAtUtc;
+        dbSub.Code = data.Code;
+        dbSub.LastModificationDate = DateTime.UtcNow;
+        dbSub.TransferredDate = status == SubscriptionStatus.Transferred ? DateTime.UtcNow : null;
+        dbSub.TransferredToId = status == SubscriptionStatus.Transferred ? data.ToCustomer?.Id : null;
+
+        context.Update(dbSub);
+    }
+
+    await context.SaveChangesAsync();
+}
 
     private bool IsUserCurrentSubscription(
         EndUser endUser,

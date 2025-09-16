@@ -2,10 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Data;
-using PadelPassCheckInSystem.Extensions;
 using PadelPassCheckInSystem.Integration.Rekaz.Enums;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
+using PadelPassCheckInSystem.Models.ViewModels.EndUserSubscriptionHistories;
 
 namespace PadelPassCheckInSystem.Controllers.EndUsers;
 
@@ -43,6 +43,65 @@ public class EndUserSubscriptionsController : Controller
             _logger.LogError(ex, "Error loading end user subscriptions");
             TempData["Error"] = "An error occurred while loading subscriptions.";
             return RedirectToAction("EndUsers", "EndUser");
+        }
+    }
+
+    public async Task<IActionResult> SubscriptionHistory(
+        int subscriptionId,
+        int page = 1,
+        int pageSize = 20)
+    {
+        try
+        {
+            // Get the subscription with end user details
+            var subscription = await _context.Set<EndUserSubscription>()
+                .Include(s => s.EndUser)
+                .FirstOrDefaultAsync(s => s.Id == subscriptionId);
+
+            if (subscription == null)
+            {
+                TempData["Error"] = "Subscription not found.";
+                return RedirectToAction("EndUserSubscriptions");
+            }
+
+            // Get history records
+            var historyQuery = _context.Set<EndUserSubscriptionHistory>()
+                .Where(h => h.EndUserSubscriptionId == subscriptionId)
+                .OrderByDescending(h => h.CreatedAt);
+
+            var totalItems = await historyQuery.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+            var historyItems = await historyQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var viewModel = new EndUserSubscriptionHistoryPaginatedViewModel
+            {
+                History = new PaginatedResult<EndUserSubscriptionHistory>
+                {
+                    Items = historyItems,
+                    CurrentPage = page,
+                    TotalPages = totalPages,
+                    TotalItems = totalItems,
+                    PageSize = pageSize
+                },
+                SubscriptionId = subscriptionId,
+                SubscriptionName = subscription.Name,
+                SubscriptionCode = subscription.Code,
+                RekazId = subscription.RekazId,
+                EndUserName = subscription.EndUser.Name,
+                EndUserPhoneNumber = subscription.EndUser.PhoneNumber
+            };
+
+            return View("~/Views/Admin/EndUserSubscriptions/History.cshtml", viewModel);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading subscription history for subscription {SubscriptionId}", subscriptionId);
+            TempData["Error"] = "An error occurred while loading subscription history.";
+            return RedirectToAction("EndUserSubscriptions");
         }
     }
 

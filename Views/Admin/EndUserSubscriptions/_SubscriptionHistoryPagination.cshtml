@@ -1,0 +1,184 @@
+﻿@model PadelPassCheckInSystem.Models.ViewModels.EndUserSubscriptionHistories.EndUserSubscriptionHistoryPaginatedViewModel
+
+@functions {
+    public string GetPageUrl(int page)
+    {
+        var routeValues = new RouteValueDictionary
+        {
+            ["subscriptionId"] = Model.SubscriptionId,
+            ["page"] = page,
+            ["pageSize"] = Model.History.PageSize
+        };
+
+        return Url.Action("SubscriptionHistory", "EndUserSubscriptions", routeValues);
+    }
+}
+
+<!-- Pagination Controls -->
+@if (Model.History.TotalPages > 1)
+{
+    <nav aria-label="Subscription history pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <!-- First Page -->
+            @if (Model.History.CurrentPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(1)" title="First page">
+                        <i class="bi bi-chevron-double-left"></i>
+                        <span class="visually-hidden">First</span>
+                    </a>
+                </li>
+            }
+
+            <!-- Previous Page -->
+            @if (Model.History.HasPreviousPage)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(Model.History.CurrentPage - 1)" title="Previous page">
+                        <i class="bi bi-chevron-left"></i>
+                        <span class="visually-hidden">Previous</span>
+                    </a>
+                </li>
+            }
+
+            <!-- Page Numbers -->
+            @{
+                var startPage = Math.Max(1, Model.History.CurrentPage - 2);
+                var endPage = Math.Min(Model.History.TotalPages, Model.History.CurrentPage + 2);
+            }
+
+            @if (startPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(1)">1</a>
+                </li>
+                @if (startPage > 2)
+                {
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                }
+            }
+
+            @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+            {
+                <li class="page-item @(pageNumber == Model.History.CurrentPage ? "active" : "")">
+                    <a class="page-link" href="@GetPageUrl(pageNumber)">
+                        @pageNumber
+                        @if (pageNumber == Model.History.CurrentPage)
+                        {
+                            <span class="visually-hidden">(current)</span>
+                        }
+                    </a>
+                </li>
+            }
+
+            @if (endPage < Model.History.TotalPages)
+            {
+                @if (endPage < Model.History.TotalPages - 1)
+                {
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                }
+
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(Model.History.TotalPages)">@Model.History.TotalPages</a>
+                </li>
+            }
+
+            <!-- Next Page -->
+            @if (Model.History.HasNextPage)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(Model.History.CurrentPage + 1)" title="Next page">
+                        <i class="bi bi-chevron-right"></i>
+                        <span class="visually-hidden">Next</span>
+                    </a>
+                </li>
+            }
+
+            <!-- Last Page -->
+            @if (Model.History.CurrentPage < Model.History.TotalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link" href="@GetPageUrl(Model.History.TotalPages)" title="Last page">
+                        <i class="bi bi-chevron-double-right"></i>
+                        <span class="visually-hidden">Last</span>
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+
+    <!-- Page Information -->
+    <div class="text-center mt-2">
+        <small class="text-muted">
+            Page @Model.History.CurrentPage of @Model.History.TotalPages 
+            (@Model.History.TotalItems total changes)
+        </small>
+    </div>
+}
+
+<!-- Page Size Selector -->
+@if (Model.History.TotalItems > 20)
+{
+    <div class="text-center mt-3">
+        <div class="d-inline-flex align-items-center gap-2">
+            <label class="form-label me-2 mb-0" for="historySizeSelect">Changes per page:</label>
+            <select class="form-select form-select-sm" id="historySizeSelect" style="width: auto;" onchange="changeHistoryPageSize(this.value)">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+    </div>
+}
+
+<!-- Navigation Summary -->
+@if (Model.History.Items.Any())
+{
+    <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+        <div class="text-muted small">
+            <i class="bi bi-info-circle"></i>
+            Showing entries @Model.History.StartIndex - @Model.History.EndIndex of @Model.History.TotalItems
+        </div>
+        
+        @if (Model.History.TotalPages > 1)
+        {
+            <div class="text-muted small">
+                <i class="bi bi-collection"></i>
+                @Model.History.TotalPages total pages
+            </div>
+        }
+    </div>
+}
+
+<script>
+    function changeHistoryPageSize(pageSize) {
+        const url = new URL(window.location);
+        url.searchParams.set('pageSize', pageSize);
+        url.searchParams.set('page', '1'); // Reset to first page when changing page size
+        window.location.href = url.toString();
+    }
+
+    function jumpToPage(pageNumber) {
+        if (pageNumber && pageNumber !== '') {
+            const url = new URL(window.location);
+            url.searchParams.set('page', pageNumber);
+            window.location.href = url.toString();
+        }
+    }
+
+    // Initialize page selector when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function () {
+        const quickPageSelect = document.getElementById('quickPageSelect');
+        if (quickPageSelect) {
+            // Reset the "Select page..." option if user navigated back
+            if (quickPageSelect.value === '@Model.History.CurrentPage') {
+                quickPageSelect.selectedIndex = 0; // Reset to "Select page..."
+            }
+        }
+    });
+</script>

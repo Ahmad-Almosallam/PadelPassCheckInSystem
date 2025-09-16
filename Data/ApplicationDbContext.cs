@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PadelPassCheckInSystem.Models.Entities;
-using PadelPassCheckInSystem.Shared;
 
 namespace PadelPassCheckInSystem.Data
 {
@@ -21,6 +20,7 @@ namespace PadelPassCheckInSystem.Data
         public DbSet<PlaytomicIntegration> PlaytomicIntegrations { get; set; }
         public DbSet<BranchCourt> BranchCourts { get; set; }
         public DbSet<EndUserSubscription> EndUserSubscriptions { get; set; }
+        public DbSet<EndUserSubscriptionHistory> EndUserSubscriptionHistories { get; set; }
         public DbSet<WebhookEventLog> WebhookEventLogs { get; set; }
 
         protected override void OnModelCreating(
@@ -45,7 +45,6 @@ namespace PadelPassCheckInSystem.Data
             builder.Entity<EndUser>()
                 .Property(x => x.IsStoppedByWarning)
                 .HasDefaultValue(false);
-
 
             // Unique constraint on EndUser phone number
             builder.Entity<EndUser>()
@@ -105,11 +104,9 @@ namespace PadelPassCheckInSystem.Data
                 .HasDatabaseName("IX_CheckIn_Branch_DateTime");
 
             // Configure decimal precision for time-related calculations
-
             builder.Entity<CheckIn>()
                 .Property(c => c.PlayDuration)
                 .HasColumnType("time");
-
 
             #region BranchCourts
 
@@ -129,6 +126,27 @@ namespace PadelPassCheckInSystem.Data
                 .WithMany(bc => bc.CheckIns)
                 .HasForeignKey(c => c.BranchCourtId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            #endregion
+
+            #region EndUserSubscriptionHistory
+
+            // EndUserSubscriptionHistory relationships
+            builder.Entity<EndUserSubscriptionHistory>()
+                .HasOne(esh => esh.EndUserSubscription)
+                .WithMany(eus => eus.History)
+                .HasForeignKey(esh => esh.EndUserSubscriptionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Index for subscription history queries
+            builder.Entity<EndUserSubscriptionHistory>()
+                .HasIndex(esh => new { esh.EndUserSubscriptionId, esh.CreatedAt })
+                .HasDatabaseName("IX_SubscriptionHistory_Subscription_Created");
+
+            // Index for event-based queries
+            builder.Entity<EndUserSubscriptionHistory>()
+                .HasIndex(esh => new { esh.RekazId, esh.EventName, esh.CreatedAt })
+                .HasDatabaseName("IX_SubscriptionHistory_Rekaz_Event_Created");
 
             #endregion
         }
