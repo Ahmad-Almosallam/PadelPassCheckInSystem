@@ -9,24 +9,46 @@ namespace PadelPassCheckInSystem.Services
 {
     public interface ISubscriptionPauseService
     {
-        Task<(bool Success, string Message)> PauseSubscriptionAsync(int endUserId, DateTime pauseStartDate, int pauseDays, string reason, string createdByUserId);
-        Task<(bool Success, string Message)> UnpauseSubscriptionAsync(int endUserId, string createdByUserId);
-        Task<List<SubscriptionPauseHistoryViewModel>> GetPauseHistoryAsync(int endUserId);
+        Task<(bool Success, string Message)> PauseSubscriptionAsync(
+            int endUserId,
+            DateTime pauseStartDate,
+            int pauseDays,
+            string reason,
+            string createdByUserId);
+
+        Task<(bool Success, string Message)> UnpauseSubscriptionAsync(
+            int endUserId,
+            string createdByUserId,
+            DateTime? unpauseDate = null);
+
+        Task<List<SubscriptionPauseHistoryViewModel>> GetPauseHistoryAsync(
+            int endUserId);
+
         Task<List<SubscriptionPauseHistoryViewModel>> GetAllPauseHistoryAsync();
-        Task<bool> IsSubscriptionCurrentlyPausedAsync(int endUserId);
-        Task<DateTime> GetEffectiveSubscriptionEndDateAsync(int endUserId);
+
+        Task<bool> IsSubscriptionCurrentlyPausedAsync(
+            int endUserId);
+
+        Task<DateTime> GetEffectiveSubscriptionEndDateAsync(
+            int endUserId);
     }
 
     public class SubscriptionPauseService : ISubscriptionPauseService
     {
         private readonly ApplicationDbContext _context;
 
-        public SubscriptionPauseService(ApplicationDbContext context)
+        public SubscriptionPauseService(
+            ApplicationDbContext context)
         {
             _context = context;
         }
 
-        public async Task<(bool Success, string Message)> PauseSubscriptionAsync(int endUserId, DateTime pauseStartDate, int pauseDays, string reason, string createdByUserId)
+        public async Task<(bool Success, string Message)> PauseSubscriptionAsync(
+            int endUserId,
+            DateTime pauseStartDate,
+            int pauseDays,
+            string reason,
+            string createdByUserId)
         {
             var endUser = await _context.EndUsers.FindAsync(endUserId);
             if (endUser == null)
@@ -40,9 +62,11 @@ namespace PadelPassCheckInSystem.Services
             }
 
             // Use KSA time for all date validations
-            var nowKSA = KSADateTimeExtensions.GetKSANow().Date;
+            var nowKSA = KSADateTimeExtensions.GetKSANow()
+                .Date;
             var pauseStartKSA = pauseStartDate.Date;
-            var subscriptionEndKSA = endUser.SubscriptionEndDate.ToKSATime().Date;
+            var subscriptionEndKSA = endUser.SubscriptionEndDate.ToKSATime()
+                .Date;
 
             // Validate pause start date using KSA time
             if (pauseStartKSA < nowKSA)
@@ -56,11 +80,22 @@ namespace PadelPassCheckInSystem.Services
                 return (false, "Pause start date is after subscription end date");
             }
 
-            var pauseEndDate = pauseStartDate.AddDays(pauseDays - 2); // -2 because we include the start day
+            var pauseEndDate = pauseStartDate.AddDays(pauseDays - 1); // -1 because we include the start day
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                var activePause = await _context.SubscriptionPauses
+                    .OrderByDescending(x => x.Id)
+                    .FirstOrDefaultAsync(sp => sp.EndUserId == endUserId && sp.IsActive);
+
+                if (activePause != null)
+                {
+                    // mark it as inactive if any (should not happen as we checked above, but just in case)
+                    activePause.IsActive = false;
+                }
+                
+                
                 // Create pause record (store in UTC)
                 var subscriptionPause = new SubscriptionPause
                 {
@@ -81,12 +116,14 @@ namespace PadelPassCheckInSystem.Services
                 endUser.CurrentPauseEndDate = pauseEndDate;
 
                 // Extend subscription end date by pause days
-                endUser.SubscriptionEndDate = endUser.SubscriptionEndDate.AddDays(pauseDays);
+                endUser.SubscriptionEndDate =
+                    endUser.SubscriptionEndDate.AddDays(pauseDays - 1); // -1 because the pause includes the start day
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return (true, $"Subscription paused for {pauseDays} days from {pauseStartKSA:MMM dd, yyyy} to {pauseEndDate.Date:MMM dd, yyyy}");
+                return (true,
+                    $"Subscription paused for {pauseDays} days from {pauseStartKSA:MMM dd, yyyy} to {pauseEndDate.Date:MMM dd, yyyy}");
             }
             catch (Exception ex)
             {
@@ -95,7 +132,10 @@ namespace PadelPassCheckInSystem.Services
             }
         }
 
-        public async Task<(bool Success, string Message)> UnpauseSubscriptionAsync(int endUserId, string createdByUserId)
+        public async Task<(bool Success, string Message)> UnpauseSubscriptionAsync(
+            int endUserId,
+            string createdByUserId,
+            DateTime? unpauseDate = null)
         {
             var endUser = await _context.EndUsers.FindAsync(endUserId);
             if (endUser == null)
@@ -108,26 +148,45 @@ namespace PadelPassCheckInSystem.Services
                 return (false, "Subscription is not currently paused");
             }
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            // Use provided unpause date or default to today in KSA
+            var unpauseDateKSA = unpauseDate?.ToKSATime()
+                .Date ?? KSADateTimeExtensions.GetKSANow()
+                .Date;
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 // Mark current active pause as completed
                 var activePause = await _context.SubscriptionPauses
+                    .OrderByDescending(x => x.Id)
                     .FirstOrDefaultAsync(sp => sp.EndUserId == endUserId && sp.IsActive);
 
                 if (activePause != null)
                 {
-                    activePause.IsActive = false;
-                    
-                    // Calculate actual pause days used based on KSA time
-                    var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
-                    var pauseStartKSA = activePause.PauseStartDate.ToKSATime().Date;
-                    var pauseEndKSA = activePause.PauseEndDate.ToKSATime().Date;
-                    
+                    // Calculate actual pause days used based on unpause date
+                    var pauseStartKSA = activePause.PauseStartDate.ToKSATime()
+                        .Date;
+                    var pauseEndKSA = activePause.PauseEndDate.ToKSATime()
+                        .Date;
+
                     var actualPauseDays = 0;
-                    
-                    if (todayKSA >= pauseStartKSA && todayKSA <= pauseEndKSA || todayKSA > pauseEndKSA)
+
+                    if (unpauseDateKSA < pauseStartKSA)
                     {
+                        // Unpausing before pause even started - no days used
+                        actualPauseDays = 0;
+                    }
+                    else if (unpauseDateKSA >= pauseStartKSA && unpauseDateKSA <= pauseEndKSA)
+                    {
+                        // Unpausing during the pause period - calculate days used
+                        actualPauseDays = (int)(unpauseDateKSA - pauseStartKSA).TotalDays + 1;
+
+                        // Update the actual pause end date to the unpause date
+                        activePause.PauseEndDate = unpauseDateKSA.Date;
+                    }
+                    else // unpauseDateKSA > pauseEndKSA
+                    {
+                        // Unpausing after pause period ended - all days were used
                         actualPauseDays = activePause.PauseDays;
                     }
 
@@ -135,19 +194,37 @@ namespace PadelPassCheckInSystem.Services
                     var unusedPauseDays = activePause.PauseDays - actualPauseDays;
                     if (unusedPauseDays > 0)
                     {
+                        unusedPauseDays = unusedPauseDays == activePause.PauseDays ? unusedPauseDays - 1 : unusedPauseDays;
                         endUser.SubscriptionEndDate = endUser.SubscriptionEndDate.AddDays(-unusedPauseDays);
                     }
+
+
+                    if (activePause.PauseDays == actualPauseDays || actualPauseDays == 0)
+                    {
+                        activePause.IsActive = false;
+                    }
+
+                    // Store actual pause days used for history
+                    activePause.PauseDays = actualPauseDays;
                 }
 
                 // Update end user pause status
-                endUser.IsPaused = false;
-                endUser.CurrentPauseStartDate = null;
-                endUser.CurrentPauseEndDate = null;
+                if (activePause is { IsActive: false } or null)
+                {
+                    endUser.IsPaused = false;
+                    endUser.CurrentPauseStartDate = null;
+                    endUser.CurrentPauseEndDate = null;
+                }
+                else
+                {
+                    endUser.CurrentPauseStartDate = activePause.PauseStartDate;
+                    endUser.CurrentPauseEndDate = unpauseDateKSA.Date;
+                }
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return (true, "Subscription unpaused successfully");
+                return (true, $"Subscription unpaused successfully on {unpauseDateKSA:MMM dd, yyyy}");
             }
             catch (Exception ex)
             {
@@ -156,7 +233,8 @@ namespace PadelPassCheckInSystem.Services
             }
         }
 
-        public async Task<List<SubscriptionPauseHistoryViewModel>> GetPauseHistoryAsync(int endUserId)
+        public async Task<List<SubscriptionPauseHistoryViewModel>> GetPauseHistoryAsync(
+            int endUserId)
         {
             return await _context.SubscriptionPauses
                 .Include(sp => sp.CreatedByUser)
@@ -199,7 +277,8 @@ namespace PadelPassCheckInSystem.Services
                 .ToListAsync();
         }
 
-        public async Task<bool> IsSubscriptionCurrentlyPausedAsync(int endUserId)
+        public async Task<bool> IsSubscriptionCurrentlyPausedAsync(
+            int endUserId)
         {
             var endUser = await _context.EndUsers.FindAsync(endUserId);
             if (endUser == null || !endUser.IsPaused)
@@ -208,14 +287,18 @@ namespace PadelPassCheckInSystem.Services
             }
 
             // Use KSA time for comparison
-            var todayKSA = KSADateTimeExtensions.GetKSANow().Date;
-            var pauseStartKSA = endUser.CurrentPauseStartDate?.ToKSATime().Date;
-            var pauseEndKSA = endUser.CurrentPauseEndDate?.ToKSATime().Date;
-            
+            var todayKSA = KSADateTimeExtensions.GetKSANow()
+                .Date;
+            var pauseStartKSA = endUser.CurrentPauseStartDate?.ToKSATime()
+                .Date;
+            var pauseEndKSA = endUser.CurrentPauseEndDate?.ToKSATime()
+                .Date;
+
             return pauseStartKSA <= todayKSA && pauseEndKSA >= todayKSA;
         }
 
-        public async Task<DateTime> GetEffectiveSubscriptionEndDateAsync(int endUserId)
+        public async Task<DateTime> GetEffectiveSubscriptionEndDateAsync(
+            int endUserId)
         {
             var endUser = await _context.EndUsers.FindAsync(endUserId);
             if (endUser == null)

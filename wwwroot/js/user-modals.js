@@ -154,3 +154,117 @@ function downloadQR() {
     link.download = `QRCode_${memberId}.png`;
     link.click();
 }
+
+
+// Unpause subscription modal functions
+function showUnpauseModal(userId, userName, currentPauseEndDate) {
+    // Set modal fields
+    document.getElementById('unpauseEndUserId').value = userId;
+    document.getElementById('unpauseUserName').textContent = userName;
+    document.getElementById('unpauseDate').value = '';
+    document.getElementById('currentPauseEndDate').textContent = currentPauseEndDate ? new Date(currentPauseEndDate).toLocaleDateString() : 'N/A';
+    
+    // set min attribute to today and max attribute to currentPauseEndDate
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('unpauseDate').setAttribute('min', today);
+    if (currentPauseEndDate) {
+        const maxDate = new Date(currentPauseEndDate);
+        document.getElementById('unpauseDate').setAttribute('max', maxDate.toISOString().split('T')[0]);
+    }
+    
+    
+    new bootstrap.Modal(document.getElementById('unpauseModal')).show();
+}
+
+function submitUnpauseSubscription() {
+    const form = document.getElementById('unpauseSubscriptionForm');
+    const formData = new FormData(form);
+    
+    // Get the unpause date value
+    const unpauseDate = formData.get('unpauseDate');
+    
+    // If unpause date is provided, validate it
+    if (unpauseDate) {
+        const selectedDate = new Date(unpauseDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time for date comparison
+        
+        if (selectedDate > today.setFullYear(today.getFullYear() + 10)) {
+            showErrorAlert('Unpause date cannot be more than 10 years in the future.');
+            return;
+        }
+    }
+    
+    // Submit the form
+    fetch('/admin/UnpauseSubscription', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.text(); // Expecting redirect, not JSON
+    })
+    .then(() => {
+        bootstrap.Modal.getInstance(document.getElementById('unpauseModal')).hide();
+        showSuccessAlert('Subscription unpaused successfully!');
+        // Refresh the page to show updated status
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showErrorAlert('Error unpausing subscription. Please try again.');
+    });
+}
+
+// Utility functions for showing alerts
+function showSuccessAlert(message) {
+    // Create or update success alert
+    let alertDiv = document.getElementById('successAlert');
+    if (!alertDiv) {
+        alertDiv = document.createElement('div');
+        alertDiv.id = 'successAlert';
+        alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        document.body.appendChild(alertDiv);
+    }
+    
+    alertDiv.innerHTML = `
+        <i class="bi bi-check-circle-fill me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+        if (alertDiv && alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 4000);
+}
+
+function showErrorAlert(message) {
+    // Create or update error alert
+    let alertDiv = document.getElementById('errorAlert');
+    if (!alertDiv) {
+        alertDiv = document.createElement('div');
+        alertDiv.id = 'errorAlert';
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        document.body.appendChild(alertDiv);
+    }
+    
+    alertDiv.innerHTML = `
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Auto-hide after 6 seconds for errors
+    setTimeout(() => {
+        if (alertDiv && alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 6000);
+}

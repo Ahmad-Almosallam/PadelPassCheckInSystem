@@ -96,12 +96,13 @@ public class PauseSubscriptionController : Controller
 
     [HttpPost]
     public async Task<IActionResult> UnpauseSubscription(
-        int endUserId)
+        int endUserId, DateTime? unpauseDate = null)
     {
         var pauseService = HttpContext.RequestServices.GetRequiredService<ISubscriptionPauseService>();
         var currentUserId = _userManager.GetUserId(User);
 
-        var result = await pauseService.UnpauseSubscriptionAsync(endUserId, currentUserId);
+        // Use the provided unpause date or default to null (current date will be used in service)
+        var result = await pauseService.UnpauseSubscriptionAsync(endUserId, currentUserId, unpauseDate);
 
         if (result.Success)
         {
