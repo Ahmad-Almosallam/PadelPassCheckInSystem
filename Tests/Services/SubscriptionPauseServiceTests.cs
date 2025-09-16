@@ -447,7 +447,7 @@ namespace PadelPassCheckInSystem.Tests.Services
                 CreatedAt = DateTime.UtcNow
             };
             _context.EndUsers.Add(endUser);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             var pauseStartDate = new DateTime(2025, 9, 13); // Sep 13, 2025
             const int pauseDays = 10;

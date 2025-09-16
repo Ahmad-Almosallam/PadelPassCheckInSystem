@@ -80,11 +80,22 @@ namespace PadelPassCheckInSystem.Services
                 return (false, "Pause start date is after subscription end date");
             }
 
-            var pauseEndDate = pauseStartDate.AddDays(pauseDays - 2); // -2 because we include the start day
+            var pauseEndDate = pauseStartDate.AddDays(pauseDays - 1); // -1 because we include the start day
 
-            // using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                var activePause = await _context.SubscriptionPauses
+                    .OrderByDescending(x => x.Id)
+                    .FirstOrDefaultAsync(sp => sp.EndUserId == endUserId && sp.IsActive);
+
+                if (activePause != null)
+                {
+                    // mark it as inactive if any (should not happen as we checked above, but just in case)
+                    activePause.IsActive = false;
+                }
+                
+                
                 // Create pause record (store in UTC)
                 var subscriptionPause = new SubscriptionPause
                 {
@@ -105,17 +116,18 @@ namespace PadelPassCheckInSystem.Services
                 endUser.CurrentPauseEndDate = pauseEndDate;
 
                 // Extend subscription end date by pause days
-                endUser.SubscriptionEndDate = endUser.SubscriptionEndDate.AddDays(pauseDays);
+                endUser.SubscriptionEndDate =
+                    endUser.SubscriptionEndDate.AddDays(pauseDays - 1); // -1 because the pause includes the start day
 
                 await _context.SaveChangesAsync();
-                // await transaction.CommitAsync();
+                await transaction.CommitAsync();
 
                 return (true,
                     $"Subscription paused for {pauseDays} days from {pauseStartKSA:MMM dd, yyyy} to {pauseEndDate.Date:MMM dd, yyyy}");
             }
             catch (Exception ex)
             {
-                // await transaction.RollbackAsync();
+                await transaction.RollbackAsync();
                 return (false, $"Error pausing subscription: {ex.Message}");
             }
         }
@@ -141,17 +153,16 @@ namespace PadelPassCheckInSystem.Services
                 .Date ?? KSADateTimeExtensions.GetKSANow()
                 .Date;
 
-            // await using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
                 // Mark current active pause as completed
                 var activePause = await _context.SubscriptionPauses
+                    .OrderByDescending(x => x.Id)
                     .FirstOrDefaultAsync(sp => sp.EndUserId == endUserId && sp.IsActive);
 
                 if (activePause != null)
                 {
-                    activePause.IsActive = false;
-
                     // Calculate actual pause days used based on unpause date
                     var pauseStartKSA = activePause.PauseStartDate.ToKSATime()
                         .Date;
@@ -171,7 +182,7 @@ namespace PadelPassCheckInSystem.Services
                         actualPauseDays = (int)(unpauseDateKSA - pauseStartKSA).TotalDays + 1;
 
                         // Update the actual pause end date to the unpause date
-                        activePause.PauseEndDate = unpauseDateKSA.ToUTCFromKSA().Date;
+                        activePause.PauseEndDate = unpauseDateKSA.Date;
                     }
                     else // unpauseDateKSA > pauseEndKSA
                     {
@@ -183,7 +194,14 @@ namespace PadelPassCheckInSystem.Services
                     var unusedPauseDays = activePause.PauseDays - actualPauseDays;
                     if (unusedPauseDays > 0)
                     {
+                        unusedPauseDays = unusedPauseDays == activePause.PauseDays ? unusedPauseDays - 1 : unusedPauseDays;
                         endUser.SubscriptionEndDate = endUser.SubscriptionEndDate.AddDays(-unusedPauseDays);
+                    }
+
+
+                    if (activePause.PauseDays == actualPauseDays || actualPauseDays == 0)
+                    {
+                        activePause.IsActive = false;
                     }
 
                     // Store actual pause days used for history
@@ -191,18 +209,26 @@ namespace PadelPassCheckInSystem.Services
                 }
 
                 // Update end user pause status
-                endUser.IsPaused = false;
-                endUser.CurrentPauseStartDate = null;
-                endUser.CurrentPauseEndDate = null;
+                if (activePause is { IsActive: false } or null)
+                {
+                    endUser.IsPaused = false;
+                    endUser.CurrentPauseStartDate = null;
+                    endUser.CurrentPauseEndDate = null;
+                }
+                else
+                {
+                    endUser.CurrentPauseStartDate = activePause.PauseStartDate;
+                    endUser.CurrentPauseEndDate = unpauseDateKSA.Date;
+                }
 
                 await _context.SaveChangesAsync();
-                // await transaction.CommitAsync();
+                await transaction.CommitAsync();
 
                 return (true, $"Subscription unpaused successfully on {unpauseDateKSA:MMM dd, yyyy}");
             }
             catch (Exception ex)
             {
-                // await transaction.RollbackAsync();
+                await transaction.RollbackAsync();
                 return (false, $"Error unpausing subscription: {ex.Message}");
             }
         }
