@@ -117,7 +117,7 @@ namespace PadelPassCheckInSystem.Services
 
                 // Extend subscription end date by pause days
                 endUser.SubscriptionEndDate =
-                    endUser.SubscriptionEndDate.AddDays(pauseDays - 1); // -1 because the pause includes the start day
+                    endUser.SubscriptionEndDate.AddDays(pauseDays);
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
