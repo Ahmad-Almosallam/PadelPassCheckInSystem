@@ -46,7 +46,7 @@ public class CheckInBaseController : Controller
             branchId ??= user.BranchId;
         }
 
-        var query = FilterCheckInQuery(fromDate, toDate, branchId, phoneNumber);
+        var query = await FilterCheckInQuery(fromDate, toDate, branchId, phoneNumber);
 
         // Get total count for pagination
         var totalItems = await query.CountAsync();
@@ -95,7 +95,7 @@ public class CheckInBaseController : Controller
             branchId ??= user.BranchId;
         }
         
-        var query = FilterCheckInQuery(fromDate, toDate, branchId, phoneNumber);
+        var query = await FilterCheckInQuery(fromDate, toDate, branchId, phoneNumber);
 
         var checkIns = await query
             .ToListAsync();
@@ -107,24 +107,32 @@ public class CheckInBaseController : Controller
             $"CheckIns_{KSADateTimeExtensions.GetKSANow():yyyyMMdd_HHmmss}_KSA.xlsx");
     }
     
-    private IQueryable<CheckIn> FilterCheckInQuery(DateTime? fromDate, DateTime? toDate, int? branchId, string phoneNumber)
+    private async Task<IQueryable<CheckIn>> FilterCheckInQuery(DateTime? fromDate, DateTime? toDate, int? branchId, string phoneNumber)
     {
+        var timeZoneId = AppConstant.KsaTimeZoneId;
         var query = _context.CheckIns
             .Include(c => c.EndUser)
             .Include(c => c.Branch)
             .Include(x => x.BranchCourt)
+            .Include(x => x.EndUserSubscription)
             .AsQueryable();
+        
+        if (branchId.HasValue)
+        {
+            query = query.Where(c => c.BranchId == branchId.Value);
+            timeZoneId = (await _context.Branches.FindAsync(branchId.Value))?.TimeZoneId;
+        }
         
         if (fromDate.HasValue)
         {
-            var fromDateUtc = fromDate.Value.ToUTCFromKSA();
+            var fromDateUtc = fromDate.Value.ToUtc(timeZoneId);
             query = query.Where(c => c.CheckInDateTime >= fromDateUtc);
         }
 
         if (toDate.HasValue)
         {
             // Add one day and convert to get the end of the day in KSA
-            var toDateUtc = toDate.Value.ToUTCFromKSA();
+            var toDateUtc = toDate.Value.ToUtc(timeZoneId);
             query = query.Where(c => c.CheckInDateTime < toDateUtc);
         }
 
