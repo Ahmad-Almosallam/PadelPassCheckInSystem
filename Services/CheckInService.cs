@@ -37,7 +37,8 @@ public class CheckInService : ICheckInService
         }
 
         var currentActiveEndUserSub =
-            await _context.EndUserSubscriptions.FirstOrDefaultAsync(x => x.Status == SubscriptionStatus.Active);
+            await _context.EndUserSubscriptions.FirstOrDefaultAsync(x =>
+                x.Status == SubscriptionStatus.Active && x.EndUserId == endUser.Id);
 
         if (currentActiveEndUserSub == null)
         {
