@@ -33,11 +33,11 @@ namespace PadelPassCheckInSystem.Services
                 worksheet.Cell(row, 2).Value = checkIn.EndUser.PhoneNumber;
                 worksheet.Cell(row, 3).Value = checkIn.EndUserSubscription.Code;
                 worksheet.Cell(row, 4).Value = checkIn.Branch.Name;
-                worksheet.Cell(row, 5).Value = checkIn.CheckInDateTime.ToLocalTime(AppConstant.KsaTimeZoneId).ToString("yyyy-MM-dd");
-                worksheet.Cell(row, 6).Value = checkIn.CreatedAt.ToLocalTime(AppConstant.KsaTimeZoneId).ToString("HH:mm:ss");
+                worksheet.Cell(row, 4).Value = checkIn.CheckInDateTime.ToLocalTime(checkIn.Branch.TimeZoneId).ToString("yyyy-MM-dd");
+                worksheet.Cell(row, 5).Value = checkIn.CreatedAt.ToLocalTime(checkIn.Branch.TimeZoneId).ToString("HH:mm:ss");
                 worksheet.Cell(row, 7).Value = checkIn.BranchCourtId.HasValue ? checkIn.BranchCourt.CourtName : checkIn.CourtName;
                 worksheet.Cell(row, 8).Value = checkIn.PlayDuration;
-                worksheet.Cell(row, 9).Value = checkIn.PlayStartTime!.Value.ToLocalTime(AppConstant.KsaTimeZoneId).ToString("HH:mm:ss");
+                worksheet.Cell(row, 8).Value = checkIn.PlayStartTime!.Value.ToLocalTime(checkIn.Branch.TimeZoneId).ToString("HH:mm:ss");
                 worksheet.Cell(row, 10).Value = checkIn.PlayerAttended;
                 row++;
             }

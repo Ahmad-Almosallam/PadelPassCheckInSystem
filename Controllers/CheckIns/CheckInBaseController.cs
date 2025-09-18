@@ -7,7 +7,6 @@ using PadelPassCheckInSystem.Extensions;
 using PadelPassCheckInSystem.Models.Entities;
 using PadelPassCheckInSystem.Models.ViewModels;
 using PadelPassCheckInSystem.Services;
-using PadelPassCheckInSystem.Shared;
 
 namespace PadelPassCheckInSystem.Controllers.CheckIns;
 
@@ -41,51 +40,13 @@ public class CheckInBaseController : Controller
         int pageSize = 10)
     {
         // check if user is BranchUser and filter by branch
-        var timeZoneId = AppConstant.KsaTimeZoneId;
         if (User.IsInRole("BranchUser"))
         {
             var user = await _userManager.GetUserAsync(User);
             branchId ??= user.BranchId;
         }
 
-        var query = _context.CheckIns
-            .Include(c => c.EndUser)
-            .Include(c => c.Branch)
-            .Include(x => x.BranchCourt)
-            .Include(x => x.EndUserSubscription)
-            .AsQueryable();
-
-        if (branchId.HasValue)
-        {
-            query = query.Where(c => c.BranchId == branchId.Value);
-            timeZoneId = (await _context.Branches.FindAsync(branchId.Value))?.TimeZoneId;
-        }
-        
-        // Convert date filters to UTC for database query
-
-        if (fromDate.HasValue)
-        {
-            var fromDateUtc = fromDate.Value.ToUtc(timeZoneId);
-            query = query.Where(c => c.CheckInDateTime >= fromDateUtc);
-        }
-
-        if (toDate.HasValue)
-        {
-            // Add one day and convert to get the end of the day in KSA
-            var toDateUtc = toDate.Value.AddDays(1).ToUtc(timeZoneId);
-            query = query.Where(c => c.CheckInDateTime < toDateUtc);
-        }
-
-        
-
-        // Add phone number filter
-        if (!string.IsNullOrWhiteSpace(phoneNumber))
-        {
-            query = query.Where(c => c.EndUser.PhoneNumber.Contains(phoneNumber));
-        }
-
-        // Order the query before pagination
-        query = query.OrderByDescending(c => c.CreatedAt);
+        var query = await FilterCheckInQuery(fromDate, toDate, branchId, phoneNumber);
 
         // Get total count for pagination
         var totalItems = await query.CountAsync();
@@ -117,6 +78,8 @@ public class CheckInBaseController : Controller
         return View("~/Views/Admin/CheckIns.cshtml", viewModel);
     }
 
+    
+
     [HttpGet]
     [Authorize(Roles = "BranchUser,Admin,Finance")]
     public async Task<IActionResult> ExportCheckIns(
@@ -126,28 +89,40 @@ public class CheckInBaseController : Controller
         string phoneNumber)
     {
         // check if user is BranchUser and filter by branch
-        var timeZoneId = AppConstant.KsaTimeZoneId;
         if (User.IsInRole("BranchUser"))
         {
             var user = await _userManager.GetUserAsync(User);
             branchId ??= user.BranchId;
         }
+        
+        var query = await FilterCheckInQuery(fromDate, toDate, branchId, phoneNumber);
 
+        var checkIns = await query
+            .ToListAsync();
+
+        var excelData = _excelService.ExportCheckInsToExcel(checkIns);
+
+        return File(excelData,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"CheckIns_{KSADateTimeExtensions.GetKSANow():yyyyMMdd_HHmmss}_KSA.xlsx");
+    }
+    
+    private async Task<IQueryable<CheckIn>> FilterCheckInQuery(DateTime? fromDate, DateTime? toDate, int? branchId, string phoneNumber)
+    {
+        var timeZoneId = AppConstant.KsaTimeZoneId;
         var query = _context.CheckIns
             .Include(c => c.EndUser)
             .Include(c => c.Branch)
             .Include(x => x.BranchCourt)
             .Include(x => x.EndUserSubscription)
             .AsQueryable();
-
+        
         if (branchId.HasValue)
         {
             query = query.Where(c => c.BranchId == branchId.Value);
             timeZoneId = (await _context.Branches.FindAsync(branchId.Value))?.TimeZoneId;
         }
         
-        // Convert date filters to UTC for database query
-
         if (fromDate.HasValue)
         {
             var fromDateUtc = fromDate.Value.ToUtc(timeZoneId);
@@ -157,8 +132,13 @@ public class CheckInBaseController : Controller
         if (toDate.HasValue)
         {
             // Add one day and convert to get the end of the day in KSA
-            var toDateUtc = toDate.Value.AddDays(1).ToUtc(timeZoneId);
+            var toDateUtc = toDate.Value.ToUtc(timeZoneId);
             query = query.Where(c => c.CheckInDateTime < toDateUtc);
+        }
+
+        if (branchId.HasValue)
+        {
+            query = query.Where(c => c.BranchId == branchId.Value);
         }
 
         // Add phone number filter
@@ -167,14 +147,10 @@ public class CheckInBaseController : Controller
             query = query.Where(c => c.EndUser.PhoneNumber.Contains(phoneNumber));
         }
 
-        var checkIns = await query
-            .OrderByDescending(c => c.CheckInDateTime)
-            .ToListAsync();
-
-        var excelData = _excelService.ExportCheckInsToExcel(checkIns);
-
-        return File(excelData,
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            $"CheckIns_{KSADateTimeExtensions.GetKSANow():yyyyMMdd_HHmmss}_KSA.xlsx");
+        // Order the query before pagination
+        query = query.OrderByDescending(c => c.CreatedAt);
+        return query;
     }
+    
+    
 }

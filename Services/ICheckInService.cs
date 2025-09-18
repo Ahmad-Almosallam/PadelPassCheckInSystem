@@ -21,12 +21,6 @@ namespace PadelPassCheckInSystem.Services
             int checkInId,
             int? branchId = null);
 
-        Task<bool> HasCheckedInTodayAsync(
-            int endUserId);
-
-        Task<List<CheckIn>> GetPendingCourtAssignmentsAsync(
-            int branchId);
-
         Task<List<CheckIn>> GetTodayCheckInsWithCourtInfoAsync(
             int branchId);
 

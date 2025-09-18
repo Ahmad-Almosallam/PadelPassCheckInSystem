@@ -339,7 +339,12 @@
                                         <i class="bi bi-gear"></i> Actions
                                     </button>
                                     <ul class="dropdown-menu">
-
+                                        <li>
+                                            <a class="dropdown-item"
+                                               href="@Url.Action("SubscriptionHistory", "EndUserSubscriptions", new { subscriptionId = subscription.Id })">
+                                                <i class="bi bi-clock-history"></i> View History
+                                            </a>
+                                        </li>
                                         <li>
                                             <a class="dropdown-item"
                                                href="@Url.Action("EndUserSubscriptions", "EndUserSubscriptions", new { endUserId = subscription.EndUserId })">

@@ -158,14 +158,10 @@
                                     @if (user.IsPaused)
                                     {
                                         <li>
-                                            <form asp-action="UnpauseSubscription" asp-controller="PauseSubscription"
-                                                  method="post" style="display: inline;"
-                                                  onsubmit="return confirm('Are you sure you want to unpause this subscription?');">
-                                                <input type="hidden" name="endUserId" value="@user.Id"/>
-                                                <button type="submit" class="dropdown-item text-success">
-                                                    <i class="bi bi-play-circle"></i> Unpause Subscription
-                                                </button>
-                                            </form>
+                                            <button class="dropdown-item text-success"
+                                                    onclick="showUnpauseModal(@user.Id, '@user.Name', '@user.CurrentPauseEndDate')">
+                                                <i class="bi bi-play-circle"></i> Unpause Subscription
+                                            </button>
                                         </li>
                                     }
                                     else
