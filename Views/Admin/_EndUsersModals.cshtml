@@ -500,3 +500,59 @@
         </div>
     </div>
 </div>
+
+<!-- Unpause Subscription Modal -->
+<div class="modal fade" id="unpauseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-play-circle"></i> Unpause Subscription
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Note:</strong> You can specify a custom unpause date or leave it empty to unpause immediately (today).
+                </div>
+
+                <div class="mb-3">
+                    <h6>User Information</h6>
+                    <div class="bg-light p-3 rounded">
+                        <p class="mb-0"><strong>Name:</strong> <span id="unpauseUserName"></span></p>
+                        <p class="mb-0"><strong>Current Pause End Date:</strong> <span id="currentPauseEndDate"></span></p>
+                    </div>
+                </div>
+
+                <form id="unpauseSubscriptionForm" asp-action="UnpauseSubscription" asp-controller="PauseSubscription" method="post">
+                    <input type="hidden" id="unpauseEndUserId" name="endUserId"/>
+
+                    <div class="mb-3">
+                        <label for="unpauseDate" class="form-label">
+                            <i class="bi bi-calendar-event"></i> New Pause End Date (Optional)
+                        </label>
+                        <input type="date" id="unpauseDate" name="unpauseDate" class="form-control"
+                               min="2020-01-01" max="2030-12-31">
+                        <div class="form-text">
+                            Leave empty to unpause immediately. If specified, the subscription will be unpaused as of this date.
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Important:</strong> This will calculate the actual pause days used and adjust the subscription end date accordingly.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-success" onclick="submitUnpauseSubscription()">
+                    <i class="bi bi-play-circle"></i> Unpause Subscription
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

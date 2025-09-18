@@ -90,7 +90,7 @@
                 pauseEndDate.setDate(pauseEndDate.getDate() + pauseDays - 1);
 
                 const newEndDate = new Date(currentEndDate);
-                newEndDate.setDate(newEndDate.getDate() + pauseDays);
+                newEndDate.setDate(newEndDate.getDate() + pauseDays - 1);
 
                 document.getElementById('pausePeriod').textContent =
                     pauseStartDate.toLocaleDateString() + ' to ' + pauseEndDate.toLocaleDateString();
