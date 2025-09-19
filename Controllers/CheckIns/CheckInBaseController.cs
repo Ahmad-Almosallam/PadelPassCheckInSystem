@@ -125,14 +125,14 @@ public class CheckInBaseController : Controller
         
         if (fromDate.HasValue)
         {
-            var fromDateUtc = fromDate.Value.ToUtc(timeZoneId);
+            var fromDateUtc = fromDate.Value.Date.GetStartOfDayUtc(timeZoneId);
             query = query.Where(c => c.CheckInDateTime >= fromDateUtc);
         }
 
         if (toDate.HasValue)
         {
             // Add one day and convert to get the end of the day in KSA
-            var toDateUtc = toDate.Value.ToUtc(timeZoneId);
+            var toDateUtc = toDate.Value.Date.GetEndOfDayUtc(timeZoneId);
             query = query.Where(c => c.CheckInDateTime < toDateUtc);
         }
 
