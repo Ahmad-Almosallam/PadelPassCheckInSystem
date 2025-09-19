@@ -117,14 +117,14 @@ public class CheckInBaseController : Controller
         
         if (fromDate.HasValue)
         {
-            var fromDateUtc = fromDate.Value.ToUTCFromKSA();
+            var fromDateUtc = fromDate.Value.Date.GetStartOfDayUtc("Asia/Riyadh");
             query = query.Where(c => c.CheckInDateTime >= fromDateUtc);
         }
 
         if (toDate.HasValue)
         {
             // Add one day and convert to get the end of the day in KSA
-            var toDateUtc = toDate.Value.ToUTCFromKSA();
+            var toDateUtc = toDate.Value.Date.GetEndOfDayUtc("Asia/Riyadh");
             query = query.Where(c => c.CheckInDateTime < toDateUtc);
         }
 
